@@ -8,22 +8,25 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "dev": "tsx index.ts",
-    "db:generate": "drizzle-kit generate:pg --config src/db/drizzle.config.json",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:generate": "npx drizzle-kit generate --config=src/db/drizzle.config.ts",
+    "db:migrate": "npx drizzle-kit migrate --config=src/db/drizzle.config.ts"
   },
   "author": "LazyCPU",
   "license": "MIT",
   "dependencies": {
     "dotenv": "^16.4.7",
+    "drizzle-kit": "^0.30.5",
     "drizzle-orm": "^0.40.0",
+    "drizzle-zod": "^0.7.0",
     "express": "^4.18.2",
-    "pg": "^8.14.0"
+    "node-postgres": "^0.6.2",
+    "pg": "^8.14.0",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.10",
     "@types/pg": "^8.11.11",
-    "drizzle-kit": "^0.30.5",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }
