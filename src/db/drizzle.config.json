@@ -1,0 +1,8 @@
+{
+  "schema": "./schemas/schema.ts",
+  "out": "./drizzle",
+  "dialect": "postgresql",
+  "dbCredentials": {
+    "connectionString": "postgres://user:password@host:port/database"
+  }
+}
