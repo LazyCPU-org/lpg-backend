@@ -27,7 +27,7 @@ const router = express.Router();
 
 /**
  * @openapi
- * /v1/api/users:
+ * /users:
  *   get:
  *     tags: [Users]
  *     summary: Returns a list of users
@@ -51,7 +51,7 @@ router.get("/", (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /v1/api/users/{id}:
+ * /users/{id}:
  *   get:
  *     tags: [Users]
  *     summary: Get user by ID
@@ -86,7 +86,7 @@ router.get("/:id", (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /v1/api/users:
+ * /users:
  *   post:
  *     tags: [Users]
  *     summary: Create a new user

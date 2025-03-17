@@ -11,16 +11,14 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: "http://localhost:5000",
-        description: "Development server",
+        url: "http://localhost:5000/api/v1",
+        description: "Development server V1",
       },
       {
         url: "/", // Relative URL for production
         description: "Production server",
       },
     ],
-    // Using a basePath for versioning
-    basePath: "/v1/api",
     // Security schemes if you're using authentication
     components: {
       securitySchemes: {
