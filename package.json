@@ -2,12 +2,12 @@
   "name": "lpg-backend",
   "version": "1.0.0",
   "description": "Backend to control the functioning of a LPG store.",
-  "main": "dist/index.js",
+  "main": "dist/app.js",
   "type": "module",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "node dist/app.js",
     "build": "tsc",
-    "dev": "tsx index.ts",
+    "dev": "tsx app.ts",
     "db:generate": "npx drizzle-kit generate --config=src/db/drizzle.config.ts",
     "db:migrate": "npx drizzle-kit migrate --config=src/db/drizzle.config.ts"
   },
@@ -21,12 +21,16 @@
     "express": "^4.18.2",
     "node-postgres": "^0.6.2",
     "pg": "^8.14.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.10",
     "@types/pg": "^8.11.11",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }
