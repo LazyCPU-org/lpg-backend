@@ -8,21 +8,34 @@ const router = express.Router();
  *   schemas:
  *     User:
  *       type: object
- *       required:
- *         - id
- *         - name
- *         - email
  *       properties:
- *         id:
+ *         userId:
  *           type: integer
  *           description: The auto-generated id of the user
- *         name:
+ *         username:
  *           type: string
- *           description: The user's name
+ *           description: The user's username
+ *         passwordHash:
+ *           type: string
+ *           description: The user's password hash
  *         email:
  *           type: string
  *           format: email
  *           description: The user's email
+ *         role:
+ *           type: string
+ *           description: The user's role (admin, operator, delivery)
+ *         isActive:
+ *           type: boolean
+ *           description: Whether the user is active
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the user was created
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the user was last updated
  */
 
 /**
