@@ -1,74 +1,28 @@
-// Import all module indexes
-import * as userManagement from './user-management';
-import * as locations from './locations';
-import * as inventory from './inventory';
-import * as customers from './customers';
-import * as orders from './orders';
-import * as vehicles from './vehicles';
-import * as finance from './finance';
-import * as audit from './audit';
-
-// Export everything
-export {
-  userManagement,
-  locations,
-  inventory,
-  customers,
-  orders,
-  vehicles,
-  finance,
-  audit
-};
-
-// Export specific tables for convenience
-export const {
-  users,
-  admins,
-  operators,
-  deliveryPersonnel,
-  userProfiles
-} = userManagement;
-
-export const {
-  stores,
-  storeAssignments
-} = locations;
-
-export const {
-  tankTypes,
-  accessories,
-  storeInventory,
-  inventoryTransactions,
-  deliveryInventoryAssignments,
-  deliveryInventoryItems
-} = inventory;
-
-export const {
-  customers: customersTable,
-  customerDebts
-} = customers;
-
-export const {
-  orders: ordersTable,
-  orderItems,
-  invoices
-} = orders;
-
-export const {
-  vehicles: vehiclesTable,
-  vehicleAssignments,
-  vehicleFuelPurchases,
-  vehicleMaintenance
-} = vehicles;
-
-export const {
-  supplierOrders,
-  supplierOrderItems,
-  dailyReports,
-  dailyCashReconciliation,
-  expenses
-} = finance;
-
-export const {
-  auditLogs
-} = audit;
+export * from "./audit/audit-logs";
+export * from "./customers/customer-debts";
+export * from "./customers/customers";
+export * from "./finance/daily-cash-reconciliation";
+export * from "./finance/daily-reports";
+export * from "./finance/expenses";
+export * from "./finance/supplier-order-items";
+export * from "./finance/supplier-orders";
+export * from "./inventory/accessories";
+export * from "./inventory/delivery-inventory-assignments";
+export * from "./inventory/delivery-inventory-items";
+export * from "./inventory/inventory-transactions";
+export * from "./inventory/store-inventory";
+export * from "./inventory/tank-types";
+export * from "./locations/store-assignments";
+export * from "./locations/stores";
+export * from "./orders/invoices";
+export * from "./orders/order-items";
+export * from "./orders/orders";
+export * from "./user-management/admins";
+export * from "./user-management/delivery-personnel";
+export * from "./user-management/operators";
+export * from "./user-management/user-profiles";
+export * from "./user-management/users";
+export * from "./vehicles/vehicle-assignments";
+export * from "./vehicles/vehicle-fuel-purchases";
+export * from "./vehicles/vehicle-maintenance";
+export * from "./vehicles/vehicles";

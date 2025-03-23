@@ -1,12 +1,17 @@
 import { Express } from "express";
-import userRoutes from "./userRoutes";
+import { createAuthRouter } from "./authRoutes";
+import { Container } from "../config/di";
 
-export const defineRoutes = function (app: Express) {
+export const defineRoutes = function (app: Express, container: Container) {
   // Version 1 routes
   const v1BasePath = "/api/v1";
-  app.use(`${v1BasePath}/users`, userRoutes);
 
-  // For future versions
-  // const v2BasePath = "api/v2";
-  // app.use(`${v2BasePath}/users`, v2UserRoutes);
+  // Create routers with injected dependencies
+  const authRouter = createAuthRouter(container.authService);
+
+  // Mount routers
+  app.use(`${v1BasePath}/auth`, authRouter);
+
+  // Other routes would follow the same pattern
+  // app.use(`${v1BasePath}/users`, createUserRouter(container.userService));
 };

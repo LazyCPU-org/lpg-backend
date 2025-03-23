@@ -1,8 +1,0 @@
-{
-  "schema": "./src/db/schemas/index.ts",
-  "out": "./src/db/drizzle",
-  "dialect": "postgresql",
-  "dbCredentials": {
-    "connectionString": "postgres://user:password@host:port/database"
-  }
-}

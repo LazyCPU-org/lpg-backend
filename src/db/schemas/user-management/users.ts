@@ -9,33 +9,28 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-
-// Define the roles enum values
-export const UserRoleEnum = {
-  ADMIN: "admin",
-  OPERATOR: "operator",
-  DELIVERY: "delivery",
-} as const;
+import { UserRoleEnum } from "../../../config/roles";
 
 // Define the users table
 export const users = pgTable(
   "users",
   {
     userId: serial("user_id").primaryKey(),
-    username: varchar("username", { length: 50 }).notNull().unique(),
-    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
     email: varchar("email", { length: 100 }).notNull().unique(),
+    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
     role: varchar("role", { length: 20 }).notNull(),
-    isActive: boolean("is_active").default(true),
+    isActive: boolean("is_active").default(false),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
   (table) => [
     check(
       "user_role_check1",
-      sql`${table.role} IN ('${sql.raw(UserRoleEnum.ADMIN)}', '${sql.raw(
-        UserRoleEnum.OPERATOR
-      )}', '${sql.raw(UserRoleEnum.DELIVERY)}')`
+      sql`${table.role} IN ('${sql.raw(UserRoleEnum.SUPERADMIN)}', '${sql.raw(
+        UserRoleEnum.ADMIN
+      )}', '${sql.raw(UserRoleEnum.OPERATOR)}', '${sql.raw(
+        UserRoleEnum.DELIVERY
+      )}')`
     ),
   ]
 );
@@ -43,6 +38,7 @@ export const users = pgTable(
 // Create Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users, {
   role: z.enum([
+    UserRoleEnum.SUPERADMIN,
     UserRoleEnum.ADMIN,
     UserRoleEnum.OPERATOR,
     UserRoleEnum.DELIVERY,
@@ -51,6 +47,7 @@ export const insertUserSchema = createInsertSchema(users, {
 
 export const selectUserSchema = createSelectSchema(users, {
   role: z.enum([
+    UserRoleEnum.SUPERADMIN,
     UserRoleEnum.ADMIN,
     UserRoleEnum.OPERATOR,
     UserRoleEnum.DELIVERY,

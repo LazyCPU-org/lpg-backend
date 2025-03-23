@@ -1,42 +1,10 @@
 import express, { Request, Response } from "express";
+import { UserService } from "../services/userService";
+import { InMemoryUserRepository } from "../repositories/userRepository";
 
 const router = express.Router();
-
-/**
- * @openapi
- * components:
- *   schemas:
- *     User:
- *       type: object
- *       properties:
- *         userId:
- *           type: integer
- *           description: The auto-generated id of the user
- *         username:
- *           type: string
- *           description: The user's username
- *         passwordHash:
- *           type: string
- *           description: The user's password hash
- *         email:
- *           type: string
- *           format: email
- *           description: The user's email
- *         role:
- *           type: string
- *           description: The user's role (admin, operator, delivery)
- *         isActive:
- *           type: boolean
- *           description: Whether the user is active
- *         createdAt:
- *           type: string
- *           format: date-time
- *           description: The date and time the user was created
- *         updatedAt:
- *           type: string
- *           format: date-time
- *           description: The date and time the user was last updated
- */
+const userRepository = new InMemoryUserRepository();
+const userService = new UserService(userRepository);
 
 /**
  * @openapi
@@ -55,11 +23,9 @@ const router = express.Router();
  *               items:
  *                 $ref: '#/components/schemas/User'
  */
-router.get("/", (req: Request, res: Response) => {
-  res.json([
-    { id: 1, name: "John Doe", email: "john@example.com" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com" },
-  ]);
+router.get("/", async (req: Request, res: Response) => {
+  const users = await userService.getUsers();
+  res.json(users);
 });
 
 /**
@@ -86,12 +52,12 @@ router.get("/", (req: Request, res: Response) => {
  *       404:
  *         description: User not found
  */
-router.get("/:id", (req: Request, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
+  const user = await userService.getUserById(id);
 
-  // Example logic - would be replaced with actual database query
-  if (id === 1) {
-    res.json({ id: 1, name: "John Doe", email: "john@example.com" });
+  if (user) {
+    res.json(user);
   } else {
     res.status(404).json({ message: "User not found" });
   }

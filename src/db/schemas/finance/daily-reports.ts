@@ -45,12 +45,9 @@ export const dailyReports = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
-  (table) => ({
-    uniqueDailyReport: uniqueIndex("unique_daily_report").on(
-      table.storeId,
-      table.reportDate
-    ),
-  })
+  (table) => [
+    uniqueIndex("unique_daily_report").on(table.storeId, table.reportDate),
+  ]
 );
 
 // Create Zod schemas for validation
