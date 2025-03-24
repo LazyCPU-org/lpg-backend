@@ -32,7 +32,7 @@ export function createContainer(): Container {
 }
 
 // For testing, create a function to create a container with mock dependencies
-export function createTestContainer(
+/* export function createTestContainer(
   mockAuthRepository?: AuthRepository
 ): Container {
   const authRepository = mockAuthRepository || new PgAuthRepository();
@@ -48,4 +48,4 @@ export function createTestContainer(
     loginStrategyFactory,
     registrationStrategyFactory,
   };
-}
+} */

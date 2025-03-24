@@ -9,7 +9,8 @@
     "build": "tsc",
     "dev": "tsx server.ts",
     "db:generate": "npx drizzle-kit generate --config=src/db/drizzle.config.ts",
-    "db:migrate": "npx drizzle-kit migrate --config=src/db/drizzle.config.ts"
+    "db:migrate": "npx drizzle-kit migrate --config=src/db/drizzle.config.ts",
+    "db:push": "npx drizzle-kit push --config=src/db/drizzle.config.ts"
   },
   "author": "LazyCPU",
   "license": "MIT",

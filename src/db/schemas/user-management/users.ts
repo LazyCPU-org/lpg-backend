@@ -1,39 +1,32 @@
-import { sql } from "drizzle-orm";
 import {
   pgTable,
   serial,
   varchar,
   boolean,
   timestamp,
-  check,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { UserRoleEnum } from "../../../config/roles";
 
+export const rolesEnum = pgEnum("roles", [
+  UserRoleEnum.SUPERADMIN,
+  UserRoleEnum.ADMIN,
+  UserRoleEnum.OPERATOR,
+  UserRoleEnum.DELIVERY,
+]);
+
 // Define the users table
-export const users = pgTable(
-  "users",
-  {
-    userId: serial("user_id").primaryKey(),
-    email: varchar("email", { length: 100 }).notNull().unique(),
-    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-    role: varchar("role", { length: 20 }).notNull(),
-    isActive: boolean("is_active").default(false),
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
-  },
-  (table) => [
-    check(
-      "user_role_check1",
-      sql`${table.role} IN ('${sql.raw(UserRoleEnum.SUPERADMIN)}', '${sql.raw(
-        UserRoleEnum.ADMIN
-      )}', '${sql.raw(UserRoleEnum.OPERATOR)}', '${sql.raw(
-        UserRoleEnum.DELIVERY
-      )}')`
-    ),
-  ]
-);
+export const users = pgTable("users", {
+  userId: serial("user_id").primaryKey(),
+  email: varchar("email", { length: 100 }).notNull().unique(),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  role: rolesEnum().default("delivery"),
+  isActive: boolean("is_active").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // Create Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users, {
