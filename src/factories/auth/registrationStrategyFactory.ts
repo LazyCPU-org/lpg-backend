@@ -4,6 +4,7 @@ import { OperatorRegistrationStrategy } from "../../strategies/auth/operatorRegi
 import { DeliveryRegistrationStrategy } from "../../strategies/auth/deliveryRegistrationStrategy";
 import { AuthRepository } from "../../repositories/authRepository";
 import { UserRoleEnum } from "../../config/roles";
+import { SuperadminRegistrationStrategy } from "../../strategies/auth/superadminRegistrationStrategy";
 
 export class RegistrationStrategyFactory {
   private authRepository: AuthRepository;
@@ -16,6 +17,8 @@ export class RegistrationStrategyFactory {
     role: (typeof UserRoleEnum)[keyof typeof UserRoleEnum]
   ): RegistrationStrategy {
     switch (role) {
+      case UserRoleEnum.SUPERADMIN:
+        return new SuperadminRegistrationStrategy(this.authRepository);
       case UserRoleEnum.ADMIN:
         return new AdminRegistrationStrategy(this.authRepository);
       case UserRoleEnum.OPERATOR:

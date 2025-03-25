@@ -4,6 +4,7 @@ import { OperatorLoginStrategy } from "../../strategies/auth/operatorLoginStrate
 import { DeliveryLoginStrategy } from "../../strategies/auth/deliveryLoginStrategy";
 import { AuthRepository } from "../../repositories/authRepository";
 import { UserRoleEnum } from "../../config/roles";
+import { SuperadminLoginStrategy } from "../../strategies/auth/superadminLoginStrategy";
 
 export class LoginStrategyFactory {
   private authRepository: AuthRepository;
@@ -16,6 +17,8 @@ export class LoginStrategyFactory {
     role: (typeof UserRoleEnum)[keyof typeof UserRoleEnum]
   ): LoginStrategy {
     switch (role) {
+      case UserRoleEnum.SUPERADMIN:
+        return new SuperadminLoginStrategy(this.authRepository);
       case UserRoleEnum.ADMIN:
         return new AdminLoginStrategy(this.authRepository);
       case UserRoleEnum.OPERATOR:

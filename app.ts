@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./src/config/swagger";
 import { defineRoutes } from "./src/routes";
@@ -13,6 +13,17 @@ export function createApp() {
 
   // Middleware
   app.use(express.json());
+
+  // Logging Middleware
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const timestamp = new Date().toISOString();
+    res.on("finish", () => {
+      console.log(
+        `[${timestamp}] ${req.method} ${req.url} - HTTP ${res.statusCode}`
+      );
+    });
+    next();
+  });
 
   // Root endpoint
   /**
