@@ -12,7 +12,7 @@
  *           type: string
  *           format: email
  *           description: The user's JWT Token for authentication/authorization
- *         role:
+ *         user_role:
  *           type: string
  *           description: The user's role (superadmin, admin, operator, delivery)
  */
@@ -22,5 +22,5 @@ export interface Auth {
   email: string;
   passwordHash?: string;
   token?: string;
-  role?: string;
+  user_role?: string;
 }

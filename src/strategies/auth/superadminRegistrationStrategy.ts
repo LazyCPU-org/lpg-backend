@@ -13,18 +13,20 @@ export class SuperadminRegistrationStrategy implements RegistrationStrategy {
   }
 
   async register(registerRequest: RegisterRequest): Promise<Auth> {
-    // Admin-specific logic
+    // Superadmin-specific logic
     const exist = await this.authRepository.superadminExists();
-    if (exist) throw new Error("Unable to register more admins");
+    if (exist) throw new Error("Unable to register admin");
 
     const hashedPassword = await bcrypt.hash(registerRequest.password, 14); // Stronger hash for superadmins
 
     // Additional admin-specific validation or processing
 
     registerRequest.password = hashedPassword;
-    return this.authRepository.registerByRole(
+    const user = this.authRepository.registerByRole(
       registerRequest,
       UserRoleEnum.SUPERADMIN
     );
+
+    return user;
   }
 }

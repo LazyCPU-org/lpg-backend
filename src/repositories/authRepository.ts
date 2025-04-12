@@ -23,7 +23,7 @@ export class PgAuthRepository implements AuthRepository {
     const rows = await db
       .select()
       .from(users)
-      .where(eq(users.role, UserRoleEnum.ADMIN));
+      .where(eq(users.role, UserRoleEnum.SUPERADMIN));
 
     return rows.length > 0;
   }
@@ -60,11 +60,11 @@ export class PgAuthRepository implements AuthRepository {
         passwordHash: registerRequest.password,
         role: role,
       })
-      .returning();
-    const registeredUser = newUser[0];
-    return {
-      id: registeredUser.userId,
-      email: registeredUser.email,
-    };
+      .returning({
+        id: users.userId,
+        email: users.email,
+        user_role: users.role as any,
+      });
+    return newUser[0];
   }
 }

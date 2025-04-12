@@ -1,15 +1,21 @@
-import tankTypes from './tank-types';
-import accessories from './accessories';
-import storeInventory from './store-inventory';
-import inventoryTransactions from './inventory-transactions';
-import deliveryInventoryAssignments from './delivery-inventory-assignments';
-import deliveryInventoryItems from './delivery-inventory-items';
+import tankType from "./tank-type";
+import inventoryItem from "./inventory-item";
+import itemTransactions from "./item-transactions";
+import tankTransactions from "./tank-transactions";
+import deliveryInventoryAssignments from "./inventory-assignments";
+import inventoryAssignmentTanks from "./inventory-assignments-tanks";
+import inventoryAssignmentItems from "./inventory-assignments-items";
 
 export {
-  tankTypes,
-  accessories,
-  storeInventory,
-  inventoryTransactions,
+  // Base types
+  tankType,
+  inventoryItem,
+  // Transactions
+  itemTransactions,
+  tankTransactions,
+  // Inventory Status
   deliveryInventoryAssignments,
-  deliveryInventoryItems
+  // Inventory Assignation
+  inventoryAssignmentTanks,
+  inventoryAssignmentItems,
 };

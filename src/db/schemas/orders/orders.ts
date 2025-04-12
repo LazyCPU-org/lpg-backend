@@ -60,7 +60,7 @@ export const orders = pgTable(
     totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
     receivedBy: integer("received_by").references(() => operators.operatorId),
     deliveredBy: integer("delivered_by").references(
-      () => deliveryPersonnel.personnelId
+      () => deliveryPersonnel.personId
     ),
     deliveryDate: timestamp("delivery_date"),
     notes: text("notes"),

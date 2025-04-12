@@ -10,7 +10,7 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { UserRoleEnum } from "../../../config/roles";
 
-export const rolesEnum = pgEnum("roles", [
+export const rolesEnum = pgEnum("roles_enum", [
   UserRoleEnum.SUPERADMIN,
   UserRoleEnum.ADMIN,
   UserRoleEnum.OPERATOR,

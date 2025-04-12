@@ -6,13 +6,15 @@ import { UserRoleEnum } from "../config/roles";
 import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
 
-export class AuthService {
-  private authRepository: AuthRepository;
+import { AuthServiceInterface } from "../interfaces/authServiceInterface";
+
+export class AuthService implements AuthServiceInterface {
+  //private authRepository: AuthRepository;
   private registrationStrategyFactory: RegistrationStrategyFactory;
   private loginStrategyFactory: LoginStrategyFactory;
 
   constructor(authRepository: AuthRepository) {
-    this.authRepository = authRepository;
+    //this.authRepository = authRepository;
     this.registrationStrategyFactory = new RegistrationStrategyFactory(
       authRepository
     );

@@ -12,8 +12,8 @@ import {
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orders } from "./orders";
-import { tankTypes } from "../inventory/tank-types";
-import { accessories } from "../inventory/accessories";
+import { tankType } from "../inventory/tank-type";
+import { inventoryItem } from "../inventory/inventory-item";
 import { deliveryPersonnel } from "../user-management/delivery-personnel";
 
 // Define item type enum values
@@ -30,15 +30,15 @@ export const orderItems = pgTable(
       .notNull()
       .references(() => orders.orderId),
     itemType: varchar("item_type", { length: 10 }).notNull(),
-    tankTypeId: integer("tank_type_id").references(() => tankTypes.typeId),
+    tankTypeId: integer("tank_type_id").references(() => tankType.typeId),
     accessoryId: integer("accessory_id").references(
-      () => accessories.accessoryId
+      () => inventoryItem.inventoryItemId
     ),
     quantity: integer("quantity").notNull(),
     tankReturned: boolean("tank_returned").default(true),
     unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
     deliveredBy: integer("delivered_by").references(
-      () => deliveryPersonnel.personnelId
+      () => deliveryPersonnel.personId
     ),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),

@@ -11,7 +11,9 @@ import { z } from "zod";
 import { users } from "../user-management/users";
 import { stores } from "./stores";
 
-// Define the store assignments table
+/**
+ * Defines the association between the user and his designed store
+ */
 export const storeAssignments = pgTable(
   "store_assignments",
   {

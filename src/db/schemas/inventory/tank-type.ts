@@ -9,8 +9,11 @@ import {
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Define the tank types table
-export const tankTypes = pgTable("tank_types", {
+/**
+ * Defines specifically the types of tanks managed
+ * Table used to reference all logic related to tanks inventory
+ */
+export const tankType = pgTable("tank_type", {
   typeId: serial("type_id").primaryKey(),
   name: varchar("name", { length: 50 }).notNull(),
   weight: decimal("weight", { precision: 5, scale: 2 }).notNull(),
@@ -21,10 +24,10 @@ export const tankTypes = pgTable("tank_types", {
 });
 
 // Create Zod schemas for validation
-export const insertTankTypeSchema = createInsertSchema(tankTypes);
-export const selectTankTypeSchema = createSelectSchema(tankTypes);
+export const insertTankTypeSchema = createInsertSchema(tankType);
+export const selectTankTypeSchema = createSelectSchema(tankType);
 
 export type TankType = z.infer<typeof selectTankTypeSchema>;
 export type NewTankType = z.infer<typeof insertTankTypeSchema>;
 
-export default tankTypes;
+export default tankType;

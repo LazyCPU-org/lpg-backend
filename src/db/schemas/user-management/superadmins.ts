@@ -10,9 +10,9 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./users";
 
-// Define the admins table
-export const admins = pgTable("admins", {
-  adminId: serial("admin_id").primaryKey(),
+// Define the sudo-admins table
+export const superadmins = pgTable("admisuperadminsns", {
+  adminId: serial("sudoadmin_id").primaryKey(),
   userId: integer("user_id")
     .notNull()
     .references(() => users.userId)
@@ -27,10 +27,10 @@ export const admins = pgTable("admins", {
 });
 
 // Create Zod schemas for validation
-export const insertAdminSchema = createInsertSchema(admins);
-export const selectAdminSchema = createSelectSchema(admins);
+export const insertSudoAdminSchema = createInsertSchema(superadmins);
+export const selectSudoAdminSchema = createSelectSchema(superadmins);
 
-export type Admin = z.infer<typeof selectAdminSchema>;
-export type NewAdmin = z.infer<typeof insertAdminSchema>;
+export type SudoAdmin = z.infer<typeof selectSudoAdminSchema>;
+export type NewSudoAdmin = z.infer<typeof insertSudoAdminSchema>;
 
-export default admins;
+export default superadmins;

@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { AuthService } from "../services/authService";
+import { AuthServiceInterface } from "../interfaces/authServiceInterface";
 import {
   RegisterRequestSchema,
   LoginRequestSchema,
@@ -7,7 +7,7 @@ import {
 } from "../dtos/authDTO";
 import { UserRoleEnum } from "../config/roles";
 
-export function createAuthRouter(authService: AuthService) {
+export function createAuthRouter(authService: AuthServiceInterface) {
   const router = express.Router();
 
   /**

@@ -12,15 +12,17 @@ import { z } from "zod";
 import { users } from "./users";
 
 // Define the delivery personnel table
-export const deliveryPersonnel = pgTable("delivery_personnel", {
-  personnelId: serial("personnel_id").primaryKey(),
+export const deliveryPersonnel = pgTable("delivery_person", {
+  personId: serial("person_id").primaryKey(),
   userId: integer("user_id")
     .notNull()
     .references(() => users.userId)
     .unique(),
   licenseNumber: varchar("license_number", { length: 50 }),
   licenseExpiry: date("license_expiry"),
-  vehicleTypePreference: varchar("vehicle_type_preference", { length: 20 }),
+  vehicleTypePreference: varchar("vehicle_type_preference", {
+    length: 20,
+  }).default("moto"),
   totalDeliveries: integer("total_deliveries").default(0),
   averageRating: decimal("average_rating", { precision: 3, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),

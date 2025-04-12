@@ -3,12 +3,13 @@ import {
   PgAuthRepository,
 } from "../repositories/authRepository";
 import { AuthService } from "../services/authService";
+import { AuthServiceInterface } from "../interfaces/authServiceInterface";
 import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
 import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 
 export interface Container {
   authRepository: AuthRepository;
-  authService: AuthService;
+  authService: AuthServiceInterface;
   loginStrategyFactory: LoginStrategyFactory;
   registrationStrategyFactory: RegistrationStrategyFactory;
 }
