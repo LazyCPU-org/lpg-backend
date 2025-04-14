@@ -21,7 +21,7 @@ export const AssignmentStatusEnum = {
 } as const;
 
 // Define enum values restriction in database
-const inventoryStatusEnum = pgEnum("assignment_status_check", [
+export const inventoryStatusEnum = pgEnum("assignment_status_check", [
   AssignmentStatusEnum.ASSIGNED,
   AssignmentStatusEnum.CREATED,
   AssignmentStatusEnum.VALIDATED,

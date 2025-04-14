@@ -20,7 +20,7 @@ export const TransactionTypeEnum = {
   ASSIGNMENT: "assignment", // When a superior requested a purchase
 } as const;
 
-const itemTransactionTypeEnum = pgEnum("item_transaction_type", [
+export const itemTransactionTypeEnum = pgEnum("item_transaction_type", [
   TransactionTypeEnum.PURCHASE,
   TransactionTypeEnum.SALE,
   TransactionTypeEnum.TRANSFER,

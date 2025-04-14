@@ -6,11 +6,15 @@ import deliveryPersonnel from "./delivery-personnel";
 import userProfiles from "./user-profiles";
 
 export {
+  // Base user table
   users,
-  rolesEnum,
-  admins,
-  operators,
+  // User roles
   deliveryPersonnel,
+  operators,
+  admins,
   superadmins,
+  // User profile information
   userProfiles,
+  // Enums
+  rolesEnum,
 };

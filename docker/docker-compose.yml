@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ../../
+      dockerfile: src/docker/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    env_file:
+      # Use environment variable to select the correct env file
+      # Default to local environment if not specified
+      - ./env/.env.${ENV:-local}
+    environment:
+      - WAIT_FOR_DB=true
+      - RUN_MIGRATIONS=true
+      - ENABLE_DATA_SEED=${ENABLE_DATA_SEED:-false}
+    volumes:
+      # For local development, mount source code to enable hot reloading
+      - ../../src:/app/src
+      - ../../server.ts:/app/server.ts
+      - ../../tsconfig.json:/app/tsconfig.json
+    # Use environment-specific command or default to npm run dev
+    command: ${APP_COMMAND:-npm run dev}
+
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      # These will be overridden by the env file values if defined there
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-lpg_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

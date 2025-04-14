@@ -3,10 +3,27 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./src/config/swagger";
 import { defineRoutes } from "./src/routes";
 import { createContainer } from "./src/config/di";
+import {
+  loadEnvironmentConfig,
+  getServerConfig,
+  validateEnv,
+} from "./src/utils/config";
 
 export function createApp() {
+  // Load environment configuration
+  const config = loadEnvironmentConfig();
+
+  // Validate required environment variables
+  const requiredEnvVars = ["DATABASE_URL", "JWT_SECRET"];
+
+  if (!validateEnv(requiredEnvVars)) {
+    console.warn(
+      "Some required environment variables are missing - this may cause issues"
+    );
+  }
+
   const app = express();
-  const port: number = Number(process.env.PORT) || 5000;
+  const serverConfig = getServerConfig();
 
   // Create the dependency container
   const container = createContainer();
@@ -46,8 +63,41 @@ export function createApp() {
   app.get("/", (req: Request, res: Response) => {
     res.json({
       message: "API Server is running",
+      environment: serverConfig.environment,
       docs: `/docs`,
       apiSpec: `/api/swagger.json`,
+    });
+  });
+
+  /**
+   * @openapi
+   * /health:
+   *   get:
+   *     summary: Health check endpoint
+   *     description: Returns the health status of the API
+   *     responses:
+   *       200:
+   *         description: API is healthy
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 status:
+   *                   type: string
+   *                   example: ok
+   *                 environment:
+   *                   type: string
+   *                   example: local
+   *                 version:
+   *                   type: string
+   *                   example: 1.0.0
+   */
+  app.get("/health", (req: Request, res: Response) => {
+    res.status(200).json({
+      status: "ok",
+      environment: serverConfig.environment,
+      version: process.env.npm_package_version || "1.0.0",
     });
   });
 
@@ -62,11 +112,6 @@ export function createApp() {
         tagsSorter: "alpha", // Sort tags alphabetically
         operationsSorter: "alpha", // Sort operations alphabetically
         docExpansion: "list", // Expand/collapse tag groups
-        // Hide version tags by using filter function if needed
-        // filter: (tagObj, operationObj) => {
-        //   // Filter out v1, v2, etc. tags from the UI
-        //   return !tagObj.name.match(/^v\d+$/);
-        // }
       },
     })
   );

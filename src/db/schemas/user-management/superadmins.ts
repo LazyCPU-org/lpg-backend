@@ -11,8 +11,8 @@ import { z } from "zod";
 import { users } from "./users";
 
 // Define the sudo-admins table
-export const superadmins = pgTable("admisuperadminsns", {
-  adminId: serial("sudoadmin_id").primaryKey(),
+export const superadmins = pgTable("superadmins", {
+  sudoadminId: serial("sudoadmin_id").primaryKey(),
   userId: integer("user_id")
     .notNull()
     .references(() => users.userId)

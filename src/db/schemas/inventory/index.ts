@@ -1,8 +1,11 @@
 import tankType from "./tank-type";
 import inventoryItem from "./inventory-item";
-import itemTransactions from "./item-transactions";
-import tankTransactions from "./tank-transactions";
-import deliveryInventoryAssignments from "./inventory-assignments";
+import { itemTransactions, itemTransactionTypeEnum } from "./item-transactions";
+import { tankTransactions, tankTransactionTypeEnum } from "./tank-transactions";
+import {
+  inventoryAssignments,
+  inventoryStatusEnum,
+} from "./inventory-assignments";
 import inventoryAssignmentTanks from "./inventory-assignments-tanks";
 import inventoryAssignmentItems from "./inventory-assignments-items";
 
@@ -14,8 +17,12 @@ export {
   itemTransactions,
   tankTransactions,
   // Inventory Status
-  deliveryInventoryAssignments,
+  inventoryAssignments,
   // Inventory Assignation
   inventoryAssignmentTanks,
   inventoryAssignmentItems,
+  //Enums
+  inventoryStatusEnum,
+  itemTransactionTypeEnum,
+  tankTransactionTypeEnum,
 };

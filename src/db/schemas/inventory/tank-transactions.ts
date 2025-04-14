@@ -12,7 +12,7 @@ import { users } from "../user-management/users";
 import assignmentItems from "./inventory-assignments-items";
 import { TransactionTypeEnum } from "./item-transactions";
 
-const tankTransactionTypeEnum = pgEnum("tank_transaction_type", [
+export const tankTransactionTypeEnum = pgEnum("tank_transaction_type", [
   TransactionTypeEnum.PURCHASE,
   TransactionTypeEnum.SALE,
   TransactionTypeEnum.RETURN,
