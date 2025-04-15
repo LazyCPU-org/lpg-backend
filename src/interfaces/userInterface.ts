@@ -1,3 +1,7 @@
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
+import { superadmins } from "../db/schemas";
+
 /**
  * @openapi
  * components:
@@ -36,3 +40,10 @@ export interface User {
   email: string;
   passwordHash: string;
 }
+
+// Create Zod schemas for validation
+export const insertSudoAdminSchema = createInsertSchema(superadmins);
+export const selectSudoAdminSchema = createSelectSchema(superadmins);
+
+export type SudoAdmin = z.infer<typeof selectSudoAdminSchema>;
+export type NewSudoAdmin = z.infer<typeof insertSudoAdminSchema>;

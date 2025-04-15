@@ -6,6 +6,7 @@ import {
   RegisterRequest,
 } from "../dtos/authDTO";
 import { UserRoleEnum } from "../config/roles";
+import { asyncHandler } from "../middlewares/async-handler";
 
 export function createAuthRouter(authService: AuthServiceInterface) {
   const router = express.Router();
@@ -47,30 +48,35 @@ export function createAuthRouter(authService: AuthServiceInterface) {
    *       401:
    *         description: Invalid credentials
    */
-  router.post("/login/:role", async (req: Request, res: Response) => {
-    try {
-      const loginRequest = LoginRequestSchema.parse(req.body);
-      const roleParam = req.params[
-        "role"
-      ] as (typeof UserRoleEnum)[keyof typeof UserRoleEnum];
-      const role = Object.values(UserRoleEnum).includes(roleParam)
-        ? roleParam
-        : UserRoleEnum.DELIVERY; // Defining login role as "delivery" by default
+  router.post(
+    "/login/:role",
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const loginRequest = LoginRequestSchema.parse(req.body);
+        const roleParam = req.params[
+          "role"
+        ] as (typeof UserRoleEnum)[keyof typeof UserRoleEnum];
+        const role = Object.values(UserRoleEnum).includes(roleParam)
+          ? roleParam
+          : UserRoleEnum.DELIVERY; // Defining login role as "delivery" by default
 
-      const auth = await authService.loginByRole(
-        loginRequest.email,
-        loginRequest.password,
-        role
-      );
-      if (auth) {
-        res.status(200).json({ message: "Successful login", auth });
-      } else {
-        res.status(401).json({ message: "Invalid credentials" });
+        const auth = await authService.loginByRole(
+          loginRequest.email,
+          loginRequest.password,
+          role
+        );
+        if (auth) {
+          res.status(200).json({ message: "Successful login", auth });
+        } else {
+          res.status(401).json({ message: "Invalid credentials" });
+        }
+      } catch (error: any) {
+        res
+          .status(error.status)
+          .json({ message: "Invalid request", err: error.message });
       }
-    } catch (error) {
-      res.status(400).json({ message: "Invalid request body", error });
-    }
-  });
+    })
+  );
 
   /**
    * @openapi
@@ -109,28 +115,31 @@ export function createAuthRouter(authService: AuthServiceInterface) {
    *       400:
    *         description: Invalid request body
    */
-  router.post("/register/:role", async (req: Request, res: Response) => {
-    try {
-      const registerRequest: RegisterRequest = RegisterRequestSchema.parse(
-        req.body
-      );
-      const roleParam = req.params[
-        "role"
-      ] as (typeof UserRoleEnum)[keyof typeof UserRoleEnum];
-      const role =
-        Object.values(UserRoleEnum).includes(roleParam) &&
-        roleParam != UserRoleEnum.SUPERADMIN
-          ? roleParam
-          : UserRoleEnum.DELIVERY; // Defining login role as "delivery" by default
+  router.post(
+    "/register/:role",
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const registerRequest: RegisterRequest = RegisterRequestSchema.parse(
+          req.body
+        );
+        const roleParam = req.params[
+          "role"
+        ] as (typeof UserRoleEnum)[keyof typeof UserRoleEnum];
+        const role =
+          Object.values(UserRoleEnum).includes(roleParam) &&
+          roleParam != UserRoleEnum.SUPERADMIN
+            ? roleParam
+            : UserRoleEnum.DELIVERY; // Defining login role as "delivery" by default
 
-      const auth = await authService.registerByRole(registerRequest, role);
-      res.status(201).json({ message: "Successful register", auth });
-    } catch (error: any) {
-      res
-        .status(400)
-        .json({ message: "Invalid request", error: error.message });
-    }
-  });
+        const auth = await authService.registerByRole(registerRequest, role);
+        res.status(201).json({ message: "Successful register", auth });
+      } catch (error: any) {
+        res
+          .status(400)
+          .json({ message: "Invalid request", error: error.message });
+      }
+    })
+  );
 
   return router;
 }

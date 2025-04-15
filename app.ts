@@ -8,6 +8,7 @@ import {
   getServerConfig,
   validateEnv,
 } from "./src/utils/config";
+import { errorHandler } from "./src/middlewares/error-handler";
 
 export function createApp() {
   // Load environment configuration
@@ -121,6 +122,9 @@ export function createApp() {
   });
 
   defineRoutes(app, container);
+
+  // Register error handler AFTER all routes
+  app.use(errorHandler);
 
   return app;
 }

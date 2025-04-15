@@ -1,9 +1,9 @@
 import { Auth } from "../interfaces/authInterface";
 import { db } from "../db";
-import { users } from "../db/schemas/user-management";
+import { superadmins, users } from "../db/schemas/user-management";
 import { eq } from "drizzle-orm";
 import { RegisterRequest } from "../dtos/authDTO";
-import { User } from "../interfaces/userInterface";
+import { SudoAdmin, User } from "../interfaces/userInterface";
 import { UserRoleEnum } from "../config/roles";
 
 export interface AuthRepository {
@@ -15,19 +15,11 @@ export interface AuthRepository {
     email: string,
     role: (typeof UserRoleEnum)[keyof typeof UserRoleEnum]
   ): Promise<User | null>;
+  findSudoAdminByUserId(id: number): Promise<SudoAdmin | null>;
   superadminExists(): Promise<boolean>;
 }
 
 export class PgAuthRepository implements AuthRepository {
-  async superadminExists(): Promise<boolean> {
-    const rows = await db
-      .select()
-      .from(users)
-      .where(eq(users.role, UserRoleEnum.SUPERADMIN));
-
-    return rows.length > 0;
-  }
-
   async findUserByRole(
     email: string,
     role: (typeof UserRoleEnum)[keyof typeof UserRoleEnum]
@@ -66,5 +58,28 @@ export class PgAuthRepository implements AuthRepository {
         user_role: users.role as any,
       });
     return newUser[0];
+  }
+
+  async findSudoAdminByUserId(id: number): Promise<SudoAdmin | null> {
+    const results = await db
+      .select()
+      .from(superadmins)
+      .where(eq(superadmins.userId, id));
+
+    const row = results[0];
+
+    if (!row || results.length > 1) {
+      return null;
+    }
+
+    return row;
+  }
+  async superadminExists(): Promise<boolean> {
+    const rows = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, UserRoleEnum.SUPERADMIN));
+
+    return rows.length > 0;
   }
 }
