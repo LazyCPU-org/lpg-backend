@@ -117,9 +117,11 @@ export function createAuthRouter(authService: AuthServiceInterface) {
       const roleParam = req.params[
         "role"
       ] as (typeof UserRoleEnum)[keyof typeof UserRoleEnum];
-      const role = Object.values(UserRoleEnum).includes(roleParam)
-        ? roleParam
-        : UserRoleEnum.DELIVERY; // Defining login role as "delivery" by default
+      const role =
+        Object.values(UserRoleEnum).includes(roleParam) &&
+        roleParam != UserRoleEnum.SUPERADMIN
+          ? roleParam
+          : UserRoleEnum.DELIVERY; // Defining login role as "delivery" by default
 
       const auth = await authService.registerByRole(registerRequest, role);
       res.status(201).json({ message: "Successful register", auth });
