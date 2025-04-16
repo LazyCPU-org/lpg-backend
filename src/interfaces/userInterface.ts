@@ -1,6 +1,7 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { superadmins } from "../db/schemas";
+import { users, superadmins } from "../db/schemas";
+import { UserRoleEnum } from "../config/roles";
 
 /**
  * @openapi
@@ -34,14 +35,29 @@ import { superadmins } from "../db/schemas";
  *           format: date-time
  *           description: The date and time the user was last updated
  */
+export type User = z.infer<typeof selectUserSchema>;
+export type NewUser = z.infer<typeof insertUserSchema>;
 
-export interface User {
-  userId: number;
-  email: string;
-  passwordHash: string;
-}
+// Generic User Zod schemas
+export const insertUserSchema = createInsertSchema(users, {
+  role: z.enum([
+    UserRoleEnum.SUPERADMIN,
+    UserRoleEnum.ADMIN,
+    UserRoleEnum.OPERATOR,
+    UserRoleEnum.DELIVERY,
+  ]),
+});
 
-// Create Zod schemas for validation
+export const selectUserSchema = createSelectSchema(users, {
+  role: z.enum([
+    UserRoleEnum.SUPERADMIN,
+    UserRoleEnum.ADMIN,
+    UserRoleEnum.OPERATOR,
+    UserRoleEnum.DELIVERY,
+  ]),
+});
+
+// SudoAdmin Zod schemas
 export const insertSudoAdminSchema = createInsertSchema(superadmins);
 export const selectSudoAdminSchema = createSelectSchema(superadmins);
 

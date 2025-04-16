@@ -1,10 +1,11 @@
 import { Auth } from "../interfaces/authInterface";
 import { db } from "../db";
-import { superadmins, users } from "../db/schemas/user-management";
+import { superadmins, users, admins } from "../db/schemas/user-management";
 import { eq } from "drizzle-orm";
 import { RegisterRequest } from "../dtos/authDTO";
 import { SudoAdmin, User } from "../interfaces/userInterface";
 import { UserRoleEnum } from "../config/roles";
+import { PermissionSets } from "../utils/permissions";
 
 export interface AuthRepository {
   registerByRole(
@@ -17,6 +18,19 @@ export interface AuthRepository {
   ): Promise<User | null>;
   findSudoAdminByUserId(id: number): Promise<SudoAdmin | null>;
   superadminExists(): Promise<boolean>;
+  findAdminByUserId(id: number): Promise<any | null>;
+  updateSudoAdminPermissions(
+    userId: number,
+    permissions: string[]
+  ): Promise<void>;
+  updateAdminPermissions(userId: number, permissions: string[]): Promise<void>;
+
+  // Method for creating admin entries
+  createAdmin(adminData: {
+    userId: number;
+    permissions?: string[];
+    // Add any other required fields
+  }): Promise<any>;
 }
 
 export class PgAuthRepository implements AuthRepository {
@@ -81,5 +95,63 @@ export class PgAuthRepository implements AuthRepository {
       .where(eq(users.role, UserRoleEnum.SUPERADMIN));
 
     return rows.length > 0;
+  }
+
+  async findAdminByUserId(id: number): Promise<any | null> {
+    // Implementation depends on your schema
+    const results = await db.select().from(admins).where(eq(admins.userId, id));
+
+    if (!results || results.length === 0) {
+      return null;
+    }
+
+    return results[0];
+  }
+
+  async updateSudoAdminPermissions(
+    userId: number,
+    permissions: string[]
+  ): Promise<void> {
+    await db
+      .update(superadmins)
+      .set({
+        permissions,
+        updatedAt: new Date(),
+      })
+      .where(eq(superadmins.userId, userId));
+  }
+
+  async updateAdminPermissions(
+    userId: number,
+    permissions: string[]
+  ): Promise<void> {
+    await db
+      .update(admins)
+      .set({
+        permissions,
+        updatedAt: new Date(),
+      })
+      .where(eq(admins.userId, userId));
+  }
+
+  async createAdmin(adminData: {
+    userId: number;
+    permissions?: string[];
+  }): Promise<any> {
+    const result = await db
+      .insert(admins)
+      .values({
+        userId: adminData.userId,
+        permissions: adminData.permissions || PermissionSets.ADMIN_PERMISSIONS,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning({
+        adminId: admins.adminId,
+        userId: admins.userId,
+        permissions: admins.permissions,
+      });
+
+    return result[0];
   }
 }

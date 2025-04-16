@@ -3,10 +3,10 @@ import {
   serial,
   integer,
   varchar,
-  boolean,
   timestamp,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { sql } from "drizzle-orm";
 
 // Define the sudo-admins table
 export const superadmins = pgTable("superadmins", {
@@ -15,10 +15,10 @@ export const superadmins = pgTable("superadmins", {
     .notNull()
     .references(() => users.userId)
     .unique(),
-  accessLevel: varchar("access_level", { length: 20 }).notNull().default("all"),
-  canManageUsers: boolean("can_manage_users").default(false),
-  canManageFinances: boolean("can_manage_finances").default(false),
-  canManageTransactions: boolean("can_manage_transactions").default(false),
+  permissions: varchar("permissions")
+    .array()
+    .notNull()
+    .default(sql`'{*}'::text[]`),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

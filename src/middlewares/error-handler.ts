@@ -1,6 +1,5 @@
-// src/middlewares/error-handler.ts
 import { Request, Response, NextFunction, ErrorRequestHandler } from "express";
-import { HttpError } from "../utils/custom-errors"; // Import your custom error class
+import { HttpError } from "../utils/custom-errors";
 
 export const errorHandler: ErrorRequestHandler = (
   err: unknown,
@@ -18,7 +17,7 @@ export const errorHandler: ErrorRequestHandler = (
     return; // Just return, don't return the response object
   }
 
-  // Handle zod validation errors if you're using zod
+  // Handle zod validation errors
   if (err instanceof Error && err.name === "ZodError") {
     res.status(400).json({
       message: "Validation error",

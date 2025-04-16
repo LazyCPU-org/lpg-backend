@@ -4,6 +4,7 @@ import { AuthRepository } from "../../repositories/authRepository";
 import { UserRoleEnum } from "../../config/roles";
 import bcrypt from "bcrypt";
 import { RegistrationStrategy } from "./registrationStrategy";
+import { UnauthorizedError } from "../../utils/custom-errors";
 
 export class SuperadminRegistrationStrategy implements RegistrationStrategy {
   private authRepository: AuthRepository;
@@ -15,7 +16,7 @@ export class SuperadminRegistrationStrategy implements RegistrationStrategy {
   async register(registerRequest: RegisterRequest): Promise<Auth> {
     // Superadmin-specific logic
     const exist = await this.authRepository.superadminExists();
-    if (exist) throw new Error("Unable to register admin");
+    if (exist) throw new UnauthorizedError();
 
     const hashedPassword = await bcrypt.hash(registerRequest.password, 14); // Stronger hash for superadmins
 

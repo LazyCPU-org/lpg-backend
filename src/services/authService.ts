@@ -1,4 +1,3 @@
-// src/services/authService.ts
 import { Auth } from "../interfaces/authInterface";
 import { AuthRepository } from "../repositories/authRepository";
 import { RegisterRequest } from "../dtos/authDTO";

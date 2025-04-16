@@ -1,22 +1,28 @@
 import { User } from "../interfaces/userInterface";
+import { db } from "../db";
+import { users } from "../db/schemas/user-management";
+import { eq } from "drizzle-orm";
 
 export interface UserRepository {
   getUsers(): Promise<User[]>;
   getUserById(id: number): Promise<User | null>;
 }
 
-export class InMemoryUserRepository implements UserRepository {
-  private users: User[] = [
-    { id: 1, email: "john@example.com" },
-    { id: 2, email: "jane@example.com" },
-  ];
-
+export class PgUserRepository implements UserRepository {
   async getUsers(): Promise<User[]> {
-    return this.users;
+    return await db.select().from(users).where(eq(users.isActive, true));
   }
 
   async getUserById(id: number): Promise<User | null> {
-    const user = this.users.find((user) => user.id === id);
-    return user || null;
+    const results = await db
+      .select()
+      .from(users)
+      .where(eq(users.userId, id) && eq(users.isActive, true));
+
+    if (!results || results.length === 0) {
+      return null;
+    }
+
+    return results[0];
   }
 }

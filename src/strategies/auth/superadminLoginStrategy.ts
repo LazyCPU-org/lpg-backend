@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import { LoginStrategy } from "./loginStrategy";
 import { User, type SudoAdmin } from "../../interfaces/userInterface";
 import { NotFoundError, UnauthorizedError } from "../../utils/custom-errors";
+import { PermissionSets } from "../../utils/permissions";
 
 export class SuperadminLoginStrategy implements LoginStrategy {
   private authRepository: AuthRepository;
@@ -26,16 +27,39 @@ export class SuperadminLoginStrategy implements LoginStrategy {
     if (!comparePassword)
       throw new UnauthorizedError("Invalid provided credentials");
 
-    // Admin-specific validation can be added here
-
     const sudoAdmin: SudoAdmin | null =
       await this.authRepository.findSudoAdminByUserId(user.userId);
     if (!sudoAdmin) throw new NotFoundError();
 
+    // Parse permissions from the database
+    let permissions: string[];
+    try {
+      // If permissions are stored as a JSON string
+      permissions =
+        typeof sudoAdmin.permissions === "string"
+          ? JSON.parse(sudoAdmin.permissions)
+          : sudoAdmin.permissions || [];
+
+      // If we don't have permissions yet, use the default SUPERADMIN permissions
+      if (!permissions || permissions.length === 0) {
+        permissions = PermissionSets.SUPERADMIN;
+      }
+    } catch (error) {
+      // Default to SUPERADMIN permissions if parsing fails
+      permissions = PermissionSets.SUPERADMIN;
+    }
+
+    // Update the last login timestamp
+    await this.authRepository.updateSudoAdminPermissions(
+      user.userId,
+      permissions
+    );
+
     const payload = {
       id: sudoAdmin.sudoadminId,
+      userId: user.userId,
       role: UserRoleEnum.SUPERADMIN,
-      permissions: [...sudoAdmin.accessLevel],
+      permissions: permissions,
     };
 
     const secretKey = process.env.JWT_SECRET || "your-secret-key";
