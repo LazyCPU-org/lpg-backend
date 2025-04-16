@@ -51,19 +51,24 @@ All environment files are stored in `src/docker/env/` directory.
    nano src/docker/env/.env.local
    ```
 
-3. **Start the application**
-
+3. **Create database schemas and data**
    ```bash
-   # This uses the local environment by default
-   npm run dev
+   Create database tables using the schema
+   npm run db:push
    ```
 
-4. **Create a superadmin account (first time only)**
-
+   Then if desired, submit the seed data
    ```bash
    # Set ENABLE_DATA_SEED=true in your .env.local file
    # Then run:
    npm run db:seed
+   ```
+
+4. **Start the application**
+
+   ```bash
+   # This uses the local environment by default
+   npm run dev
    ```
 
 ### Development with Docker
@@ -86,14 +91,17 @@ All environment files are stored in `src/docker/env/` directory.
    ENV=prod npm run docker:up
    ```
 
-3. **Create a superadmin (first time only)**
-
+3. **Create database schemas and data**
    ```bash
-   # Start with superadmin seeding enabled
-   npm run docker:seed
+   Create database tables using the schema
+   npm run db:push
+   ```
 
-   # Or specify an environment:
-   ENV=qa npm run docker:seed
+   Then if desired, submit the seed data
+   ```bash
+   # Set ENABLE_DATA_SEED=true in your .env.local file
+   # Then run:
+   npm run db:seed
    ```
 
 4. **View logs**

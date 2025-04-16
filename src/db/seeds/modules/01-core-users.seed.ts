@@ -52,10 +52,7 @@ const run = async (db: DrizzleDB): Promise<void> => {
     // Insert superadmin
     await tx.insert(superadmins).values({
       userId: newUser.userId,
-      accessLevel: "all",
-      canManageUsers: true,
-      canManageFinances: true,
-      canManageTransactions: true,
+      permissions: ["*"],
     });
 
     console.log(`Superadmin created successfully with ID: ${newUser.userId}`);
