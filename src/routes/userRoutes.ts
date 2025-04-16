@@ -1,105 +1,135 @@
 import express, { Request, Response } from "express";
-import { UserService } from "../services/userService";
-import { InMemoryUserRepository } from "../repositories/userRepository";
+import { AuthRequest } from "../middlewares/authorization";
+import { asyncHandler } from "../middlewares/async-handler";
+import {
+  isAuthenticated,
+  requirePermission,
+} from "../middlewares/authorization";
+import { ActionEnum, ModuleEnum } from "../utils/permissions";
+import { UserServiceInterface } from "../interfaces/services/userServiceInterface";
 
-const router = express.Router();
-const userRepository = new InMemoryUserRepository();
-const userService = new UserService(userRepository);
+export function buildUserRouter(userService: UserServiceInterface) {
+  const router = express.Router();
 
-/**
- * @openapi
- * /users:
- *   get:
- *     tags: [Users]
- *     summary: Returns a list of users
- *     description: Retrieves all registered users
- *     responses:
- *       200:
- *         description: A list of users
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/User'
- */
-router.get("/", async (req: Request, res: Response) => {
-  const users = await userService.getUsers();
-  res.json(users);
-});
+  /**
+   * @openapi
+   * /users/self:
+   *   get:
+   *     tags: [Users]
+   *     summary: Returns the basic user data using the auth token
+   *     description: Retrieves data from oneself
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: A registered user
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *
+   */
+  router.get(
+    "/self",
+    isAuthenticated,
+    requirePermission(ModuleEnum.USERS, ActionEnum.READ),
+    asyncHandler(async (req: AuthRequest, res: Response) => {
+      if (!req.user) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+      const userId = parseInt(req.user.id, 10);
+      const users = await userService.getUserById(userId);
+      res.json(users);
+    })
+  );
 
-/**
- * @openapi
- * /users/{id}:
- *   get:
- *     tags: [Users]
- *     summary: Get user by ID
- *     description: Retrieves a specific user by their ID
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: The user ID
- *     responses:
- *       200:
- *         description: User details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       404:
- *         description: User not found
- */
-router.get("/:id", async (req: Request, res: Response) => {
-  const id = parseInt(req.params.id);
-  const user = await userService.getUserById(id);
+  /**
+   * @openapi
+   * /users/{id}:
+   *   get:
+   *     tags: [Users]
+   *     summary: Get user by ID
+   *     description: Retrieves a specific user by their ID
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: The user ID
+   *     responses:
+   *       200:
+   *         description: Specific user details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       404:
+   *         description: User not found
+   */
+  router.get(
+    "/:id",
+    isAuthenticated,
+    requirePermission(ModuleEnum.USERS, ActionEnum.MANAGE),
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = parseInt(req.params.id);
+      const user = await userService.getUserById(id);
 
-  if (user) {
-    res.json(user);
-  } else {
-    res.status(404).json({ message: "User not found" });
-  }
-});
+      if (user) {
+        res.json(user);
+      } else {
+        res.status(404).json({ message: "User not found" });
+      }
+    })
+  );
 
-/**
- * @openapi
- * /users:
- *   post:
- *     tags: [Users]
- *     summary: Create a new user
- *     description: Add a new user to the system
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *     responses:
- *       201:
- *         description: User created successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       400:
- *         description: Invalid request body
- */
-router.post("/", (req: Request, res: Response) => {
-  const { name, email } = req.body;
+  /**
+   * @openapi
+   * /users:
+   *   post:
+   *     tags: [Users]
+   *     summary: Create a new user
+   *     description: Add a new user to the system
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - name
+   *               - email
+   *               - role
+   *             properties:
+   *               name:
+   *                 type: string
+   *               email:
+   *                 type: string
+   *                 format: email
+   *     responses:
+   *       201:
+   *         description: User created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       400:
+   *         description: Invalid request body
+   */
+  router.post(
+    "/",
+    isAuthenticated,
+    requirePermission(ModuleEnum.USERS, ActionEnum.MANAGE),
+    asyncHandler(async (req: Request, res: Response) => {
+      const { name, email, role } = req.body;
 
-  // Example logic - would be replaced with actual database insert
-  res.status(201).json({ id: 3, name, email });
-});
+      // Example logic - would be replaced with actual database insert
+      res.status(201).json({ id: 3, name, email, role });
+    })
+  );
 
-export default router;
+  return router;
+}

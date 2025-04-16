@@ -34,6 +34,11 @@ export function createApp() {
 
   // Logging Middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
+    // Skip logging for Swagger UI and docs routes
+    if (req.url.match(/^(\/docs|\/swagger-ui.*|\/favicon.*)/)) {
+      return next();
+    }
+
     const timestamp = new Date().toISOString();
     res.on("finish", () => {
       console.log(

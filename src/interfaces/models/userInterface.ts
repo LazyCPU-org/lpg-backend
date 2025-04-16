@@ -1,7 +1,7 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { users, superadmins } from "../db/schemas";
-import { UserRoleEnum } from "../config/roles";
+import { users, superadmins } from "../../db/schemas";
+import { UserRoleEnum } from "../../config/roles";
 
 /**
  * @openapi

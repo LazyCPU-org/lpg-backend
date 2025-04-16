@@ -1,9 +1,9 @@
-import { Auth } from "../interfaces/authInterface";
+import { Auth } from "../interfaces/models/authInterface";
 import { db } from "../db";
 import { superadmins, users, admins } from "../db/schemas/user-management";
 import { eq } from "drizzle-orm";
 import { RegisterRequest } from "../dtos/authDTO";
-import { SudoAdmin, User } from "../interfaces/userInterface";
+import { SudoAdmin, User } from "../interfaces/models/userInterface";
 import { UserRoleEnum } from "../config/roles";
 import { PermissionSets } from "../utils/permissions";
 

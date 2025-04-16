@@ -3,7 +3,7 @@ import {
   PgAuthRepository,
 } from "../repositories/authRepository";
 import { AuthService } from "../services/authService";
-import { AuthServiceInterface } from "../interfaces/authServiceInterface";
+import { AuthServiceInterface } from "../interfaces/services/authServiceInterface";
 import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
 import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import {
@@ -11,11 +11,14 @@ import {
   UserRepository,
 } from "../repositories/userRepository";
 import { PermissionManager } from "../utils/permission-actions";
+import { UserServiceInterface } from "../interfaces/services/userServiceInterface";
+import { UserService } from "../services/userService";
 
 export interface Container {
   authRepository: AuthRepository;
   userRepository: UserRepository;
   authService: AuthServiceInterface;
+  userService: UserServiceInterface;
   loginStrategyFactory: LoginStrategyFactory;
   registrationStrategyFactory: RegistrationStrategyFactory;
   permissionManager: PermissionManager;
@@ -29,43 +32,28 @@ export function createContainer(): Container {
     authRepository
   );
   const loginStrategyFactory = new LoginStrategyFactory(authRepository);
-  const authService = new AuthService(authRepository);
+
   const permissionManager = new PermissionManager(
     authRepository,
     userRepository
   );
 
+  const authService = new AuthService(authRepository);
+  const userService = new UserService(userRepository);
+
   // Return container with all dependencies
   return {
-    authRepository,
-    userRepository,
-    authService,
+    // Utils
     loginStrategyFactory,
     registrationStrategyFactory,
     permissionManager,
+
+    // Repositories
+    authRepository,
+    userRepository,
+
+    // Services
+    authService,
+    userService,
   };
 }
-
-// For testing, create a function to create a container with mock dependencies
-/* export function createTestContainer(
-  mockAuthRepository?: AuthRepository,
-  mockUserRepository?: UserRepository
-): Container {
-  const authRepository = mockAuthRepository || new PgAuthRepository();
-  const userRepository = mockUserRepository || new PgUserRepository();
-  const registrationStrategyFactory = new RegistrationStrategyFactory(
-    authRepository
-  );
-  const loginStrategyFactory = new LoginStrategyFactory(authRepository);
-  const authService = new AuthService(authRepository);
-  const permissionManager = new PermissionManager(authRepository, userRepository);
-
-  return {
-    authRepository,
-    userRepository,
-    authService,
-    loginStrategyFactory,
-    registrationStrategyFactory,
-    permissionManager,
-  };
-} */

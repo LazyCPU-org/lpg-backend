@@ -1,11 +1,11 @@
-import { Auth } from "../interfaces/authInterface";
+import { Auth } from "../interfaces/models/authInterface";
 import { AuthRepository } from "../repositories/authRepository";
 import { RegisterRequest } from "../dtos/authDTO";
 import { UserRoleEnum } from "../config/roles";
 import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
 
-import { AuthServiceInterface } from "../interfaces/authServiceInterface";
+import { AuthServiceInterface } from "../interfaces/services/authServiceInterface";
 
 export class AuthService implements AuthServiceInterface {
   //private authRepository: AuthRepository;

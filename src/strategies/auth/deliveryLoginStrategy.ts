@@ -1,4 +1,4 @@
-import { Auth } from "../../interfaces/authInterface";
+import { Auth } from "../../interfaces/models/authInterface";
 import { AuthRepository } from "../../repositories/authRepository";
 import { UserRoleEnum } from "../../config/roles";
 import bcrypt from "bcrypt";

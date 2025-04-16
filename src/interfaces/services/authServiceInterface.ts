@@ -1,4 +1,4 @@
-import { Auth } from "./authInterface";
+import { Auth } from "../models/authInterface";
 
 export interface AuthServiceInterface {
   loginByRole(

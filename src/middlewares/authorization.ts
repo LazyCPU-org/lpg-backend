@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { ModuleEnum, ActionEnum, createPermission } from "../utils/permissions";
 
 // Define the extended Request type
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
   user?: {
     id: string;
     role: string;

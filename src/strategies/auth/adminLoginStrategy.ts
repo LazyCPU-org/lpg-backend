@@ -1,10 +1,10 @@
-import { Auth } from "../../interfaces/authInterface";
+import { Auth } from "../../interfaces/models/authInterface";
 import { AuthRepository } from "../../repositories/authRepository";
 import { UserRoleEnum } from "../../config/roles";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { LoginStrategy } from "./loginStrategy";
-import { User } from "../../interfaces/userInterface";
+import { User } from "../../interfaces/models/userInterface";
 import { NotFoundError, UnauthorizedError } from "../../utils/custom-errors";
 import { PermissionSets } from "../../utils/permissions";
 

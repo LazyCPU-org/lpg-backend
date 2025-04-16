@@ -1,10 +1,8 @@
-import { User } from "../interfaces/userInterface";
-import {
-  UserRepository,
-  InMemoryUserRepository,
-} from "../repositories/userRepository";
+import { UserServiceInterface } from "../interfaces/services/userServiceInterface";
+import { User } from "../interfaces/models/userInterface";
+import { UserRepository } from "../repositories/userRepository";
 
-export class UserService {
+export class UserService implements UserServiceInterface {
   private userRepository: UserRepository;
 
   constructor(userRepository: UserRepository) {
@@ -19,7 +17,3 @@ export class UserService {
     return this.userRepository.getUserById(id);
   }
 }
-
-// Example usage:
-const userRepository = new InMemoryUserRepository();
-const userService = new UserService(userRepository);

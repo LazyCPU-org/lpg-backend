@@ -1,6 +1,7 @@
 import { Express, Request, Response, NextFunction } from "express";
-import { createAuthRouter } from "./authRoutes";
 import { Container } from "../config/di";
+import { buildUserRouter } from "./userRoutes";
+import { buildAuthRouter } from "./authRoutes";
 
 // Middleware to inject container into request
 const injectContainer = (container: Container) => {
@@ -18,11 +19,10 @@ export const defineRoutes = function (app: Express, container: Container) {
   app.use(injectContainer(container));
 
   // Create routers with injected dependencies
-  const authRouter = createAuthRouter(container.authService);
+  const authRouter = buildAuthRouter(container.authService);
+  const userRouter = buildUserRouter(container.userService);
 
   // Mount routers
   app.use(`${v1BasePath}/auth`, authRouter);
-
-  // Other routes would follow the same pattern
-  // app.use(`${v1BasePath}/users`, createUserRouter(container.userService));
+  app.use(`${v1BasePath}/users`, userRouter);
 };

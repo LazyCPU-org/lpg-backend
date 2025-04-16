@@ -1,4 +1,4 @@
-import { User } from "../interfaces/userInterface";
+import { User } from "../interfaces/models/userInterface";
 import { db } from "../db";
 import { users } from "../db/schemas/user-management";
 import { eq } from "drizzle-orm";
