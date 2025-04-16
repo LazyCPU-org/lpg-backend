@@ -16,9 +16,14 @@ import { z } from "zod";
 export const tankType = pgTable("tank_type", {
   typeId: serial("type_id").primaryKey(),
   name: varchar("name", { length: 50 }).notNull(),
-  weight: decimal("weight", { precision: 5, scale: 2 }).notNull(),
+  weight: varchar("weight", { length: 5 }).notNull(),
   description: text("description"),
-  currentPrice: decimal("current_price", { precision: 10, scale: 2 }).notNull(),
+  purchase_price: decimal("purchase_price", {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+  sell_price: decimal("sell_price", { precision: 10, scale: 2 }).notNull(),
+  scale: varchar("scale", { length: 10 }).notNull().default("unidad"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

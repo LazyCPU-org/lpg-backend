@@ -1,4 +1,10 @@
-import { pgTable, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  integer,
+  timestamp,
+  decimal,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { inventoryAssignments } from "./inventory-assignments";
@@ -15,6 +21,11 @@ export const assignmentTanks = pgTable("assignment_tanks", {
   tankTypeId: integer("tank_type_id")
     .notNull()
     .references(() => tankType.typeId),
+  purchase_price: decimal("purchase_price", {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+  sell_price: decimal("sell_price", { precision: 10, scale: 2 }).notNull(),
   assignedFullTanks: integer("assigned_full_tanks").notNull().default(0),
   currentFullTanks: integer("current_full_tanks").notNull().default(0),
   assignedEmptyTanks: integer("assigned_empty_tanks").default(0),

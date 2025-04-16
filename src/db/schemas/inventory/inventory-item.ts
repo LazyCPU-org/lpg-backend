@@ -17,10 +17,12 @@ export const inventoryItem = pgTable("inventory_item", {
   inventoryItemId: serial("inventory_item_id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  currentPrice: decimal("current_price", {
+  purchase_price: decimal("purchase_price", {
     precision: 10,
     scale: 2,
   }).notNull(),
+  sell_price: decimal("sell_price", { precision: 10, scale: 2 }).notNull(),
+  scale: varchar("scale", { length: 10 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

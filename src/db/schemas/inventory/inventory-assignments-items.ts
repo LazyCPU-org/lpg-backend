@@ -1,4 +1,10 @@
-import { pgTable, serial, integer, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  integer,
+  timestamp,
+  decimal,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { inventoryAssignments } from "./inventory-assignments";
@@ -16,8 +22,13 @@ export const assignmentItems = pgTable("assignment_items", {
   inventoryItemId: integer("inventory_item_id")
     .notNull()
     .references(() => inventoryItem.inventoryItemId),
-  assignedItems: integer("assigned_full_items").notNull().default(0),
-  currentItems: integer("current_full_items").notNull().default(0),
+  purchase_price: decimal("purchase_price", {
+    precision: 10,
+    scale: 2,
+  }).notNull(),
+  sell_price: decimal("sell_price", { precision: 10, scale: 2 }).notNull(),
+  assignedItems: integer("assigned_items").notNull().default(0),
+  currentItems: integer("current_items").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
