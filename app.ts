@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./src/config/swagger";
 import { defineRoutes } from "./src/routes";
@@ -12,7 +13,7 @@ import { errorHandler } from "./src/middlewares/error-handler";
 
 export function createApp() {
   // Load environment configuration
-  const config = loadEnvironmentConfig();
+  loadEnvironmentConfig();
 
   // Validate required environment variables
   const requiredEnvVars = ["DATABASE_URL", "JWT_SECRET"];
@@ -32,6 +33,37 @@ export function createApp() {
   // Middleware
   app.use(express.json());
 
+  // CORS setup with specific allowed origins for security
+  const allowedOrigins = [
+    // Frontend URLs
+    "http://localhost:5173", // Local development frontend URL
+    "http://localhost:5000", // Local development docs
+  ];
+
+  // For GitHub Actions deployment, you might want to use environment variables
+  // const allowedOrigins = process.env.NODE_ENV === 'production'
+  //   ? ['https://your-app.netlify.app']
+  //   : ['http://localhost:5173'];
+
+  app.use(
+    cors({
+      origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) === -1) {
+          const msg =
+            "The CORS policy for this site does not allow access from the specified Origin.";
+          return callback(new Error(msg), false);
+        }
+
+        return callback(null, true);
+      },
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    })
+  );
+
   // Logging Middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
     // Skip logging for Swagger UI and docs routes
@@ -42,7 +74,7 @@ export function createApp() {
     const timestamp = new Date().toISOString();
     res.on("finish", () => {
       console.log(
-        `[${timestamp}] ${req.method} ${req.url} - HTTP ${res.statusCode}`
+        `[${timestamp}] ${req.method} ${req.baseUrl}${req.url} - HTTP ${res.statusCode}`
       );
     });
     next();

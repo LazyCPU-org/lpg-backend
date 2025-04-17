@@ -13,7 +13,7 @@ export function buildUserRouter(userService: UserServiceInterface) {
 
   /**
    * @openapi
-   * /users/self:
+   * /users/me:
    *   get:
    *     tags: [Users]
    *     summary: Returns the basic user data using the auth token
@@ -30,7 +30,7 @@ export function buildUserRouter(userService: UserServiceInterface) {
    *
    */
   router.get(
-    "/self",
+    "/me",
     isAuthenticated,
     requirePermission(ModuleEnum.USERS, ActionEnum.READ),
     asyncHandler(async (req: AuthRequest, res: Response) => {
