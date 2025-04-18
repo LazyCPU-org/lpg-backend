@@ -9,7 +9,8 @@ import {
   getServerConfig,
   validateEnv,
 } from "./src/utils/config";
-import { errorHandler } from "./src/middlewares/error-handler";
+import { AppError, errorHandler } from "./src/middlewares/error-handler";
+import { responseFormatter } from "./src/middlewares/response-formatter"; // Import the new middleware
 
 export function createApp() {
   // Load environment configuration
@@ -42,7 +43,7 @@ export function createApp() {
 
   // For GitHub Actions deployment, you might want to use environment variables
   // const allowedOrigins = process.env.NODE_ENV === 'production'
-  //   ? ['https://your-app.netlify.app']
+  //   ? ['https://test.app']
   //   : ['http://localhost:5173'];
 
   app.use(
@@ -78,6 +79,17 @@ export function createApp() {
       );
     });
     next();
+  });
+
+  // Apply response formatter middleware BEFORE routes but AFTER other middleware
+  // Skip for Swagger docs
+  app.use((req, res, next) => {
+    if (
+      req.url.match(/^(\/docs|\/swagger-ui.*|\/api\/swagger.json|\/favicon.*)/)
+    ) {
+      return next();
+    }
+    responseFormatter(req, res, next);
   });
 
   // Root endpoint
@@ -158,10 +170,14 @@ export function createApp() {
     res.json(swaggerSpec);
   });
 
+  // Root routes definition
   defineRoutes(app, container);
 
   // Register error handler AFTER all routes
-  app.use(errorHandler);
+  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    const appError = err as AppError;
+    errorHandler(appError, req, res, next);
+  });
 
   return app;
 }

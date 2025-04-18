@@ -1,40 +1,45 @@
-import { Request, Response, NextFunction, ErrorRequestHandler } from "express";
-import { HttpError } from "../utils/custom-errors";
+import { Request, Response, NextFunction } from "express";
 
-export const errorHandler: ErrorRequestHandler = (
-  err: unknown,
+// Define an interface for custom errors
+export interface AppError extends Error {
+  statusCode?: number;
+  isOperational?: boolean;
+}
+
+/**
+ * Express error handler middleware
+ * The function signature must match exactly what Express expects
+ */
+export const errorHandler = (
+  err: AppError,
   req: Request,
   res: Response,
   next: NextFunction
-) => {
-  console.error("Error:", err);
+): void => {
+  // Skip formatting for Swagger routes
+  const isSwaggerRoute = req.url.match(
+    /^(\/docs|\/swagger-ui.*|\/api\/swagger.json)/
+  );
 
-  if (err instanceof HttpError) {
-    res.status(err.status).json({
-      message: err.message || "Error occurred",
-      err: err.message,
+  const statusCode = err.statusCode || 500;
+  const errorMessage = err.message || "Internal Server Error";
+
+  console.error(`[Error] ${req.method} ${req.path}: ${errorMessage}`, err);
+
+  // For Swagger routes, just return the error directly
+  if (isSwaggerRoute) {
+    res.status(statusCode).json({
+      message: errorMessage,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
     });
-    return; // Just return, don't return the response object
+  } else {
+    // For API routes, return the error message directly
+    // The response formatter middleware will handle wrapping it in the standardized format
+    res.status(statusCode).json({
+      message: errorMessage,
+      ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    });
   }
 
-  // Handle zod validation errors
-  if (err instanceof Error && err.name === "ZodError") {
-    res.status(400).json({
-      message: "Validation error",
-      err: err.message,
-    });
-    return;
-  }
-
-  // Default error handler for unhandled errors
-  res.status(500).json({
-    message: "Internal Server Error",
-    err:
-      process.env.NODE_ENV === "production"
-        ? "Something went wrong"
-        : err instanceof Error
-        ? err.message
-        : String(err),
-  });
-  // No return statement here either
+  // No return statement - this is important for Express error handler type compatibility
 };
