@@ -1,12 +1,5 @@
-import {
-  pgTable,
-  serial,
-  integer,
-  varchar,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, timestamp } from "drizzle-orm/pg-core";
 import { users } from "./users";
-import { sql } from "drizzle-orm";
 
 // Define the sudo-admins table
 export const superadmins = pgTable("superadmins", {
@@ -15,10 +8,6 @@ export const superadmins = pgTable("superadmins", {
     .notNull()
     .references(() => users.userId)
     .unique(),
-  permissions: varchar("permissions")
-    .array()
-    .notNull()
-    .default(sql`'{*}'::text[]`),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

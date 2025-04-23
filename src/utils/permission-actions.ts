@@ -175,19 +175,6 @@ export class PermissionManager {
     role: string,
     permissions: string[]
   ): Promise<void> {
-    switch (role) {
-      case "superadmin":
-        await this.authRepository.updateSudoAdminPermissions(
-          userId,
-          permissions
-        );
-        break;
-      case "admin":
-        await this.authRepository.updateAdminPermissions(userId, permissions);
-        break;
-      // Add other roles as needed
-      default:
-        throw new Error(`Unsupported role: ${role}`);
-    }
+    await this.authRepository.updateUserPermissions(userId, permissions);
   }
 }

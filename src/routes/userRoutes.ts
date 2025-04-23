@@ -26,7 +26,7 @@ export function buildUserRouter(userService: UserServiceInterface) {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/User'
+   *               $ref: '#/components/schemas/Auth'
    *
    */
   router.get(
@@ -39,7 +39,8 @@ export function buildUserRouter(userService: UserServiceInterface) {
         return;
       }
       const userId = parseInt(req.user.id, 10);
-      const users = await userService.getUserById(userId);
+      const users = await userService.getCurrentUser(userId, req.user.role);
+
       res.json(users);
     })
   );

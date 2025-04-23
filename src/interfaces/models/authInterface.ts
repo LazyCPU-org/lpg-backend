@@ -10,17 +10,22 @@
  *           description: The auto-generated id of the user
  *         token:
  *           type: string
- *           format: email
  *           description: The user's JWT Token for authentication/authorization
- *         current_role:
+ *         user_role:
  *           type: string
  *           description: The user's role (superadmin, admin, operator, delivery)
+ *         permissions:
+ *           type: array
+ *           descriptions: A list of defined roles for a given user within the system
+ *           items:
+ *             type: string
+ *
  */
 
 export interface Auth {
   id?: number;
   email: string;
-  passwordHash?: string;
   token?: string;
-  current_role?: string;
+  user_role?: string;
+  permissions: string[];
 }

@@ -16,7 +16,6 @@ export const admins = pgTable("admins", {
     .notNull()
     .references(() => users.userId)
     .unique(),
-  permissions: varchar("permissions").array().notNull(),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

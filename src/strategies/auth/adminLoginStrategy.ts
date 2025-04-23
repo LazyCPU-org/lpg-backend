@@ -51,7 +51,7 @@ export class AdminLoginStrategy implements LoginStrategy {
     }
 
     // Update the permissions in case we applied defaults
-    await this.authRepository.updateAdminPermissions(user.userId, permissions);
+    await this.authRepository.updateUserPermissions(user.userId, permissions);
 
     // Create JWT payload
     const payload = {
@@ -63,12 +63,13 @@ export class AdminLoginStrategy implements LoginStrategy {
 
     // Sign and return token
     const secretKey = process.env.JWT_SECRET || "your-secret-key";
-    const token = jwt.sign(payload, secretKey, { expiresIn: "30min" });
+    const token = jwt.sign(payload, secretKey, { expiresIn: "60min" });
 
     return {
       id: user.userId,
       email: user.email,
       token,
+      permissions: user.permissions,
     } as Auth;
   }
 }
