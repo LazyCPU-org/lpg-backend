@@ -5,9 +5,16 @@
  *     Auth:
  *       type: object
  *       properties:
- *         email:
+ *         id:
  *           type: integer
  *           description: The auto-generated id of the user
+ *         name:
+ *           type: string
+ *           description: The name defined for the user
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: The email associated with the user
  *         token:
  *           type: string
  *           description: The user's JWT Token for authentication/authorization
@@ -24,6 +31,7 @@
 
 export interface Auth {
   id?: number;
+  name: string;
   email: string;
   token?: string;
   user_role?: string;

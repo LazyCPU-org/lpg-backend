@@ -40,10 +40,12 @@ const run = async (db: DrizzleDB): Promise<void> => {
     const userResult = await tx
       .insert(users)
       .values({
+        name: "Diego Marquina",
         email: process.env.SUPERADMIN_EMAIL!,
         passwordHash,
         role: UserRoleEnum.SUPERADMIN,
         isActive: true,
+        isVerified: true,
         permissions: ["*"],
       })
       .returning();

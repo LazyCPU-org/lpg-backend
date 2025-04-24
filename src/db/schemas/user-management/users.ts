@@ -20,8 +20,10 @@ export const rolesEnum = pgEnum("roles_enum", [
 export const users = pgTable("users", {
   userId: serial("user_id").primaryKey(),
   email: varchar("email", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   role: rolesEnum().notNull().default("delivery"),
+  isVerified: boolean("is_verified").default(false),
   permissions: varchar("permissions")
     .array()
     .notNull()

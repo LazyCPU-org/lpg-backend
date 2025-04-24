@@ -18,6 +18,7 @@ export class UserService implements UserServiceInterface {
     if (user.role != role) throw new UnauthorizedError();
     return {
       id: user.userId,
+      name: user.name,
       email: user.email,
       user_role: user.role,
       permissions: user.permissions,

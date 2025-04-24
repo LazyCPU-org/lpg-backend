@@ -4,6 +4,7 @@ import { UserRoleEnum } from "../config/roles";
 export const RegisterRequestSchema = z.object({
   email: z.string().email(),
   password: z.string(),
+  name: z.string(),
   role: z
     .enum([UserRoleEnum.ADMIN, UserRoleEnum.OPERATOR, UserRoleEnum.DELIVERY])
     .default(UserRoleEnum.DELIVERY),

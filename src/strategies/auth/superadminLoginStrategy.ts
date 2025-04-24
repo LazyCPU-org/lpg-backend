@@ -39,6 +39,7 @@ export class SuperadminLoginStrategy implements LoginStrategy {
 
     return {
       id: user.userId,
+      name: user.name,
       email: user.email,
       current_role: user.role,
       token,

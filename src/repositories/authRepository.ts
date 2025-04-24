@@ -65,6 +65,7 @@ export class PgAuthRepository implements AuthRepository {
       .values({
         email: registerRequest.email,
         passwordHash: registerRequest.password,
+        name: registerRequest.name,
         role: role,
       })
       .returning({
