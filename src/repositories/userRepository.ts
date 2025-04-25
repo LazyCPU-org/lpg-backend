@@ -2,6 +2,7 @@ import { User } from "../interfaces/models/userInterface";
 import { db } from "../db";
 import { users } from "../db/schemas/user-management";
 import { eq } from "drizzle-orm";
+import { UserStatus } from "../utils/status";
 
 export interface UserRepository {
   getUsers(): Promise<User[]>;
@@ -10,14 +11,17 @@ export interface UserRepository {
 
 export class PgUserRepository implements UserRepository {
   async getUsers(): Promise<User[]> {
-    return await db.select().from(users).where(eq(users.isActive, true));
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.status, UserStatus.ACTIVE));
   }
 
   async getUserById(id: number): Promise<User | null> {
     const results = await db
       .select()
       .from(users)
-      .where(eq(users.userId, id) && eq(users.isActive, true));
+      .where(eq(users.userId, id) && eq(users.status, UserStatus.ACTIVE));
 
     if (!results || results.length === 0) {
       return null;

@@ -57,6 +57,21 @@ export const selectUserSchema = createSelectSchema(users, {
   ]),
 });
 
+// Create safe generic schema for users
+export type SafeUser = z.infer<typeof selectSafeUserSchema>;
+export const selectSafeUserSchema = createSelectSchema(users, {
+  role: z.enum([
+    UserRoleEnum.SUPERADMIN,
+    UserRoleEnum.ADMIN,
+    UserRoleEnum.OPERATOR,
+    UserRoleEnum.DELIVERY,
+  ]),
+}).omit({
+  passwordHash: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // SudoAdmin Zod schemas
 export const insertSudoAdminSchema = createInsertSchema(superadmins);
 export const selectSudoAdminSchema = createSelectSchema(superadmins);

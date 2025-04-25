@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { RegisterRequest } from "../dtos/authDTO";
 import { SudoAdmin, User } from "../interfaces/models/userInterface";
 import { UserRoleEnum } from "../config/roles";
+import { UserStatus } from "../utils/status";
 
 export interface AuthRepository {
   registerByRole(
@@ -26,15 +27,12 @@ export interface AuthRepository {
     permissions?: string[];
     // Add any other required fields
   }): Promise<any>;
+
+  // Method to update the latest login date
+  updateLastLogin(id: number): Promise<boolean | null>;
 }
 
 export class PgAuthRepository implements AuthRepository {
-  createAdmin(adminData: {
-    userId: number;
-    permissions?: string[];
-  }): Promise<any> {
-    throw new Error("Method not implemented.");
-  }
   async findUserByRole(
     email: string,
     role: (typeof UserRoleEnum)[keyof typeof UserRoleEnum]
@@ -45,7 +43,7 @@ export class PgAuthRepository implements AuthRepository {
       .where(
         eq(users.email, email) &&
           eq(users.role, role) &&
-          eq(users.isActive, true)
+          eq(users.status, UserStatus.ACTIVE)
       );
     const row = rows[0];
 
@@ -70,6 +68,7 @@ export class PgAuthRepository implements AuthRepository {
       })
       .returning({
         id: users.userId,
+        name: users.name,
         email: users.email,
         user_role: users.role as any,
         permissions: users.permissions,
@@ -122,5 +121,20 @@ export class PgAuthRepository implements AuthRepository {
         updatedAt: new Date(),
       })
       .where(eq(users.userId, userId));
+  }
+
+  createAdmin(adminData: {
+    userId: number;
+    permissions?: string[];
+  }): Promise<any> {
+    throw new Error("Method not implemented.");
+  }
+
+  async updateLastLogin(id: number): Promise<boolean | null> {
+    const loginUpdate = await db.update(users).set({
+      lastLogin: new Date(),
+    });
+
+    return loginUpdate != null;
   }
 }

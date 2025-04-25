@@ -1,5 +1,9 @@
 import { UserServiceInterface } from "../interfaces/services/userServiceInterface";
-import { User } from "../interfaces/models/userInterface";
+import {
+  SafeUser,
+  selectSafeUserSchema,
+  User,
+} from "../interfaces/models/userInterface";
 import { UserRepository } from "../repositories/userRepository";
 import { NotFoundError, UnauthorizedError } from "../utils/custom-errors";
 import { Auth } from "../interfaces/models/authInterface";
@@ -25,8 +29,9 @@ export class UserService implements UserServiceInterface {
     };
   }
 
-  async getUsers(): Promise<User[]> {
-    return this.userRepository.getUsers();
+  async getUsers(): Promise<SafeUser[]> {
+    const users = await this.userRepository.getUsers();
+    return users.map((user) => selectSafeUserSchema.parse(user));
   }
 
   async getUserById(id: number): Promise<User | null> {

@@ -1,10 +1,4 @@
-import {
-  pgTable,
-  serial,
-  integer,
-  boolean,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./users";
@@ -20,9 +14,6 @@ export const operators = pgTable("operators", {
   storeId: integer("store_id")
     .notNull()
     .references(() => stores.storeId),
-  canCreateReports: boolean("can_create_reports").default(true),
-  canModifyInventory: boolean("can_modify_inventory").default(false),
-  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

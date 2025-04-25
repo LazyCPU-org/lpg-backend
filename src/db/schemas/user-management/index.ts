@@ -1,5 +1,5 @@
 import superadmins from "./superadmins";
-import { rolesEnum, users } from "./users";
+import { rolesEnum, users, statusEnum } from "./users";
 import admins from "./admins";
 import operators from "./operators";
 import deliveryPersonnel from "./delivery-personnel";
@@ -17,4 +17,5 @@ export {
   userProfiles,
   // Enums
   rolesEnum,
+  statusEnum,
 };

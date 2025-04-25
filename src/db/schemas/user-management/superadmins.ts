@@ -8,7 +8,6 @@ export const superadmins = pgTable("superadmins", {
     .notNull()
     .references(() => users.userId)
     .unique(),
-  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

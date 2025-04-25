@@ -4,6 +4,7 @@ import { users, superadmins } from "../../schemas/user-management";
 import { UserRoleEnum } from "../../../config/roles";
 import { SeedModule } from "../types";
 import type { DrizzleDB } from "../types";
+import { UserStatus } from "../../../utils/status";
 
 const run = async (db: DrizzleDB): Promise<void> => {
   // Check if superadmin already exists
@@ -44,7 +45,7 @@ const run = async (db: DrizzleDB): Promise<void> => {
         email: process.env.SUPERADMIN_EMAIL!,
         passwordHash,
         role: UserRoleEnum.SUPERADMIN,
-        isActive: true,
+        status: UserStatus.ACTIVE,
         isVerified: true,
         permissions: ["*"],
       })

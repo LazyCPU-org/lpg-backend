@@ -8,12 +8,20 @@ import {
 } from "drizzle-orm/pg-core";
 import { UserRoleEnum } from "../../../config/roles";
 import { sql } from "drizzle-orm";
+import { UserStatus } from "../../../utils/status";
 
 export const rolesEnum = pgEnum("roles_enum", [
   UserRoleEnum.SUPERADMIN,
   UserRoleEnum.ADMIN,
   UserRoleEnum.OPERATOR,
   UserRoleEnum.DELIVERY,
+]);
+
+export const statusEnum = pgEnum("status_enum", [
+  UserStatus.ACTIVE,
+  UserStatus.INACTIVE,
+  UserStatus.PENDING,
+  UserStatus.BLOCKED,
 ]);
 
 // Define the users table
@@ -28,7 +36,8 @@ export const users = pgTable("users", {
     .array()
     .notNull()
     .default(sql`'{}'::text[]`),
-  isActive: boolean("is_active").default(false),
+  status: statusEnum().notNull().default("pending"),
+  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

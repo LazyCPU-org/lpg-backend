@@ -132,5 +132,20 @@ export function buildUserRouter(userService: UserServiceInterface) {
     })
   );
 
+  router.get(
+    "/",
+    isAuthenticated,
+    requirePermission(ModuleEnum.USERS, ActionEnum.MANAGE),
+    asyncHandler(async (req: Request, res: Response) => {
+      const users = await userService.getUsers();
+
+      if (users?.length) {
+        res.json(users);
+      } else {
+        res.status(404).json({ message: "Users not found" });
+      }
+    })
+  );
+
   return router;
 }

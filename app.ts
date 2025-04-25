@@ -10,7 +10,7 @@ import {
   validateEnv,
 } from "./src/utils/config";
 import { AppError, errorHandler } from "./src/middlewares/error-handler";
-import { responseFormatter } from "./src/middlewares/response-formatter"; // Import the new middleware
+import { responseFormatter } from "./src/middlewares/response-formatter";
 
 export function createApp() {
   // Load environment configuration
@@ -175,6 +175,7 @@ export function createApp() {
 
   // Register error handler AFTER all routes
   app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    console.log("err!!", err);
     const appError = err as AppError;
     errorHandler(appError, req, res, next);
   });

@@ -5,8 +5,11 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { LoginStrategy } from "./loginStrategy";
 import { User } from "../../interfaces/models/userInterface";
-import { NotFoundError, UnauthorizedError } from "../../utils/custom-errors";
-import { permission } from "process";
+import {
+  InternalError,
+  NotFoundError,
+  UnauthorizedError,
+} from "../../utils/custom-errors";
 
 export class SuperadminLoginStrategy implements LoginStrategy {
   private authRepository: AuthRepository;
@@ -26,6 +29,14 @@ export class SuperadminLoginStrategy implements LoginStrategy {
     const comparePassword = await bcrypt.compare(password, user.passwordHash);
     if (!comparePassword)
       throw new UnauthorizedError("Invalid provided credentials");
+
+    // From this point, it's assumed the user has provided the correct login information
+
+    const updateLastLogin = await this.authRepository.updateLastLogin(
+      user.userId
+    );
+    if (!updateLastLogin)
+      throw new InternalError("could not update last login date");
 
     const payload = {
       id: user.userId,

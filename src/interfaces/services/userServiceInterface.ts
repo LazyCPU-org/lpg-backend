@@ -1,8 +1,8 @@
 import { Auth } from "../models/authInterface";
-import { User } from "../models/userInterface";
+import { SafeUser, User } from "../models/userInterface";
 
 export interface UserServiceInterface {
-  getUsers(): Promise<User[] | null>;
+  getUsers(): Promise<SafeUser[] | null>;
 
   getUserById(id: number): Promise<User | null>;
 

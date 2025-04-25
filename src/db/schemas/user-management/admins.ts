@@ -1,10 +1,4 @@
-import {
-  pgTable,
-  serial,
-  integer,
-  varchar,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./users";
@@ -16,7 +10,6 @@ export const admins = pgTable("admins", {
     .notNull()
     .references(() => users.userId)
     .unique(),
-  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
