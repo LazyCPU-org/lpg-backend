@@ -1,9 +1,6 @@
-import { RegisterRequest } from "../../dtos/authDTO";
-import { Auth } from "../../interfaces/models/authInterface";
 import { AuthRepository } from "../../repositories/authRepository";
-import { UserRoleEnum } from "../../config/roles";
-import bcrypt from "bcrypt";
 import { RegistrationStrategy } from "./registrationStrategy";
+import { selectSafeUserSchema } from "../../interfaces/models/userInterface";
 
 export class DeliveryRegistrationStrategy implements RegistrationStrategy {
   private authRepository: AuthRepository;
@@ -12,16 +9,10 @@ export class DeliveryRegistrationStrategy implements RegistrationStrategy {
     this.authRepository = authRepository;
   }
 
-  async register(registerRequest: RegisterRequest): Promise<Auth> {
-    // Delivery-specific logic here
-    const hashedPassword = await bcrypt.hash(registerRequest.password, 8);
-
-    // Delivery users might need additional fields or validations
-
-    registerRequest.password = hashedPassword;
-    return this.authRepository.registerByRole(
-      registerRequest,
-      UserRoleEnum.DELIVERY
-    );
+  async register(userId: number): Promise<boolean> {
+    // Get user information
+    const user = await this.authRepository.findUserById(userId);
+    const safeUser = selectSafeUserSchema.parse(user);
+    return await this.authRepository.createDeliveryByUser(safeUser);
   }
 }

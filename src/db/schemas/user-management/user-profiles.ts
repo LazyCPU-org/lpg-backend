@@ -21,7 +21,7 @@ export const userProfiles = pgTable("user_profiles", {
   lastName: varchar("last_name", { length: 50 }).notNull(),
   phoneNumber: varchar("phone_number", { length: 15 }).notNull(),
   address: text("address"),
-  entryDate: date("entry_date").notNull(),
+  entryDate: date("entry_date").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

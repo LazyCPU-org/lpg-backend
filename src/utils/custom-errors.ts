@@ -1,10 +1,10 @@
 export class HttpError extends Error {
-  status: number;
+  statusCode: number;
 
-  constructor(message: string, status: number = 500) {
+  constructor(message: string, statusCode: number = 500) {
     super(message);
     this.name = this.constructor.name;
-    this.status = status;
+    this.statusCode = statusCode;
     // This captures the stack trace in V8 environments
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
@@ -25,8 +25,20 @@ export class UnauthorizedError extends HttpError {
   }
 }
 
+export class ForbiddenError extends HttpError {
+  constructor(message: string = "Forbidden") {
+    super(message, 403);
+  }
+}
+
 export class NotFoundError extends HttpError {
   constructor(message: string = "Not Found") {
+    super(message, 404);
+  }
+}
+
+export class ExpirationError extends HttpError {
+  constructor(message: string = "Token invalid or expired") {
     super(message, 404);
   }
 }

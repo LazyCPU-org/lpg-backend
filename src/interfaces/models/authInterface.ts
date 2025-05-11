@@ -29,6 +29,8 @@
  *
  */
 
+import { UserRoleEnum } from "../../config/roles";
+
 export interface Auth {
   id?: number;
   name: string;
@@ -36,4 +38,11 @@ export interface Auth {
   token?: string;
   user_role?: string;
   permissions: string[];
+}
+
+export interface PreRegistration {
+  email: string;
+  name: string;
+  role: (typeof UserRoleEnum)[keyof typeof UserRoleEnum];
+  token?: string;
 }

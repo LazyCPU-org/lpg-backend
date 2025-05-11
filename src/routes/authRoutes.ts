@@ -4,6 +4,8 @@ import {
   RegisterRequestSchema,
   LoginRequestSchema,
   RegisterRequest,
+  PreRegistrationRequestSchema,
+  PreRegistrationRequest,
 } from "../dtos/authDTO";
 import { UserRoleEnum } from "../config/roles";
 import { asyncHandler } from "../middlewares/async-handler";
@@ -12,17 +14,20 @@ import {
   requirePermission,
 } from "../middlewares/authorization";
 import { ModuleEnum, ActionEnum } from "../utils/permissions";
+import { BadRequestError } from "../utils/custom-errors";
 
 export function buildAuthRouter(authService: AuthServiceInterface) {
   const router = express.Router();
 
+  // Login routes
+
   /**
    * @openapi
-   * /auth/login/{role}:
+   * /auth/login:
    *   post:
    *     tags: [Auth]
-   *     summary: Login admin
-   *     description: Logs in an existing admin
+   *     summary: Login user
+   *     description: Logs in an existing user
    *     parameters:
    *       - in: path
    *         name: role
@@ -47,6 +52,10 @@ export function buildAuthRouter(authService: AuthServiceInterface) {
    *                 format: email
    *               password:
    *                 type: string
+   *               role:
+   *                 type: string
+   *                 enum: [delivery, operator, admin, superadmin]
+   *                 default: delivery
    *     responses:
    *       200:
    *         description: Successful login
@@ -54,53 +63,30 @@ export function buildAuthRouter(authService: AuthServiceInterface) {
    *         description: Invalid credentials
    */
   router.post(
-    "/login/:role",
+    "/login",
     asyncHandler(async (req: Request, res: Response) => {
-      try {
-        const loginRequest = LoginRequestSchema.parse(req.body);
-        const roleParam = req.params[
-          "role"
-        ] as (typeof UserRoleEnum)[keyof typeof UserRoleEnum];
-        const role = Object.values(UserRoleEnum).includes(roleParam)
-          ? roleParam
-          : UserRoleEnum.DELIVERY; // Defining login role as "delivery" by default
-
-        const auth = await authService.loginByRole(
-          loginRequest.email,
-          loginRequest.password,
-          role
-        );
-        if (auth) {
-          res.status(200).json({ message: "Successful login", auth });
-        } else {
-          res.status(401).json({ message: "Invalid credentials" });
-        }
-      } catch (error: any) {
-        res
-          .status(error.status || 400)
-          .json({ message: "Invalid request", err: error.message });
-      }
+      const loginRequest = LoginRequestSchema.parse(req.body);
+      const roleParam = loginRequest.role;
+      const auth = await authService.loginByRole(
+        loginRequest.email,
+        loginRequest.password,
+        roleParam
+      );
+      res.status(200).json(auth);
     })
   );
 
+  // Pre-register route
+
   /**
    * @openapi
-   * /auth/register/{role}:
+   * /auth/preregistration:
    *   post:
    *     tags: [Auth]
-   *     summary: Register a new user by his role
-   *     description: Registers a new user in the system
+   *     summary: Create a registration token for a new user
+   *     description: Creates a temporary token for user self-registration
    *     security:
    *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: role
-   *         schema:
-   *           type: string
-   *           enum: [delivery, operator, admin, superadmin]
-   *           default: delivery
-   *         required: true
-   *         description: Role used to register into the system
    *     requestBody:
    *       required: true
    *       content:
@@ -109,72 +95,151 @@ export function buildAuthRouter(authService: AuthServiceInterface) {
    *             type: object
    *             required:
    *               - email
-   *               - password
+   *               - name
+   *               - role
    *             properties:
    *               email:
    *                 type: string
    *                 format: email
-   *               password:
+   *               name:
    *                 type: string
+   *               role:
+   *                 type: string
+   *                 enum: [delivery, operator, admin]
    *     responses:
    *       201:
-   *         description: Successful register
+   *         description: Registration token created successfully
    *       400:
-   *         description: Invalid request body
+   *         description: Invalid request
    *       401:
    *         description: Unauthorized
    *       403:
    *         description: Forbidden - insufficient permissions
    */
   router.post(
-    "/register/:role",
-    isAuthenticated, // Require authentication
-    requirePermission(ModuleEnum.USERS, ActionEnum.CREATE), // Require user creation permission
+    "/preregistration",
+    isAuthenticated,
+    requirePermission(ModuleEnum.USERS, ActionEnum.CREATE),
     asyncHandler(async (req: Request, res: Response) => {
-      try {
-        const registerRequest: RegisterRequest = RegisterRequestSchema.parse(
-          req.body
-        );
-        const roleParam = req.params[
-          "role"
-        ] as (typeof UserRoleEnum)[keyof typeof UserRoleEnum];
+      // Request body validation
+      const preRegistrationData = PreRegistrationRequestSchema.parse(req.body);
+      const authReq = req as any;
+      const createdBy = authReq.user.id;
 
-        // Only allow registering superadmins if requester has special permission
-        if (roleParam === UserRoleEnum.SUPERADMIN) {
-          // Cast req to AuthRequest to access user property
-          const authReq = req as any;
-          const hasManageSuperadminPerm = (
-            authReq.user?.permissions || []
-          ).some(
-            (perm: string) =>
-              perm === "*" ||
-              perm === "superadmins:create" ||
-              perm === "superadmins:manage"
-          );
-
-          if (!hasManageSuperadminPerm) {
-            return res.status(403).json({
-              message: "Permission denied",
-              required: "superadmins:create",
-            });
-          }
-        }
-
-        const role = Object.values(UserRoleEnum).includes(roleParam)
-          ? roleParam
-          : UserRoleEnum.DELIVERY; // Defining login role as "delivery" by default
-
-        const auth = await authService.registerByRole(registerRequest, role);
-        res.status(201).json({ message: "Successful register", auth });
-      } catch (error: any) {
-        res
-          .status(400)
-          .json({ message: "Invalid request", error: error.message });
+      // Avoid superadmin creation for now
+      if (preRegistrationData.role === UserRoleEnum.SUPERADMIN) {
+        throw new BadRequestError("Información inválida");
       }
+
+      const registrationToken = await authService.createRegistrationToken(
+        preRegistrationData,
+        createdBy
+      );
+
+      res.status(201).json(registrationToken);
     })
   );
 
-  // Add a route to manage permissions - requires special access
+  // Register confirmation route
+
+  /**
+   * @openapi
+   * /auth/verify-registration-token/{token}:
+   *   get:
+   *     tags: [Auth]
+   *     summary: Verify a registration token and get prefilled data
+   *     description: Verifies if a token is valid and returns user data to prefill the form
+   *     parameters:
+   *       - in: path
+   *         name: token
+   *         schema:
+   *           type: string
+   *         required: true
+   *         description: Registration token
+   *     responses:
+   *       200:
+   *         description: Token verified successfully
+   *       400:
+   *         description: Invalid or expired token
+   */
+  router.get(
+    "/verify-registration-token/:token",
+    asyncHandler(async (req: Request, res: Response) => {
+      const { token } = req.params;
+
+      const result = await authService.verifyRegistrationToken(token);
+
+      res.status(200).json(result);
+    })
+  );
+
+  /**
+   * @openapi
+   * /auth/complete-registration/{token}:
+   *   post:
+   *     tags: [Auth]
+   *     summary: Complete user registration with a token
+   *     description: Completes the registration process using a valid token
+   *     parameters:
+   *       - in: path
+   *         name: token
+   *         schema:
+   *           type: string
+   *         required: true
+   *         description: Registration token
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - password
+   *             properties:
+   *               password:
+   *                 type: string
+   *                 format: password
+   *     responses:
+   *       201:
+   *         description: Registration completed successfully
+   *       400:
+   *         description: Invalid token or request
+   */
+  router.post(
+    "/complete-registration/:token",
+    asyncHandler(async (req: Request, res: Response) => {
+      const { token } = req.params;
+      const registerRequest = RegisterRequestSchema.parse(req.body);
+
+      if (!registerRequest.password) {
+        throw new BadRequestError("Password es un campo obligatorio");
+      }
+
+      // Obtaining predefined information for completing register process
+      const preRegistration = await authService.verifyRegistrationToken(token);
+
+      const auth = await authService.completeTokenRegistration(
+        token,
+        preRegistration,
+        registerRequest
+      );
+
+      if (!auth) {
+        return res.status(400).json({
+          message: "Failed to complete registration",
+          error: "Invalid or expired token",
+        });
+      }
+
+      res.status(201).json({
+        message: "Registration completed successfully",
+        auth,
+      });
+    })
+  );
+
+  // Permision management routes
+
   /**
    * @openapi
    * /auth/permissions/{userId}:

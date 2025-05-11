@@ -1,3 +1,6 @@
+import { UserRoleEnum } from "../config/roles";
+import { BadRequestError } from "./custom-errors";
+
 // Define modules
 export enum ModuleEnum {
   USERS = "users",
@@ -20,6 +23,7 @@ export enum ActionEnum {
   MANAGE = "manage", // Special action that includes all CRUD operations
   EXPORT = "export", // For reports export
   APPROVE = "approve", // For approving transactions, etc.
+  SELFMANAGE = "selfmanage", // Action specific to manage data about oneself
   // Add more specific actions as needed
 }
 
@@ -34,7 +38,7 @@ export const createPermission = (
 // Define common permission sets
 export const PermissionSets = {
   // Full access to everything
-  SUPERADMIN: ["*"],
+  SUPERADMIN_PERMISSIONS: ["*"],
 
   // Module-specific full access permissions
   FULL_USERS_ACCESS: [
@@ -87,8 +91,10 @@ export const PermissionSets = {
   ],
 
   DELIVERY_PERMISSIONS: [
-    createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.READ),
-    createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.UPDATE),
+    createPermission(ModuleEnum.USERS, ActionEnum.SELFMANAGE),
+    createPermission(ModuleEnum.INVENTORY, ActionEnum.SELFMANAGE),
+    createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.SELFMANAGE),
+    createPermission(ModuleEnum.SETTINGS, ActionEnum.SELFMANAGE),
   ],
 
   // Read-only permissions
@@ -109,3 +115,19 @@ export const PermissionSets = {
     createPermission(ModuleEnum.DASHBOARD, ActionEnum.READ),
   ],
 };
+
+export function getPermissionsByRole(role: string) {
+  const permission = [];
+  switch (role) {
+    case UserRoleEnum.DELIVERY:
+      return PermissionSets.DELIVERY_PERMISSIONS;
+    case UserRoleEnum.OPERATOR:
+      return PermissionSets.OPERATOR_PERMISSIONS;
+    case UserRoleEnum.ADMIN:
+      return PermissionSets.ADMIN_PERMISSIONS;
+    case UserRoleEnum.SUPERADMIN:
+      return PermissionSets.SUPERADMIN_PERMISSIONS;
+    default:
+      throw new BadRequestError("Invalid provided role");
+  }
+}

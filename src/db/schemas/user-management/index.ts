@@ -1,3 +1,4 @@
+import preRegistration from "./pre-registration";
 import superadmins from "./superadmins";
 import { rolesEnum, users, statusEnum } from "./users";
 import admins from "./admins";
@@ -15,6 +16,8 @@ export {
   superadmins,
   // User profile information
   userProfiles,
+  //User register process
+  preRegistration,
   // Enums
   rolesEnum,
   statusEnum,

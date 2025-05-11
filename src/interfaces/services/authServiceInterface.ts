@@ -1,4 +1,5 @@
-import { Auth } from "../models/authInterface";
+import { PreRegistrationRequest, RegisterRequest } from "../../dtos/authDTO";
+import { Auth, PreRegistration } from "../models/authInterface";
 
 export interface AuthServiceInterface {
   loginByRole(
@@ -7,8 +8,18 @@ export interface AuthServiceInterface {
     role: string
   ): Promise<Auth | null>; // Replace 'any' with a more specific type if available
 
-  registerByRole(
-    registerRequest: any, // Replace 'any' with a more specific type like RegisterRequest if available
-    role: string
-  ): Promise<Auth>; // Replace 'any' with a more specific type if available
+  // New methods for token-based registration
+  createRegistrationToken(
+    userData: PreRegistrationRequest,
+    createdBy: number,
+    expiresInHours?: number
+  ): Promise<PreRegistration>;
+
+  verifyRegistrationToken(token: string): Promise<PreRegistration>;
+
+  completeTokenRegistration(
+    token: string,
+    preRegistrationData: PreRegistration,
+    registerRequest: RegisterRequest
+  ): Promise<Auth>;
 }
