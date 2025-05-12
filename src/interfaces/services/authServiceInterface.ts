@@ -1,12 +1,11 @@
 import { PreRegistrationRequest, RegisterRequest } from "../../dtos/authDTO";
 import { Auth, PreRegistration } from "../models/authInterface";
+import { SafeUser } from "../models/userInterface";
 
 export interface AuthServiceInterface {
-  loginByRole(
-    email: string,
-    password: string,
-    role: string
-  ): Promise<Auth | null>; // Replace 'any' with a more specific type if available
+  verifyLoginCredentials(email: string, password: string): Promise<SafeUser>;
+
+  loginUser(user: SafeUser): Promise<Auth | null>;
 
   // New methods for token-based registration
   createRegistrationToken(

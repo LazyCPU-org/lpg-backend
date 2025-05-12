@@ -1,12 +1,19 @@
 import { Auth, PreRegistration } from "../interfaces/models/authInterface";
 import { AuthRepository } from "../repositories/authRepository";
 import { PreRegistrationRequest, RegisterRequest } from "../dtos/authDTO";
-import { UserRoleEnum } from "../config/roles";
 import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
 
 import { AuthServiceInterface } from "../interfaces/services/authServiceInterface";
 import { getPermissionsByRole } from "../utils/permissions";
+import {
+  SafeUser,
+  selectSafeUserSchema,
+} from "../interfaces/models/userInterface";
+import { UserStatus } from "../utils/status";
+import { UnauthorizedError } from "../utils/custom-errors";
+
+import bcrypt from "bcrypt";
 
 export class AuthService implements AuthServiceInterface {
   private authRepository: AuthRepository;
@@ -21,13 +28,31 @@ export class AuthService implements AuthServiceInterface {
     this.loginStrategyFactory = new LoginStrategyFactory(authRepository);
   }
 
-  async loginByRole(
+  async verifyLoginCredentials(
     email: string,
-    password: string,
-    role: (typeof UserRoleEnum)[keyof typeof UserRoleEnum]
-  ): Promise<Auth | null> {
-    const loginStrategy = this.loginStrategyFactory.createStrategy(role);
-    return loginStrategy.login(email, password);
+    password: string
+  ): Promise<SafeUser> {
+    const user = await this.authRepository.findUserByEmail(email);
+    if (
+      user.status === UserStatus.BLOCKED ||
+      user.status === UserStatus.INACTIVE
+    ) {
+      throw new UnauthorizedError(
+        "No tienes permitido ingresar a la plataforma"
+      );
+    }
+
+    // Verify password
+    const comparePassword = await bcrypt.compare(password, user.passwordHash);
+    if (!comparePassword)
+      throw new UnauthorizedError("Usuario/Contraseña incorrectos");
+
+    return selectSafeUserSchema.parse(user);
+  }
+
+  async loginUser(user: SafeUser): Promise<Auth | null> {
+    const loginStrategy = this.loginStrategyFactory.createStrategy(user.role);
+    return loginStrategy.login(user);
   }
 
   async createRegistrationToken(

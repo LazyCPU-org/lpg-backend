@@ -4,6 +4,8 @@ import { UserRoleEnum } from "../../config/roles";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { LoginStrategy } from "./loginStrategy";
+import { SafeUser } from "../../interfaces/models/userInterface";
+import { InternalError } from "../../utils/custom-errors";
 
 export class OperatorLoginStrategy implements LoginStrategy {
   private authRepository: AuthRepository;
@@ -12,23 +14,18 @@ export class OperatorLoginStrategy implements LoginStrategy {
     this.authRepository = authRepository;
   }
 
-  async login(email: string, password: string): Promise<Auth | null> {
-    // Operator-specific login logic
-    const user = await this.authRepository.findUserByRole(
-      email,
-      UserRoleEnum.OPERATOR
+  async login(user: SafeUser): Promise<Auth | null> {
+    const updateLastLogin = await this.authRepository.updateLastLogin(
+      user.userId
     );
-    if (!user) return null;
-
-    const comparePassword = await bcrypt.compare(password, user.passwordHash);
-    if (!comparePassword) return null;
+    if (!updateLastLogin)
+      throw new InternalError("Error interno, intenta nuevamente");
 
     // Operator-specific validation
-
     const payload = {
       email: user.email,
       role: UserRoleEnum.OPERATOR,
-      permissions: ["process_orders", "manage_inventory"],
+      permissions: user.permissions,
     };
 
     const secretKey = process.env.JWT_SECRET || "your-secret-key";
@@ -36,9 +33,11 @@ export class OperatorLoginStrategy implements LoginStrategy {
 
     return {
       id: user.userId,
+      name: user.name,
       email: user.email,
-      role: UserRoleEnum.OPERATOR,
+      user_role: UserRoleEnum.OPERATOR,
       token,
-    };
+      permissions: user.permissions,
+    } as Auth;
   }
 }

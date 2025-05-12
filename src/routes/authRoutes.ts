@@ -3,9 +3,7 @@ import { AuthServiceInterface } from "../interfaces/services/authServiceInterfac
 import {
   RegisterRequestSchema,
   LoginRequestSchema,
-  RegisterRequest,
   PreRegistrationRequestSchema,
-  PreRegistrationRequest,
 } from "../dtos/authDTO";
 import { UserRoleEnum } from "../config/roles";
 import { asyncHandler } from "../middlewares/async-handler";
@@ -28,15 +26,6 @@ export function buildAuthRouter(authService: AuthServiceInterface) {
    *     tags: [Auth]
    *     summary: Login user
    *     description: Logs in an existing user
-   *     parameters:
-   *       - in: path
-   *         name: role
-   *         schema:
-   *           type: string
-   *           enum: [delivery, operator, admin, superadmin]
-   *           default: delivery
-   *         required: true
-   *         description: Role used to login into the system
    *     requestBody:
    *       required: true
    *       content:
@@ -52,10 +41,6 @@ export function buildAuthRouter(authService: AuthServiceInterface) {
    *                 format: email
    *               password:
    *                 type: string
-   *               role:
-   *                 type: string
-   *                 enum: [delivery, operator, admin, superadmin]
-   *                 default: delivery
    *     responses:
    *       200:
    *         description: Successful login
@@ -66,12 +51,13 @@ export function buildAuthRouter(authService: AuthServiceInterface) {
     "/login",
     asyncHandler(async (req: Request, res: Response) => {
       const loginRequest = LoginRequestSchema.parse(req.body);
-      const roleParam = loginRequest.role;
-      const auth = await authService.loginByRole(
+
+      const safeUser = await authService.verifyLoginCredentials(
         loginRequest.email,
-        loginRequest.password,
-        roleParam
+        loginRequest.password
       );
+
+      const auth = await authService.loginUser(safeUser);
       res.status(200).json(auth);
     })
   );

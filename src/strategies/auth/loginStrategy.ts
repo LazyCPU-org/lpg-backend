@@ -1,5 +1,6 @@
 import { Auth } from "../../interfaces/models/authInterface";
+import { SafeUser } from "../../interfaces/models/userInterface";
 
 export interface LoginStrategy {
-  login(email: string, password: string): Promise<Auth | null>;
+  login(user: SafeUser): Promise<Auth | null>;
 }

@@ -1,15 +1,9 @@
 import { Auth } from "../../interfaces/models/authInterface";
 import { AuthRepository } from "../../repositories/authRepository";
-import { UserRoleEnum } from "../../config/roles";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { LoginStrategy } from "./loginStrategy";
-import { User } from "../../interfaces/models/userInterface";
-import {
-  InternalError,
-  NotFoundError,
-  UnauthorizedError,
-} from "../../utils/custom-errors";
+import { SafeUser } from "../../interfaces/models/userInterface";
+import { InternalError } from "../../utils/custom-errors";
 
 export class SuperadminLoginStrategy implements LoginStrategy {
   private authRepository: AuthRepository;
@@ -18,20 +12,8 @@ export class SuperadminLoginStrategy implements LoginStrategy {
     this.authRepository = authRepository;
   }
 
-  async login(email: string, password: string): Promise<Auth | null> {
-    // Admin-specific login logic
-    const user: User | null = await this.authRepository.findUserByRole(
-      email,
-      UserRoleEnum.SUPERADMIN
-    );
-    if (!user) throw new NotFoundError();
-
-    const comparePassword = await bcrypt.compare(password, user.passwordHash);
-    if (!comparePassword)
-      throw new UnauthorizedError("Invalid provided credentials");
-
+  async login(user: SafeUser): Promise<Auth | null> {
     // From this point, it's assumed the user has provided the correct login information
-
     const updateLastLogin = await this.authRepository.updateLastLogin(
       user.userId
     );
@@ -46,13 +28,13 @@ export class SuperadminLoginStrategy implements LoginStrategy {
     };
 
     const secretKey = process.env.JWT_SECRET || "your-secret-key";
-    const token = jwt.sign(payload, secretKey, { expiresIn: "60min" });
+    const token = jwt.sign(payload, secretKey, { expiresIn: "24h" });
 
     return {
       id: user.userId,
       name: user.name,
       email: user.email,
-      current_role: user.role,
+      user_role: user.role,
       token,
       permissions: user.permissions,
     } as Auth;

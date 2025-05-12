@@ -17,7 +17,11 @@ import { RegisterRequest, RegisterUserRequest } from "../dtos/authDTO";
 import { SudoAdmin, User } from "../interfaces/models/userInterface";
 import { UserRoleEnum } from "../config/roles";
 import { UserStatus } from "../utils/status";
-import { BadRequestError, ExpirationError } from "../utils/custom-errors";
+import {
+  BadRequestError,
+  ExpirationError,
+  NotFoundError,
+} from "../utils/custom-errors";
 
 export interface AuthRepository {
   /* Register methods */
@@ -64,6 +68,7 @@ export interface AuthRepository {
     role: (typeof UserRoleEnum)[keyof typeof UserRoleEnum]
   ): Promise<User | null>;
   findUserById(id: number): Promise<User>;
+  findUserByEmail(email: string): Promise<User>;
   findSudoAdminByUserId(id: number): Promise<SudoAdmin | null>;
 
   /* Method to find user on role-specific tables */
@@ -104,6 +109,19 @@ export class PgAuthRepository implements AuthRepository {
     }
 
     return row;
+  }
+
+  async findUserByEmail(email: string): Promise<User> {
+    const results = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    const result = results[0];
+    if (!result || results.length > 1) {
+      throw new NotFoundError("Usuario no registrado");
+    }
+    return result;
   }
 
   async registerByRole(
