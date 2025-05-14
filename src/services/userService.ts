@@ -3,6 +3,7 @@ import { SafeUser } from "../interfaces/models/userInterface";
 import { UserRepository } from "../repositories/userRepository";
 import { NotFoundError, UnauthorizedError } from "../utils/custom-errors";
 import { Auth } from "../interfaces/models/authInterface";
+import { UserRoleEnum } from "../config/roles";
 
 export class UserService implements UserServiceInterface {
   private userRepository: UserRepository;
@@ -25,8 +26,13 @@ export class UserService implements UserServiceInterface {
     };
   }
 
-  async getUsers(): Promise<SafeUser[]> {
-    return await this.userRepository.getUsers();
+  async getUsers(authUserRole: string): Promise<SafeUser[]> {
+    let users = await this.userRepository.getUsers();
+    // Avoid showing sudo admin data to common users
+    if (authUserRole != UserRoleEnum.SUPERADMIN) {
+      users = users.filter((user) => user.role !== UserRoleEnum.SUPERADMIN);
+    }
+    return users;
   }
 
   async getUserById(id: number): Promise<SafeUser> {

@@ -34,12 +34,11 @@ export function buildUserRouter(userService: UserServiceInterface) {
     isAuthenticated,
     requirePermission(ModuleEnum.USERS, ActionEnum.READ),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      if (!req.user) {
-        res.status(401).json({ message: "Unauthorized" });
-        return;
-      }
-      const userId = parseInt(req.user.id, 10);
-      const users = await userService.getCurrentUser(userId, req.user.role);
+      const userId = parseInt(req.user?.id || "0", 10);
+      const users = await userService.getCurrentUser(
+        userId,
+        req.user?.role || ""
+      );
 
       res.json(users);
     })
@@ -136,14 +135,10 @@ export function buildUserRouter(userService: UserServiceInterface) {
     "/",
     isAuthenticated,
     requirePermission(ModuleEnum.USERS, ActionEnum.MANAGE),
-    asyncHandler(async (req: Request, res: Response) => {
-      const users = await userService.getUsers();
-
-      if (users?.length) {
-        res.json(users);
-      } else {
-        res.status(404).json({ message: "Users not found" });
-      }
+    asyncHandler(async (req: AuthRequest, res: Response) => {
+      const authUserRole = req.user?.role || "";
+      const users = await userService.getUsers(authUserRole);
+      res.json(users);
     })
   );
 
