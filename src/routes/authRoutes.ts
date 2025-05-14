@@ -180,6 +180,8 @@ export function buildAuthRouter(authService: AuthServiceInterface) {
    *           schema:
    *             type: object
    *             required:
+   *               - phone_number
+   *               - last_name
    *               - password
    *             properties:
    *               password:
@@ -213,14 +215,11 @@ export function buildAuthRouter(authService: AuthServiceInterface) {
       if (!auth) {
         return res.status(400).json({
           message: "Failed to complete registration",
-          error: "Invalid or expired token",
+          error: "Token inválido o expirado",
         });
       }
 
-      res.status(201).json({
-        message: "Registration completed successfully",
-        auth,
-      });
+      res.status(201).json(auth);
     })
   );
 

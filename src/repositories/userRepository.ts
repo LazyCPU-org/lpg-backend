@@ -1,32 +1,40 @@
-import { User } from "../interfaces/models/userInterface";
+import {
+  SafeUser,
+  selectSafeUserSchema,
+} from "../interfaces/models/userInterface";
 import { db } from "../db";
 import { users } from "../db/schemas/user-management";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { UserStatus } from "../utils/status";
+import { NotFoundError } from "../utils/custom-errors";
 
 export interface UserRepository {
-  getUsers(): Promise<User[]>;
-  getUserById(id: number): Promise<User | null>;
+  getUsers(): Promise<SafeUser[]>;
+  getUserById(id: number): Promise<SafeUser>;
 }
 
 export class PgUserRepository implements UserRepository {
-  async getUsers(): Promise<User[]> {
-    return await db
-      .select()
-      .from(users)
-      .where(eq(users.status, UserStatus.ACTIVE));
-  }
-
-  async getUserById(id: number): Promise<User | null> {
+  async getUsers(): Promise<SafeUser[]> {
     const results = await db
       .select()
       .from(users)
-      .where(eq(users.userId, id) && eq(users.status, UserStatus.ACTIVE));
+      .where(eq(users.status, UserStatus.ACTIVE))
+      .orderBy(users.userId);
+
+    return results.map((user) => selectSafeUserSchema.parse(user));
+  }
+
+  async getUserById(id: number): Promise<SafeUser> {
+    const results = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.userId, id), eq(users.status, UserStatus.ACTIVE)));
 
     if (!results || results.length === 0) {
-      return null;
+      throw new NotFoundError("Usuario inválido");
     }
 
-    return results[0];
+    const user = results[0];
+    return selectSafeUserSchema.parse(user);
   }
 }

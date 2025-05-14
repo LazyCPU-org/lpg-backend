@@ -1,9 +1,5 @@
 import { UserServiceInterface } from "../interfaces/services/userServiceInterface";
-import {
-  SafeUser,
-  selectSafeUserSchema,
-  User,
-} from "../interfaces/models/userInterface";
+import { SafeUser } from "../interfaces/models/userInterface";
 import { UserRepository } from "../repositories/userRepository";
 import { NotFoundError, UnauthorizedError } from "../utils/custom-errors";
 import { Auth } from "../interfaces/models/authInterface";
@@ -16,7 +12,7 @@ export class UserService implements UserServiceInterface {
   }
 
   // Method used to retrieve user's own information
-  async getCurrentUser(id: number, role: string): Promise<Auth | null> {
+  async getCurrentUser(id: number, role: string): Promise<Auth> {
     const user = await this.userRepository.getUserById(id);
     if (!user) throw new NotFoundError();
     if (user.role != role) throw new UnauthorizedError();
@@ -30,11 +26,10 @@ export class UserService implements UserServiceInterface {
   }
 
   async getUsers(): Promise<SafeUser[]> {
-    const users = await this.userRepository.getUsers();
-    return users.map((user) => selectSafeUserSchema.parse(user));
+    return await this.userRepository.getUsers();
   }
 
-  async getUserById(id: number): Promise<User | null> {
+  async getUserById(id: number): Promise<SafeUser> {
     return this.userRepository.getUserById(id);
   }
 }

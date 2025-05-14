@@ -204,9 +204,12 @@ export class PgAuthRepository implements AuthRepository {
   }
 
   async updateLastLogin(id: number): Promise<boolean | null> {
-    const loginUpdate = await db.update(users).set({
-      lastLogin: new Date(),
-    });
+    const loginUpdate = await db
+      .update(users)
+      .set({
+        lastLogin: new Date(),
+      })
+      .where(eq(users.userId, id));
 
     return loginUpdate != null;
   }
@@ -253,19 +256,19 @@ export class PgAuthRepository implements AuthRepository {
       );
 
     if (rows.length === 0) {
-      throw new BadRequestError("Invalid token");
+      throw new BadRequestError("Token inválido");
     }
 
     const tokenData = rows[0];
 
     // Check if the token has already been used
     if (tokenData.usedAt) {
-      throw new ExpirationError();
+      throw new ExpirationError("El token ya ha sido usado anteriormente");
     }
 
     // Check if the token has expired
     if (new Date() > tokenData.expiresAt) {
-      throw new ExpirationError();
+      throw new ExpirationError("El token ya ha expirado");
     }
 
     // Return the token data

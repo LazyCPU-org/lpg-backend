@@ -38,7 +38,7 @@ export class NotFoundError extends HttpError {
 }
 
 export class ExpirationError extends HttpError {
-  constructor(message: string = "Token invalid or expired") {
+  constructor(message: string = "Invalid data") {
     super(message, 404);
   }
 }
