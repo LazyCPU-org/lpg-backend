@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node dist/server.js",
     "build": "tsc",
-    "dev": "cross-env ENV=local tsx server.ts",
+    "dev": "cross-env ENV=local tsx --watch server.ts",
     "dev:qa": "cross-env ENV=qa tsx server.ts",
     "dev:prod": "cross-env ENV=prod tsx server.ts",
     "start:local": "cross-env ENV=local node dist/server.js",
