@@ -5,7 +5,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
-import users, { rolesEnum } from "./users";
+import { rolesEnum } from "./enums";
 
 // Initial step when register a new user
 export const preRegistration = pgTable("registration_tokens", {
@@ -22,5 +22,7 @@ export const preRegistration = pgTable("registration_tokens", {
     .references(() => users.userId),
   assignedTo: integer("assigned_to").references(() => users.userId),
 });
+
+import { users } from ".";
 
 export default preRegistration;

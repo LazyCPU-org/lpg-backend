@@ -1,10 +1,11 @@
 import preRegistration from "./pre-registration";
 import superadmins from "./superadmins";
-import { rolesEnum, users, statusEnum } from "./users";
+import { users, usersRelations } from "./users";
 import admins from "./admins";
 import operators from "./operators";
 import deliveryPersonnel from "./delivery-personnel";
 import userProfiles from "./user-profiles";
+import { rolesEnum, statusEnum } from "./enums";
 
 export {
   // Base user table
@@ -21,4 +22,6 @@ export {
   // Enums
   rolesEnum,
   statusEnum,
+  // Relations
+  usersRelations,
 };

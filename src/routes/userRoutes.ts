@@ -6,9 +6,9 @@ import {
   requirePermission,
 } from "../middlewares/authorization";
 import { ActionEnum, ModuleEnum } from "../utils/permissions";
-import { UserServiceInterface } from "../interfaces/services/userServiceInterface";
+import { IUserService } from "../services/userService";
 
-export function buildUserRouter(userService: UserServiceInterface) {
+export function buildUserRouter(userService: IUserService) {
   const router = express.Router();
 
   /**

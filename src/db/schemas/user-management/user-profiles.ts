@@ -9,7 +9,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { users } from "./users";
+
+import { relations } from "drizzle-orm";
 
 // Define the user profiles table
 export const userProfiles = pgTable("user_profiles", {
@@ -25,6 +26,13 @@ export const userProfiles = pgTable("user_profiles", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
+  users: one(users),
+}));
+
+// Resolve circular dependency by importing after defining the relations
+import { users } from ".";
 
 // Create Zod schemas for validation
 export const insertUserProfileSchema = createInsertSchema(userProfiles);

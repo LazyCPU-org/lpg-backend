@@ -21,19 +21,8 @@ export class PermissionManager {
       throw new Error(`User with ID ${userId} not found`);
     }
 
-    // Get the user's role-specific record (admin, superadmin, etc.)
-    const roleRecord = await this.getRoleRecordByUserId(userId, user.role);
-    if (!roleRecord) {
-      throw new Error(`Role record for user ${userId} not found`);
-    }
-
     // Get current permissions
-    let currentPermissions: string[] = [];
-    try {
-      currentPermissions = JSON.parse(roleRecord.permissions || "[]");
-    } catch (e) {
-      currentPermissions = [];
-    }
+    let currentPermissions: string[] = user.permissions;
 
     // Add new permissions without duplicates
     const uniquePermissions = [
@@ -58,19 +47,8 @@ export class PermissionManager {
       throw new Error(`User with ID ${userId} not found`);
     }
 
-    // Get the user's role-specific record
-    const roleRecord = await this.getRoleRecordByUserId(userId, user.role);
-    if (!roleRecord) {
-      throw new Error(`Role record for user ${userId} not found`);
-    }
-
     // Get current permissions
-    let currentPermissions: string[] = [];
-    try {
-      currentPermissions = JSON.parse(roleRecord.permissions || "[]");
-    } catch (e) {
-      currentPermissions = [];
-    }
+    let currentPermissions: string[] = user.permissions;
 
     // Remove specified permissions
     const updatedPermissions = currentPermissions.filter(
@@ -107,19 +85,8 @@ export class PermissionManager {
       return false;
     }
 
-    // Get the user's role-specific record
-    const roleRecord = await this.getRoleRecordByUserId(userId, user.role);
-    if (!roleRecord) {
-      return false;
-    }
-
     // Get current permissions
-    let permissions: string[] = [];
-    try {
-      permissions = JSON.parse(roleRecord.permissions || "[]");
-    } catch (e) {
-      permissions = [];
-    }
+    let permissions: string[] = user.permissions;
 
     // Check for wildcard
     if (permissions.includes("*")) {
@@ -148,22 +115,6 @@ export class PermissionManager {
     }
 
     return false;
-  }
-
-  /**
-   * Helper to get the role-specific record (admin, superadmin, etc.)
-   * @private
-   */
-  private async getRoleRecordByUserId(userId: number, role: string) {
-    switch (role) {
-      case "superadmin":
-        return this.authRepository.findSudoAdminByUserId(userId);
-      case "admin":
-        return this.authRepository.findAdminByUserId(userId);
-      // Add other roles as needed
-      default:
-        return null;
-    }
   }
 
   /**

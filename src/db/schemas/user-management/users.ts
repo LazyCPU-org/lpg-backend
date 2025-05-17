@@ -4,25 +4,8 @@ import {
   varchar,
   boolean,
   timestamp,
-  pgEnum,
 } from "drizzle-orm/pg-core";
-import { UserRoleEnum } from "../../../config/roles";
-import { sql } from "drizzle-orm";
-import { UserStatus } from "../../../utils/status";
-
-export const rolesEnum = pgEnum("roles_enum", [
-  UserRoleEnum.SUPERADMIN,
-  UserRoleEnum.ADMIN,
-  UserRoleEnum.OPERATOR,
-  UserRoleEnum.DELIVERY,
-]);
-
-export const statusEnum = pgEnum("status_enum", [
-  UserStatus.ACTIVE,
-  UserStatus.INACTIVE,
-  UserStatus.PENDING,
-  UserStatus.BLOCKED,
-]);
+import { relations, sql } from "drizzle-orm";
 
 // Define the users table
 export const users = pgTable("users", {
@@ -41,5 +24,15 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Define relations
+export const usersRelations = relations(users, ({ one, many }) => ({
+  userProfiles: one(userProfiles),
+  storeAssignments: many(storeAssignments),
+}));
+
+// Resolve circular dependency by importing after defining the relations
+import { storeAssignments } from "../locations";
+import { rolesEnum, statusEnum, userProfiles } from ".";
 
 export default users;

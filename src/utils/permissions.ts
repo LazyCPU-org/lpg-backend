@@ -4,6 +4,7 @@ import { BadRequestError } from "./custom-errors";
 // Define modules
 export enum ModuleEnum {
   USERS = "users",
+  STORES = "stores",
   FINANCES = "finances",
   INVENTORY = "inventory",
   TRANSACTIONS = "transactions",
@@ -40,39 +41,10 @@ export const PermissionSets = {
   // Full access to everything
   SUPERADMIN_PERMISSIONS: ["*"],
 
-  // Module-specific full access permissions
-  FULL_USERS_ACCESS: [
-    createPermission(ModuleEnum.USERS, ActionEnum.CREATE),
-    createPermission(ModuleEnum.USERS, ActionEnum.READ),
-    createPermission(ModuleEnum.USERS, ActionEnum.UPDATE),
-    createPermission(ModuleEnum.USERS, ActionEnum.DELETE),
-  ],
-
-  FULL_FINANCES_ACCESS: [
-    createPermission(ModuleEnum.FINANCES, ActionEnum.CREATE),
-    createPermission(ModuleEnum.FINANCES, ActionEnum.READ),
-    createPermission(ModuleEnum.FINANCES, ActionEnum.UPDATE),
-    createPermission(ModuleEnum.FINANCES, ActionEnum.DELETE),
-  ],
-
-  FULL_INVENTORY_ACCESS: [
-    createPermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
-    createPermission(ModuleEnum.INVENTORY, ActionEnum.READ),
-    createPermission(ModuleEnum.INVENTORY, ActionEnum.UPDATE),
-    createPermission(ModuleEnum.INVENTORY, ActionEnum.DELETE),
-  ],
-
-  FULL_TRANSACTIONS_ACCESS: [
-    createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.CREATE),
-    createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.READ),
-    createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.UPDATE),
-    createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.DELETE),
-    createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.APPROVE),
-  ],
-
   // Role-based permission sets
   ADMIN_PERMISSIONS: [
     createPermission(ModuleEnum.USERS, ActionEnum.MANAGE),
+    createPermission(ModuleEnum.STORES, ActionEnum.MANAGE),
     createPermission(ModuleEnum.INVENTORY, ActionEnum.MANAGE),
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.MANAGE),
     createPermission(ModuleEnum.REPORTS, ActionEnum.READ),
@@ -82,6 +54,7 @@ export const PermissionSets = {
 
   OPERATOR_PERMISSIONS: [
     createPermission(ModuleEnum.USERS, ActionEnum.READ),
+    createPermission(ModuleEnum.STORES, ActionEnum.MANAGE),
     createPermission(ModuleEnum.INVENTORY, ActionEnum.READ),
     createPermission(ModuleEnum.INVENTORY, ActionEnum.UPDATE),
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.CREATE),
@@ -92,6 +65,7 @@ export const PermissionSets = {
 
   DELIVERY_PERMISSIONS: [
     createPermission(ModuleEnum.USERS, ActionEnum.SELFMANAGE),
+    createPermission(ModuleEnum.STORES, ActionEnum.READ),
     createPermission(ModuleEnum.INVENTORY, ActionEnum.SELFMANAGE),
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.SELFMANAGE),
     createPermission(ModuleEnum.SETTINGS, ActionEnum.SELFMANAGE),
@@ -117,7 +91,6 @@ export const PermissionSets = {
 };
 
 export function getPermissionsByRole(role: string) {
-  const permission = [];
   switch (role) {
     case UserRoleEnum.DELIVERY:
       return PermissionSets.DELIVERY_PERMISSIONS;

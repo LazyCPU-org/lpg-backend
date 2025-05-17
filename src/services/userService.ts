@@ -1,11 +1,18 @@
-import { UserServiceInterface } from "../interfaces/services/userServiceInterface";
-import { SafeUser } from "../interfaces/models/userInterface";
+import { SafeUser } from "../dtos/response/userInterface";
 import { UserRepository } from "../repositories/userRepository";
 import { NotFoundError, UnauthorizedError } from "../utils/custom-errors";
-import { Auth } from "../interfaces/models/authInterface";
+import { Auth } from "../dtos/response/authInterface";
 import { UserRoleEnum } from "../config/roles";
 
-export class UserService implements UserServiceInterface {
+export interface IUserService {
+  getUsers(userRole: string): Promise<SafeUser[]>;
+
+  getUserById(id: number): Promise<SafeUser>;
+
+  getCurrentUser(id: number, role: string): Promise<Auth>;
+}
+
+export class UserService implements IUserService {
   private userRepository: UserRepository;
 
   constructor(userRepository: UserRepository) {

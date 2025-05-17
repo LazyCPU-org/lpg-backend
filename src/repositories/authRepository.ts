@@ -1,7 +1,7 @@
-import { SafeUser } from "./../interfaces/models/userInterface";
+import { SafeUser } from "../dtos/response/userInterface";
 import crypto from "node:crypto";
 import bcrypt from "bcrypt";
-import { Auth, PreRegistration } from "../interfaces/models/authInterface";
+import { Auth, PreRegistration } from "../dtos/response/authInterface";
 import { db } from "../db";
 import {
   superadmins,
@@ -13,8 +13,8 @@ import {
   deliveryPersonnel,
 } from "../db/schemas/user-management";
 import { and, eq, isNull } from "drizzle-orm";
-import { RegisterRequest, RegisterUserRequest } from "../dtos/authDTO";
-import { SudoAdmin, User } from "../interfaces/models/userInterface";
+import { RegisterRequest, RegisterUserRequest } from "../dtos/request/authDTO";
+import { SudoAdmin, User } from "../dtos/response/userInterface";
 import { UserRoleEnum } from "../config/roles";
 import { UserStatus } from "../utils/status";
 import {

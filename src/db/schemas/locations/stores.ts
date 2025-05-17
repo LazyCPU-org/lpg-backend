@@ -1,22 +1,31 @@
-import { pgTable, serial, varchar, text, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
+import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  serial,
+  varchar,
+  text,
+  timestamp,
+  decimal,
+} from "drizzle-orm/pg-core";
 
 // Define the stores table
 export const stores = pgTable("stores", {
   storeId: serial("store_id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   address: text("address").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
   phoneNumber: varchar("phone_number", { length: 15 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Create Zod schemas for validation
-export const insertStoreSchema = createInsertSchema(stores);
-export const selectStoreSchema = createSelectSchema(stores);
+// Define relations
+export const storesRelations = relations(stores, ({ many }) => ({
+  assignments: many(storeAssignments),
+}));
 
-export type Store = z.infer<typeof selectStoreSchema>;
-export type NewStore = z.infer<typeof insertStoreSchema>;
+// Resolve circular dependency by importing after defining the relations
+import { storeAssignments } from ".";
 
 export default stores;

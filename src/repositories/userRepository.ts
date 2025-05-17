@@ -1,7 +1,4 @@
-import {
-  SafeUser,
-  selectSafeUserSchema,
-} from "../interfaces/models/userInterface";
+import { SafeUser, selectSafeUserSchema } from "../dtos/response/userInterface";
 import { db } from "../db";
 import { users } from "../db/schemas/user-management";
 import { and, eq } from "drizzle-orm";

@@ -1,7 +1,14 @@
-import stores from './stores';
-import storeAssignments from './store-assignments';
+import stores, { storesRelations } from "./stores";
+import storeAssignments, {
+  storeAssignmentsRelations,
+} from "./store-assignments";
 
 export {
+  // Base tables
   stores,
-  storeAssignments
+  storeAssignments,
+
+  // Relations
+  storesRelations,
+  storeAssignmentsRelations,
 };

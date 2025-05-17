@@ -1,21 +1,41 @@
-import { Auth, PreRegistration } from "../interfaces/models/authInterface";
+import { Auth, PreRegistration } from "../dtos/response/authInterface";
 import { AuthRepository } from "../repositories/authRepository";
-import { PreRegistrationRequest, RegisterRequest } from "../dtos/authDTO";
+import {
+  PreRegistrationRequest,
+  RegisterRequest,
+} from "../dtos/request/authDTO";
 import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
 
-import { AuthServiceInterface } from "../interfaces/services/authServiceInterface";
 import { getPermissionsByRole } from "../utils/permissions";
-import {
-  SafeUser,
-  selectSafeUserSchema,
-} from "../interfaces/models/userInterface";
+import { SafeUser, selectSafeUserSchema } from "../dtos/response/userInterface";
 import { UserStatus } from "../utils/status";
 import { UnauthorizedError } from "../utils/custom-errors";
 
 import bcrypt from "bcrypt";
 
-export class AuthService implements AuthServiceInterface {
+export interface IAuthService {
+  verifyLoginCredentials(email: string, password: string): Promise<SafeUser>;
+
+  loginUser(user: SafeUser): Promise<Auth | null>;
+
+  // New methods for token-based registration
+  createRegistrationToken(
+    userData: PreRegistrationRequest,
+    createdBy: number,
+    expiresInHours?: number
+  ): Promise<PreRegistration>;
+
+  verifyRegistrationToken(token: string): Promise<PreRegistration>;
+
+  completeTokenRegistration(
+    token: string,
+    preRegistrationData: PreRegistration,
+    registerRequest: RegisterRequest
+  ): Promise<Auth>;
+}
+
+export class AuthService implements IAuthService {
   private authRepository: AuthRepository;
   private registrationStrategyFactory: RegistrationStrategyFactory;
   private loginStrategyFactory: LoginStrategyFactory;

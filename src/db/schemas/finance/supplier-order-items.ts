@@ -2,7 +2,7 @@ import { pgTable, serial, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { supplierOrders } from "./supplier-orders";
-import { tankTypes } from "../inventory/tank-type";
+import { tankType } from "../inventory/tank-type";
 
 export const supplierOrderItems = pgTable("supplier_order_items", {
   itemId: serial("item_id").primaryKey(),
@@ -11,7 +11,7 @@ export const supplierOrderItems = pgTable("supplier_order_items", {
     .references(() => supplierOrders.orderId),
   tankTypeId: integer("tank_type_id")
     .notNull()
-    .references(() => tankTypes.typeId),
+    .references(() => tankType.typeId),
   fullTanksOrdered: integer("full_tanks_ordered").notNull(),
   emptyTanksReturned: integer("empty_tanks_returned").notNull(),
   createdAt: timestamp("created_at").defaultNow(),

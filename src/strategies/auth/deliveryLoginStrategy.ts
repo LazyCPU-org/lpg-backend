@@ -1,10 +1,10 @@
-import { Auth } from "../../interfaces/models/authInterface";
+import { Auth } from "../../dtos/response/authInterface";
 import { AuthRepository } from "../../repositories/authRepository";
 import { UserRoleEnum } from "../../config/roles";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { LoginStrategy } from "./loginStrategy";
-import { SafeUser } from "../../interfaces/models/userInterface";
+import { SafeUser } from "../../dtos/response/userInterface";
 import { InternalError } from "../../utils/custom-errors";
 
 export class DeliveryLoginStrategy implements LoginStrategy {

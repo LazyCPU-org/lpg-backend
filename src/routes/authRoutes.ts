@@ -1,10 +1,9 @@
 import express, { Request, Response } from "express";
-import { AuthServiceInterface } from "../interfaces/services/authServiceInterface";
 import {
   RegisterRequestSchema,
   LoginRequestSchema,
   PreRegistrationRequestSchema,
-} from "../dtos/authDTO";
+} from "../dtos/request/authDTO";
 import { UserRoleEnum } from "../config/roles";
 import { asyncHandler } from "../middlewares/async-handler";
 import {
@@ -13,8 +12,9 @@ import {
 } from "../middlewares/authorization";
 import { ModuleEnum, ActionEnum } from "../utils/permissions";
 import { BadRequestError } from "../utils/custom-errors";
+import { IAuthService } from "../services/authService";
 
-export function buildAuthRouter(authService: AuthServiceInterface) {
+export function buildAuthRouter(authService: IAuthService) {
   const router = express.Router();
 
   // Login routes

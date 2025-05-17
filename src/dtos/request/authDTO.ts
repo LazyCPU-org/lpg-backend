@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRoleEnum } from "../config/roles";
+import { UserRoleEnum } from "../../config/roles";
 
 // Pre-Registration model validation
 
