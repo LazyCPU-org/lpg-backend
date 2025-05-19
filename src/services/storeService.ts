@@ -11,7 +11,8 @@ export interface IStoreService {
     address: string,
     latitude: string,
     longitude: string,
-    phoneNumber: string
+    phoneNumber: string,
+    mapsUrl: string
   ): Promise<Store>;
   createNewStoreAssignment(
     storeId: number,
@@ -45,7 +46,8 @@ export class StoreService implements IStoreService {
     address: string,
     latitude: string,
     longitude: string,
-    phoneNumber: string
+    phoneNumber: string,
+    mapsUrl: string
   ): Promise<Store> {
     // Check for duplicate store names
     const existingStore = await this.storeRepository.findByName(name);
@@ -58,7 +60,8 @@ export class StoreService implements IStoreService {
       address,
       latitude,
       longitude,
-      phoneNumber
+      phoneNumber,
+      mapsUrl
     );
   }
 

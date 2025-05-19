@@ -119,6 +119,8 @@ export function buildStoreRouter(storeService: IStoreService) {
    *                 type: string
    *               phoneNumber:
    *                 type: string
+   *               mapsUrl:
+   *                 type: string
    *     responses:
    *       200:
    *         description: Store created successfully
@@ -140,7 +142,8 @@ export function buildStoreRouter(storeService: IStoreService) {
         storeData.address,
         storeData.latitude,
         storeData.longitude,
-        storeData.phoneNumber
+        storeData.phoneNumber,
+        storeData.mapsUrl
       );
       res.json(store);
     })

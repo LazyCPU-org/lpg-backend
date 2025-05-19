@@ -28,7 +28,11 @@ export const userProfiles = pgTable("user_profiles", {
 });
 
 export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
-  users: one(users),
+  user: one(users, {
+    relationName: "user",
+    fields: [userProfiles.userId],
+    references: [users.userId],
+  }),
 }));
 
 // Resolve circular dependency by importing after defining the relations

@@ -13,6 +13,7 @@ export const stores = pgTable("stores", {
   storeId: serial("store_id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   address: text("address").notNull(),
+  mapsUrl: text("mapsUrl"),
   latitude: decimal("latitude", { precision: 10, scale: 7 }),
   longitude: decimal("longitude", { precision: 10, scale: 7 }),
   phoneNumber: varchar("phone_number", { length: 15 }),
@@ -22,7 +23,7 @@ export const stores = pgTable("stores", {
 
 // Define relations
 export const storesRelations = relations(stores, ({ many }) => ({
-  assignments: many(storeAssignments),
+  assignedUsers: many(storeAssignments),
 }));
 
 // Resolve circular dependency by importing after defining the relations

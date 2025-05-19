@@ -9,6 +9,7 @@ export const CreateStoreRequestSchema = z.object({
   latitude: z.string(),
   longitude: z.string(),
   phoneNumber: z.string(),
+  mapsUrl: z.string(),
 });
 
 export const CreateStoreAssignmentRequestSchema = z.object({

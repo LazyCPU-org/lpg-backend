@@ -2,10 +2,6 @@ import { z } from "zod";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { storeAssignments, stores } from "../../db/schemas/locations";
 
-// Create Zod schemas for validation
-export const InsertStoreSchema = createInsertSchema(stores);
-const SelectStoreSchema = createSelectSchema(stores);
-
 /**
  * @openapi
  * components:
@@ -48,6 +44,9 @@ const SelectStoreSchema = createSelectSchema(stores);
  *           type: integer
  *           description: The user ID
  */
+export const InsertStoreSchema = createInsertSchema(stores);
+const SelectStoreSchema = createSelectSchema(stores);
+
 export type Store = z.infer<typeof SelectStoreSchema>;
 export type NewStore = z.infer<typeof InsertStoreSchema>;
 

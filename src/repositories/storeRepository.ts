@@ -4,10 +4,15 @@ import { storeAssignments, stores, users } from "../db/schemas";
 import { Store, StoreAssignment } from "../dtos/response/storeInterface";
 import { InternalError, NotFoundError } from "../utils/custom-errors";
 
+// Define a specific return type for findById that includes relations
+interface StoreWithRelations extends Store {
+  assignedUsers: StoreAssignment[];
+}
+
 export interface StoreRepository {
   // Find
   find(): Promise<Store[]>;
-  findById(storeId: number): Promise<Store>;
+  findById(storeId: number): Promise<StoreWithRelations>;
   findByName(name: string): Promise<Store | undefined>;
 
   // Create
@@ -16,7 +21,8 @@ export interface StoreRepository {
     address: string,
     latitude: string,
     longitude: string,
-    phoneNumber: string
+    phoneNumber: string,
+    mapsUrl: string
   ): Promise<Store>;
   createAssignment(storeId: number, userId: number): Promise<StoreAssignment>;
 
@@ -29,36 +35,57 @@ export interface StoreRepository {
 }
 
 export class PgStoreRepository implements StoreRepository {
-  async findById(storeId: number): Promise<Store> {
-    const storeResult = await db.query.stores.findFirst({
+  async findById(storeId: number): Promise<StoreWithRelations> {
+    // First, get the store without trying to load all relations
+    const storeBasic = await db.query.stores.findFirst({
       where: eq(stores.storeId, storeId),
-      with: {
-        assignments: {
-          with: {
-            user: {
-              with: {
-                userProfiles: {
-                  columns: {
-                    firstName: true,
-                    lastName: true,
+    });
+
+    if (!storeBasic) {
+      throw new NotFoundError("Id de tienda inválido");
+    }
+
+    // Check if the store has any assignments
+    const hasAssignments = await db.query.storeAssignments.findFirst({
+      where: eq(storeAssignments.storeId, storeId),
+    });
+
+    let storeResult;
+    if (hasAssignments) {
+      // Only try to load all nested relations if assignments exist
+      storeResult = await db.query.stores.findFirst({
+        where: eq(stores.storeId, storeId),
+        with: {
+          assignedUsers: {
+            with: {
+              user: {
+                with: {
+                  userProfile: {
+                    columns: {
+                      firstName: true,
+                      lastName: true,
+                      entryDate: true,
+                    },
                   },
                 },
-              },
-              columns: {
-                userId: true,
+                columns: {
+                  userId: true,
+                },
               },
             },
           },
         },
-      },
-    });
-
-    if (!storeResult) {
-      throw new NotFoundError("Id de tienda inválido");
+      });
+      return storeResult as StoreWithRelations;
+    } else {
+      // If no assignments, return the basic store with empty assignments
+      return {
+        ...storeBasic,
+        assignedUsers: [],
+      } as StoreWithRelations;
     }
-
-    return storeResult;
   }
+
   async find(): Promise<Store[]> {
     return await db.select().from(stores);
   }
@@ -74,7 +101,8 @@ export class PgStoreRepository implements StoreRepository {
     address: string,
     latitude: string,
     longitude: string,
-    phoneNumber: string
+    phoneNumber: string,
+    mapsUrl: string
   ): Promise<Store> {
     const results = await db
       .insert(stores)
@@ -84,6 +112,7 @@ export class PgStoreRepository implements StoreRepository {
         latitude,
         longitude,
         phoneNumber,
+        mapsUrl,
       })
       .returning();
     if (!results) {

@@ -27,5 +27,5 @@ export const defineRoutes = function (app: Express, container: Container) {
   // Mount routers
   app.use(`${v1BasePath}/auth`, authRouter);
   app.use(`${v1BasePath}/users`, userRouter);
-  app.use(`${v1BasePath}/store`, storeRouter);
+  app.use(`${v1BasePath}/stores`, storeRouter);
 };

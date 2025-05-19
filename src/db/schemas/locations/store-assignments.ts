@@ -26,11 +26,13 @@ export const storeAssignmentsRelations = relations(
   ({ one }) => ({
     // Define the one-to-many relationship with the user
     user: one(users, {
+      relationName: "user",
       fields: [storeAssignments.userId],
       references: [users.userId],
     }),
     // Define the one-to-many relationship with the store
     store: one(stores, {
+      relationName: "store",
       fields: [storeAssignments.storeId],
       references: [stores.storeId],
     }),
