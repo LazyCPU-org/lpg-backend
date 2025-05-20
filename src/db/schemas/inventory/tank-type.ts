@@ -1,10 +1,11 @@
+import { relations } from "drizzle-orm";
 import {
+  decimal,
   pgTable,
   serial,
-  varchar,
   text,
-  decimal,
   timestamp,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -28,6 +29,11 @@ export const tankType = pgTable("tank_type", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Define relations
+export const tankTypeRelations = relations(tankType, ({ many }) => ({
+  assignmentTanks: many(assignmentTanks),
+}));
+
 // Create Zod schemas for validation
 export const insertTankTypeSchema = createInsertSchema(tankType);
 export const selectTankTypeSchema = createSelectSchema(tankType);
@@ -36,3 +42,6 @@ export type TankType = z.infer<typeof selectTankTypeSchema>;
 export type NewTankType = z.infer<typeof insertTankTypeSchema>;
 
 export default tankType;
+
+// Import after relations to avoid circular dependency
+import { assignmentTanks } from "./inventory-assignments-tanks";

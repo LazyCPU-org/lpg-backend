@@ -1,17 +1,17 @@
-import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import express, { NextFunction, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
-import { swaggerSpec } from "./src/config/swagger";
-import { defineRoutes } from "./src/routes";
 import { createContainer } from "./src/config/di";
-import {
-  loadEnvironmentConfig,
-  getServerConfig,
-  validateEnv,
-} from "./src/utils/config";
+import { swaggerSpec } from "./src/config/swagger";
 import { errorHandler } from "./src/middlewares/error-handler";
 import { responseFormatter } from "./src/middlewares/response-formatter";
 import { AppError } from "./src/middlewares/types";
+import { defineRoutes } from "./src/routes";
+import {
+  getServerConfig,
+  loadEnvironmentConfig,
+  validateEnv,
+} from "./src/utils/config";
 
 export function createApp() {
   // Load environment configuration

@@ -1,10 +1,17 @@
-import { Store, StoreAssignment } from "../dtos/response/storeInterface";
+import {
+  Store,
+  StoreAssignment,
+  StoreRelationOptions,
+} from "../dtos/response/storeInterface";
 import { StoreRepository } from "../repositories/storeRepository";
 import { BadRequestError } from "../utils/custom-errors";
 
 export interface IStoreService {
   findStoreList(): Promise<Store[]>;
-  findStoreById(storeId: number): Promise<Store>;
+  findStoreById(
+    storeId: number,
+    relations?: StoreRelationOptions
+  ): Promise<Store>;
 
   createNewStore(
     name: string,
@@ -37,8 +44,11 @@ export class StoreService implements IStoreService {
     return await this.storeRepository.find();
   }
 
-  async findStoreById(storeId: number): Promise<Store> {
-    return await this.storeRepository.findById(storeId);
+  async findStoreById(
+    storeId: number,
+    relations: StoreRelationOptions = {}
+  ): Promise<Store> {
+    return await this.storeRepository.findById(storeId, relations);
   }
 
   async createNewStore(

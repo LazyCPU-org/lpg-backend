@@ -1,18 +1,32 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db";
-import { storeAssignments, stores, users } from "../db/schemas";
-import { Store, StoreAssignment } from "../dtos/response/storeInterface";
-import { InternalError, NotFoundError } from "../utils/custom-errors";
-
-// Define a specific return type for findById that includes relations
-interface StoreWithRelations extends Store {
-  assignedUsers: StoreAssignment[];
-}
+import {
+  inventoryAssignments,
+  storeAssignments,
+  stores,
+  users,
+} from "../db/schemas";
+import {
+  Store,
+  StoreAssignment,
+  StoreBasic,
+  StoreRelationOptions,
+  StoreWithInventory,
+  StoreWithUsers,
+} from "../dtos/response/storeInterface";
+import {
+  ConflictError,
+  InternalError,
+  NotFoundError,
+} from "../utils/custom-errors";
 
 export interface StoreRepository {
   // Find
   find(): Promise<Store[]>;
-  findById(storeId: number): Promise<StoreWithRelations>;
+  findById(
+    storeId: number,
+    relations: StoreRelationOptions
+  ): Promise<StoreBasic | StoreWithUsers | StoreWithInventory>;
   findByName(name: string): Promise<Store | undefined>;
 
   // Create
@@ -35,8 +49,11 @@ export interface StoreRepository {
 }
 
 export class PgStoreRepository implements StoreRepository {
-  async findById(storeId: number): Promise<StoreWithRelations> {
-    // First, get the store without trying to load all relations
+  async findById(
+    storeId: number,
+    relations: StoreRelationOptions = {}
+  ): Promise<StoreBasic | StoreWithUsers | StoreWithInventory> {
+    // Basic store fetch
     const storeBasic = await db.query.stores.findFirst({
       where: eq(stores.storeId, storeId),
     });
@@ -45,45 +62,102 @@ export class PgStoreRepository implements StoreRepository {
       throw new NotFoundError("Id de tienda inválido");
     }
 
-    // Check if the store has any assignments
+    // Return basic store if no users relation requested
+    if (!relations.users) {
+      return storeBasic;
+    }
+
+    // Check if store has assignments before loading relations
     const hasAssignments = await db.query.storeAssignments.findFirst({
       where: eq(storeAssignments.storeId, storeId),
     });
 
-    let storeResult;
-    if (hasAssignments) {
-      // Only try to load all nested relations if assignments exist
-      storeResult = await db.query.stores.findFirst({
-        where: eq(stores.storeId, storeId),
-        with: {
-          assignedUsers: {
-            with: {
-              user: {
-                with: {
-                  userProfile: {
-                    columns: {
-                      firstName: true,
-                      lastName: true,
-                      entryDate: true,
-                    },
+    if (!hasAssignments) {
+      return {
+        ...storeBasic,
+        assignedUsers: [],
+      } as StoreWithUsers;
+    }
+
+    // Current date for inventory filter
+    const today = new Date().toISOString().split("T")[0];
+
+    // Build query with user relations
+    let query = {
+      where: eq(stores.storeId, storeId),
+      with: {
+        assignedUsers: {
+          with: {
+            user: {
+              with: {
+                userProfile: {
+                  columns: {
+                    firstName: true,
+                    lastName: true,
+                    entryDate: true,
                   },
                 },
-                columns: {
-                  userId: true,
-                },
+              },
+              columns: {
+                userId: true,
               },
             },
           },
         },
-      });
-      return storeResult as StoreWithRelations;
-    } else {
-      // If no assignments, return the basic store with empty assignments
+      },
+    };
+
+    // If inventory relation is requested, add a sub-query to get only the current day's inventory
+    if (relations.inventory) {
+      // First, we get the store with assigned users
+      const storeWithUsers: StoreWithUsers | undefined =
+        await db.query.stores.findFirst(query);
+
+      if (!storeWithUsers) {
+        return {
+          ...storeBasic,
+          assignedUsers: [],
+        } as StoreWithUsers;
+      }
+
+      // Then for each assigned user, fetch their current inventory (if it exists)
+      const enrichedAssignedUsers = await Promise.all(
+        storeWithUsers.assignedUsers.map(async (assignment) => {
+          // Find today's inventory for this assignment
+          const currentInventory =
+            await db.query.inventoryAssignments.findFirst({
+              where: and(
+                eq(inventoryAssignments.assignmentId, assignment.assignmentId),
+                eq(inventoryAssignments.assignmentDate, today)
+              ),
+              with: {
+                assignedByUser: {
+                  columns: {
+                    userId: true,
+                    name: true,
+                  },
+                },
+              },
+            });
+
+          // Return assignment with current inventory (if exists)
+          return {
+            ...assignment,
+            currentInventory: currentInventory || undefined,
+          };
+        })
+      );
+
+      // Return store with users and their current inventory
       return {
-        ...storeBasic,
-        assignedUsers: [],
-      } as StoreWithRelations;
+        ...storeWithUsers,
+        assignedUsers: enrichedAssignedUsers,
+      } as StoreWithInventory;
     }
+
+    // Just return store with users (no inventory)
+    const storeResult = await db.query.stores.findFirst(query);
+    return storeResult as StoreWithUsers;
   }
 
   async find(): Promise<Store[]> {
@@ -154,6 +228,13 @@ export class PgStoreRepository implements StoreRepository {
       where: eq(users.userId, userId),
     });
     if (!user) throw new NotFoundError("Usuario no válido");
+
+    // We're making sure
+    const userAssigned = await db.query.storeAssignments.findFirst({
+      where: eq(storeAssignments.userId, userId),
+    });
+
+    if (userAssigned) throw new ConflictError("Usuario ya asignado a tienda");
 
     const result = await db
       .insert(storeAssignments)

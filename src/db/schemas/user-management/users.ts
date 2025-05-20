@@ -1,11 +1,11 @@
+import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
   pgTable,
   serial,
-  varchar,
-  boolean,
   timestamp,
+  varchar,
 } from "drizzle-orm/pg-core";
-import { relations, sql } from "drizzle-orm";
 
 // Define the users table
 export const users = pgTable("users", {
@@ -33,10 +33,19 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [userProfiles.userId],
   }),
   storeAssignments: many(storeAssignments),
+  // Relations for inventory management
+  tankTransactions: many(tankTransactions),
+  itemTransactions: many(itemTransactions),
+  assignedInventories: many(inventoryAssignments, {
+    relationName: "assignedByUser",
+  }),
 }));
 
 // Resolve circular dependency by importing after defining the relations
-import { storeAssignments } from "../locations";
 import { rolesEnum, statusEnum, userProfiles } from ".";
+import { inventoryAssignments } from "../inventory/inventory-assignments";
+import { itemTransactions } from "../inventory/item-transactions";
+import { tankTransactions } from "../inventory/tank-transactions";
+import { storeAssignments } from "../locations";
 
 export default users;

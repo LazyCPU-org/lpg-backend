@@ -1,12 +1,11 @@
+import { relations } from "drizzle-orm";
 import {
+  decimal,
+  integer,
   pgTable,
   serial,
-  integer,
   timestamp,
-  decimal,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 import { inventoryAssignments } from "./inventory-assignments";
 import { tankType } from "./tank-type";
 
@@ -15,7 +14,7 @@ import { tankType } from "./tank-type";
  */
 export const assignmentTanks = pgTable("assignment_tanks", {
   assignmentTankId: serial("assignment_tank_id").primaryKey(),
-  assignmentId: integer("assignment_id")
+  inventoryId: integer("inventory_id")
     .notNull()
     .references(() => inventoryAssignments.inventoryId),
   tankTypeId: integer("tank_type_id")
@@ -34,11 +33,23 @@ export const assignmentTanks = pgTable("assignment_tanks", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Create Zod schemas for validation
-export const insertInventoryTankSchema = createInsertSchema(assignmentTanks);
-export const selectInventoryTankSchema = createSelectSchema(assignmentTanks);
-
-export type InventoryTank = z.infer<typeof selectInventoryTankSchema>;
-export type NewInventoryTank = z.infer<typeof insertInventoryTankSchema>;
+// Define relations
+export const assignmentTanksRelations = relations(
+  assignmentTanks,
+  ({ one, many }) => ({
+    inventoryAssignment: one(inventoryAssignments, {
+      fields: [assignmentTanks.inventoryId],
+      references: [inventoryAssignments.inventoryId],
+    }),
+    tankType: one(tankType, {
+      fields: [assignmentTanks.tankTypeId],
+      references: [tankType.typeId],
+    }),
+    transactions: many(tankTransactions), // Will be added in index.ts due to circular dependency
+  })
+);
 
 export default assignmentTanks;
+
+// Import after relations to avoid circular dependency
+import { tankTransactions } from "./tank-transactions";

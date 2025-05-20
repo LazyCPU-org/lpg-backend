@@ -119,29 +119,29 @@ When a delivery is completed, full tanks are given to customers and empty tanks 
 ## Implementation Checklist
 
 ### Phase 1: Core Assignment Management
-- [ ] Database Schema Implementation
-  - [ ] Create inventory_assignments table
-  - [ ] Create assignment_tanks table
-  - [ ] Create assignment_items table
-  - [ ] Set up proper relationships and constraints
-  - [ ] Implement indexes for performance
+- [x] Database Schema Implementation
+  - [x] Create inventory_assignments table
+  - [x] Create assignment_tanks table
+  - [x] Create assignment_items table
+  - [x] Set up proper relationships and constraints
+  - [x] Implement indexes for performance
 
-- [ ] Assignment Creation
-  - [ ] Implement `POST /api/inventory/assignments` endpoint
-  - [ ] Create database functions for assignment creation
-  - [ ] Implement validation for user-store relationship
-  - [ ] Setup initial tank and item assignment
+- [x] Assignment Creation
+  - [x] Implement `POST /api/inventory/assignments` endpoint
+  - [x] Create database functions for assignment creation
+  - [x] Implement validation for user-store relationship
+  - [x] Setup initial tank and item assignment
 
-- [ ] Assignment Retrieval
-  - [ ] Implement `GET /api/inventory/assignments/:id` endpoint
-  - [ ] Create database queries with proper joins
-  - [ ] Add filtering support by user, store, and date
-  - [ ] Implement `GET /api/inventory/assignments` with filters
+- [x] Assignment Retrieval
+  - [x] Implement `GET /api/inventory/assignments/:id` endpoint
+  - [x] Create database queries with proper joins
+  - [x] Add filtering support by user, store, and date
+  - [x] Implement `GET /api/inventory/assignments` with filters
 
-- [ ] Basic Status Transitions
-  - [ ] Implement `PATCH /api/inventory/assignments/:id/status` endpoint
-  - [ ] Add validation for status transitions
-  - [ ] Create status update database functions
+- [x] Basic Status Transitions
+  - [x] Implement `PATCH /api/inventory/assignments/:id/status` endpoint
+  - [x] Add validation for status transitions
+  - [x] Create status update database functions
 
 ### Phase 2: Transaction System
 - [ ] Transaction Recording - Tanks

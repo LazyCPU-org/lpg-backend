@@ -1,21 +1,29 @@
+import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
+import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import {
   AuthRepository,
   PgAuthRepository,
 } from "../repositories/authRepository";
-import { AuthService, IAuthService } from "../services/authService";
-import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
-import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import {
-  PgUserRepository,
-  UserRepository,
-} from "../repositories/userRepository";
-import { PermissionManager } from "../utils/permission-actions";
-import { IUserService, UserService } from "../services/userService";
+  InventoryAssignmentRepository,
+  PgInventoryAssignmentRepository,
+} from "../repositories/inventoryAssignmentRepository";
 import {
   PgStoreRepository,
   StoreRepository,
 } from "../repositories/storeRepository";
+import {
+  PgUserRepository,
+  UserRepository,
+} from "../repositories/userRepository";
+import { AuthService, IAuthService } from "../services/authService";
+import {
+  IInventoryAssignmentService,
+  InventoryAssignmentService,
+} from "../services/inventoryAssignmentService";
 import { IStoreService, StoreService } from "../services/storeService";
+import { IUserService, UserService } from "../services/userService";
+import { PermissionManager } from "../utils/permission-actions";
 
 export interface Container {
   // Repositories
@@ -32,6 +40,10 @@ export interface Container {
   loginStrategyFactory: LoginStrategyFactory;
   registrationStrategyFactory: RegistrationStrategyFactory;
   permissionManager: PermissionManager;
+
+  // Inventory module
+  inventoryAssignmentRepository: InventoryAssignmentRepository;
+  inventoryAssignmentService: IInventoryAssignmentService;
 }
 
 export function createContainer(): Container {
@@ -54,6 +66,12 @@ export function createContainer(): Container {
   const userService = new UserService(userRepository);
   const storeService = new StoreService(storeRepository);
 
+  // Create inventory module dependencies
+  const inventoryAssignmentRepository = new PgInventoryAssignmentRepository();
+  const inventoryAssignmentService = new InventoryAssignmentService(
+    inventoryAssignmentRepository
+  );
+
   // Return container with all dependencies
   return {
     // Utils
@@ -70,5 +88,8 @@ export function createContainer(): Container {
     authService,
     userService,
     storeService,
+
+    inventoryAssignmentRepository,
+    inventoryAssignmentService,
   };
 }

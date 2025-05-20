@@ -1,28 +1,52 @@
-import tankType from "./tank-type";
-import inventoryItem from "./inventory-item";
-import { itemTransactions, itemTransactionTypeEnum } from "./item-transactions";
-import { tankTransactions, tankTransactionTypeEnum } from "./tank-transactions";
 import {
+  AssignmentStatusEnum,
   inventoryAssignments,
+  inventoryAssignmentsRelations,
   inventoryStatusEnum,
 } from "./inventory-assignments";
-import inventoryAssignmentTanks from "./inventory-assignments-tanks";
-import inventoryAssignmentItems from "./inventory-assignments-items";
+import {
+  assignmentItems,
+  assignmentItemsRelations,
+} from "./inventory-assignments-items";
+import {
+  assignmentTanks,
+  assignmentTanksRelations,
+} from "./inventory-assignments-tanks";
+import { inventoryItem, inventoryItemRelations } from "./inventory-item";
+import {
+  itemTransactions,
+  itemTransactionsRelations,
+  itemTransactionTypeEnum,
+} from "./item-transactions";
+import {
+  tankTransactions,
+  tankTransactionsRelations,
+  tankTransactionTypeEnum,
+} from "./tank-transactions";
+import { tankType, tankTypeRelations } from "./tank-type";
 
 export {
-  // Base types
-  tankType,
-  inventoryItem,
-  // Transactions
-  itemTransactions,
-  tankTransactions,
+  assignmentItems,
+  assignmentItemsRelations,
+  AssignmentStatusEnum,
+  // Inventory Assignation
+  assignmentTanks,
+  assignmentTanksRelations,
   // Inventory Status
   inventoryAssignments,
-  // Inventory Assignation
-  inventoryAssignmentTanks,
-  inventoryAssignmentItems,
+  inventoryAssignmentsRelations,
+  inventoryItem,
+  inventoryItemRelations,
   //Enums
   inventoryStatusEnum,
+  // Transactions
+  itemTransactions,
+  itemTransactionsRelations,
   itemTransactionTypeEnum,
+  tankTransactions,
+  tankTransactionsRelations,
   tankTransactionTypeEnum,
+  // Base types
+  tankType,
+  tankTypeRelations,
 };

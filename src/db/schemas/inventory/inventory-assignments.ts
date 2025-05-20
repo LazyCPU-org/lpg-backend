@@ -1,17 +1,17 @@
+import { relations } from "drizzle-orm";
 import {
-  pgTable,
-  integer,
-  text,
-  date,
-  timestamp,
   boolean,
+  date,
+  integer,
   pgEnum,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
-import { users } from "../user-management/users";
 import { storeAssignments } from "../locations";
-import { serial } from "drizzle-orm/pg-core";
+import { users } from "../user-management/users";
 
 // Define status enum values
 export const AssignmentStatusEnum = {
@@ -31,50 +31,55 @@ export const inventoryStatusEnum = pgEnum("assignment_status_check", [
  * Defines the association concept for the assignment's (user and store) inventory.
  * This table will hold information about the consolidation of inventory given a date
  */
-export const inventoryAssignments = pgTable("inventory_assignments", {
-  inventoryId: serial("inventory_id").primaryKey(),
-  assignmentId: integer("assignment_id")
-    .notNull()
-    .references(() => storeAssignments.assignmentId),
-  assignmentDate: date("assignment_date").notNull(),
-  assignedBy: integer("assigned_by")
-    .notNull()
-    .references(() => users.userId),
-  status: inventoryStatusEnum().default(AssignmentStatusEnum.CREATED),
-  autoAssignment: boolean().default(false),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Create Zod schemas for validation
-export const insertInventoryAssignmentSchema = createInsertSchema(
-  inventoryAssignments,
+export const inventoryAssignments = pgTable(
+  "inventory_assignments",
   {
-    status: z.enum([
-      AssignmentStatusEnum.ASSIGNED,
-      AssignmentStatusEnum.CREATED,
-      AssignmentStatusEnum.VALIDATED,
-    ]),
+    inventoryId: serial("inventory_id").primaryKey(),
+    assignmentId: integer("assignment_id")
+      .notNull()
+      .references(() => storeAssignments.assignmentId),
+    assignmentDate: date("assignment_date", { mode: "string" })
+      .defaultNow()
+      .notNull(),
+    assignedBy: integer("assigned_by")
+      .notNull()
+      .references(() => users.userId),
+    status: inventoryStatusEnum().default(AssignmentStatusEnum.CREATED),
+    autoAssignment: boolean().default(false),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => {
+    return {
+      // Add unique constraint to ensure only one inventory assignment per store assignment per day
+      assignmentDateUnique: unique().on(
+        table.assignmentId,
+        table.assignmentDate
+      ),
+    };
   }
 );
 
-export const selectInventoryAssignmentSchema = createSelectSchema(
+// Define relations
+export const inventoryAssignmentsRelations = relations(
   inventoryAssignments,
-  {
-    status: z.enum([
-      AssignmentStatusEnum.ASSIGNED,
-      AssignmentStatusEnum.CREATED,
-      AssignmentStatusEnum.VALIDATED,
-    ]),
-  }
+  ({ one, many }) => ({
+    storeAssignment: one(storeAssignments, {
+      fields: [inventoryAssignments.assignmentId],
+      references: [storeAssignments.assignmentId],
+    }),
+    assignedByUser: one(users, {
+      fields: [inventoryAssignments.assignedBy],
+      references: [users.userId],
+    }),
+    assignmentTanks: many(assignmentTanks),
+    assignmentItems: many(assignmentItems),
+  })
 );
-
-export type InventoryAssignment = z.infer<
-  typeof selectInventoryAssignmentSchema
->;
-export type NewInventoryAssignment = z.infer<
-  typeof insertInventoryAssignmentSchema
->;
 
 export default inventoryAssignments;
+
+// Import after relations to avoid circular dependency
+import { assignmentItems } from "./inventory-assignments-items";
+import { assignmentTanks } from "./inventory-assignments-tanks";

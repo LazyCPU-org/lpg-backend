@@ -1,12 +1,11 @@
+import { relations } from "drizzle-orm";
 import {
+  decimal,
+  integer,
   pgTable,
   serial,
-  integer,
   timestamp,
-  decimal,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 import { inventoryAssignments } from "./inventory-assignments";
 import inventoryItem from "./inventory-item";
 
@@ -15,8 +14,8 @@ import inventoryItem from "./inventory-item";
  * Unlike the assignment_tanks table, this table will be related to any other items different than tanks
  */
 export const assignmentItems = pgTable("assignment_items", {
-  assignentItemId: serial("assignment_item_id").primaryKey(),
-  assignmentId: integer("assignment_id")
+  assignmentItemId: serial("assignment_item_id").primaryKey(),
+  inventoryId: integer("inventory_id")
     .notNull()
     .references(() => inventoryAssignments.inventoryId),
   inventoryItemId: integer("inventory_item_id")
@@ -33,11 +32,23 @@ export const assignmentItems = pgTable("assignment_items", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Create Zod schemas for validation
-export const insertInventoryItemSchema = createInsertSchema(assignmentItems);
-export const selectInventoryItemSchema = createSelectSchema(assignmentItems);
-
-export type InventoryItem = z.infer<typeof selectInventoryItemSchema>;
-export type NewInventoryItem = z.infer<typeof insertInventoryItemSchema>;
+// Define relations
+export const assignmentItemsRelations = relations(
+  assignmentItems,
+  ({ one, many }) => ({
+    inventoryAssignment: one(inventoryAssignments, {
+      fields: [assignmentItems.inventoryId],
+      references: [inventoryAssignments.inventoryId],
+    }),
+    inventoryItem: one(inventoryItem, {
+      fields: [assignmentItems.inventoryItemId],
+      references: [inventoryItem.inventoryItemId],
+    }),
+    transactions: many(itemTransactions),
+  })
+);
 
 export default assignmentItems;
+
+// Import after relations to avoid circular dependency
+import { itemTransactions } from "./item-transactions";

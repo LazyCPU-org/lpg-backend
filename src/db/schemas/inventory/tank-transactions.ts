@@ -1,15 +1,16 @@
+import { relations } from "drizzle-orm";
 import {
+  integer,
+  pgEnum,
   pgTable,
   serial,
-  integer,
   text,
   timestamp,
-  pgEnum,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "../user-management/users";
-import assignmentItems from "./inventory-assignments-items";
+import { assignmentTanks } from "./inventory-assignments-tanks";
 import { TransactionTypeEnum } from "./item-transactions";
 
 export const tankTransactionTypeEnum = pgEnum("tank_transaction_type", [
@@ -23,9 +24,9 @@ export const tankTransactionTypeEnum = pgEnum("tank_transaction_type", [
 // Define the inventory transactions table
 export const tankTransactions = pgTable("tank_transactions", {
   transactionId: serial("transaction_id").primaryKey(),
-  assignentItemId: integer("assignent_item_id")
+  assignmentTankId: integer("assignment_tank_id")
     .notNull()
-    .references(() => assignmentItems.assignentItemId),
+    .references(() => assignmentTanks.assignmentTankId),
   transactionType: tankTransactionTypeEnum().default(TransactionTypeEnum.SALE),
   fullTanksChange: integer("full_tanks_change").notNull().default(0),
   emptyTanksChange: integer("empty_tanks_change").notNull().default(0),
@@ -38,6 +39,21 @@ export const tankTransactions = pgTable("tank_transactions", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Define relations
+export const tankTransactionsRelations = relations(
+  tankTransactions,
+  ({ one }) => ({
+    assignmentTank: one(assignmentTanks, {
+      fields: [tankTransactions.assignmentTankId],
+      references: [assignmentTanks.assignmentTankId],
+    }),
+    user: one(users, {
+      fields: [tankTransactions.userId],
+      references: [users.userId],
+    }),
+  })
+);
 
 // Create Zod schemas for validation
 export const insertInventoryTransactionSchema = createInsertSchema(

@@ -36,6 +36,7 @@ const options: swaggerJsdoc.Options = {
     "./src/routes/*.ts", // Include all TypeScript files in src directory
     "./src/db/schemas/**/*.ts", // Include all TypeScript files in src directory
     "./src/interfaces/**/*.ts",
+    "./src/dtos/**/*.ts",
     "./app.ts", // Include the main app file], // Adjust this path based on your project structure
   ],
 };

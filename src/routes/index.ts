@@ -1,8 +1,9 @@
-import { Express, Request, Response, NextFunction } from "express";
+import { Express, NextFunction, Request, Response } from "express";
 import { Container } from "../config/di";
-import { buildUserRouter } from "./userRoutes";
 import { buildAuthRouter } from "./authRoutes";
+import { buildInventoryAssignmentRouter } from "./inventoryAssignmentRoutes";
 import { buildStoreRouter } from "./storeRoutes";
+import { buildUserRouter } from "./userRoutes";
 
 // Middleware to inject container into request
 const injectContainer = (container: Container) => {
@@ -23,9 +24,13 @@ export const defineRoutes = function (app: Express, container: Container) {
   const authRouter = buildAuthRouter(container.authService);
   const userRouter = buildUserRouter(container.userService);
   const storeRouter = buildStoreRouter(container.storeService);
+  const inventoryAssignments = buildInventoryAssignmentRouter(
+    container.inventoryAssignmentService
+  );
 
   // Mount routers
   app.use(`${v1BasePath}/auth`, authRouter);
   app.use(`${v1BasePath}/users`, userRouter);
   app.use(`${v1BasePath}/stores`, storeRouter);
+  app.use(`${v1BasePath}/assignments`, inventoryAssignments);
 };

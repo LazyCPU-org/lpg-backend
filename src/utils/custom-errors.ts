@@ -43,6 +43,12 @@ export class ExpirationError extends HttpError {
   }
 }
 
+export class ConflictError extends HttpError {
+  constructor(message: string = "Conflict error") {
+    super(message, 409);
+  }
+}
+
 export class InternalError extends HttpError {
   constructor(message: string = "Internal Server Error") {
     super(message, 500);

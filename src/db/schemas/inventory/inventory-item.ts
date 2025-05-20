@@ -1,9 +1,10 @@
+import { relations } from "drizzle-orm";
 import {
+  decimal,
   pgTable,
   serial,
-  timestamp,
-  decimal,
   text,
+  timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -27,6 +28,11 @@ export const inventoryItem = pgTable("inventory_item", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Define relations
+export const inventoryItemRelations = relations(inventoryItem, ({ many }) => ({
+  assignmentItems: many(assignmentItems),
+}));
+
 // Create Zod schemas for validation
 export const insertInventoryItemSchema = createInsertSchema(inventoryItem);
 export const selectInventoryItemSchema = createSelectSchema(inventoryItem);
@@ -35,3 +41,6 @@ export type InventoryItem = z.infer<typeof selectInventoryItemSchema>;
 export type NewInventoryItem = z.infer<typeof insertInventoryItemSchema>;
 
 export default inventoryItem;
+
+// Import after relations to avoid circular dependency
+import { assignmentItems } from "./inventory-assignments-items";

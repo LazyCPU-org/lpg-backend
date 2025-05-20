@@ -1,15 +1,16 @@
+import { relations } from "drizzle-orm";
 import {
+  integer,
+  pgEnum,
   pgTable,
   serial,
-  integer,
   text,
   timestamp,
-  pgEnum,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "../user-management/users";
-import assignmentItems from "./inventory-assignments-items";
+import { assignmentItems } from "./inventory-assignments-items";
 
 // Define the transaction type enum values
 export const TransactionTypeEnum = {
@@ -30,9 +31,9 @@ export const itemTransactionTypeEnum = pgEnum("item_transaction_type", [
 // Define the inventory transactions table
 export const itemTransactions = pgTable("item_transactions", {
   itemTransactionId: serial("item_transaction_id").primaryKey(),
-  assignentItemId: integer("assignent_item_id")
+  assignmentItemId: integer("assignment_item_id")
     .notNull()
-    .references(() => assignmentItems.assignentItemId),
+    .references(() => assignmentItems.assignmentItemId),
   transactionType: itemTransactionTypeEnum().default(TransactionTypeEnum.SALE),
   itemChange: integer("item_change").notNull().default(0),
   userId: integer("user_id")
@@ -43,6 +44,21 @@ export const itemTransactions = pgTable("item_transactions", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Define relations
+export const itemTransactionsRelations = relations(
+  itemTransactions,
+  ({ one }) => ({
+    assignmentItem: one(assignmentItems, {
+      fields: [itemTransactions.assignmentItemId],
+      references: [assignmentItems.assignmentItemId],
+    }),
+    user: one(users, {
+      fields: [itemTransactions.userId],
+      references: [users.userId],
+    }),
+  })
+);
 
 // Create Zod schemas for validation
 export const insertInventoryTransactionSchema = createInsertSchema(

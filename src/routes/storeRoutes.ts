@@ -1,16 +1,18 @@
-import { Router, Request, Response } from "express";
-import { IStoreService } from "../services/storeService";
-import {
-  isAuthenticated,
-  requirePermission,
-} from "../middlewares/authorization";
-import { ActionEnum, ModuleEnum } from "../utils/permissions";
-import { asyncHandler } from "../middlewares/async-handler";
+import { Request, Response, Router } from "express";
 import {
   CreateStoreAssignmentRequestSchema,
   CreateStoreRequestSchema,
   UpdateStoreLocationRequestSchema,
 } from "../dtos/request/storeDTO";
+import { StoreRelationOptions } from "../dtos/response/storeInterface";
+import { asyncHandler } from "../middlewares/async-handler";
+import {
+  isAuthenticated,
+  requirePermission,
+} from "../middlewares/authorization";
+import { parseIncludeRelations } from "../middlewares/include-relations";
+import { IStoreService } from "../services/storeService";
+import { ActionEnum, ModuleEnum } from "../utils/permissions";
 
 export function buildStoreRouter(storeService: IStoreService) {
   const router = Router();
@@ -54,7 +56,7 @@ export function buildStoreRouter(storeService: IStoreService) {
    *   get:
    *     tags: [Stores]
    *     summary: Get store by ID
-   *     description: Retrieves a store by its ID
+   *     description: Retrieves a store by its ID with optional related data
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -64,13 +66,29 @@ export function buildStoreRouter(storeService: IStoreService) {
    *           type: integer
    *         required: true
    *         description: Store ID
+   *       - in: query
+   *         name: include
+   *         schema:
+   *           type: string
+   *         required: false
+   *         description: |
+   *           Relations to include in the response.
+   *           Format options:
+   *           - Comma-separated: `users,inventory`
+   *           - JSON format: `{"users":true,"inventory":true}`
+   *
+   *           Available relations:
+   *           - `users`: Include assigned users
+   *           - `inventory`: Include current day's inventory status for each user
    *     responses:
    *       200:
-   *         description: Store details
+   *         description: Store details with requested relations
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/Store'
+   *               $ref: '#/components/schemas/StoreResponse'
+   *       400:
+   *         description: Invalid include parameter format
    *       401:
    *         description: Unauthorized
    *       403:
@@ -78,14 +96,21 @@ export function buildStoreRouter(storeService: IStoreService) {
    *       404:
    *         description: Store not found
    */
-
   router.get(
     "/:id",
     isAuthenticated,
     requirePermission(ModuleEnum.STORES, ActionEnum.READ),
+    parseIncludeRelations,
     asyncHandler(async (req: Request, res: Response) => {
       const storeId = parseInt(req.params.id);
-      const store = await storeService.findStoreById(storeId);
+
+      // Convert include relations to repository options
+      const relationOptions: StoreRelationOptions = {
+        users: Boolean(req.includeRelations.users),
+        inventory: Boolean(req.includeRelations.inventory),
+      };
+
+      const store = await storeService.findStoreById(storeId, relationOptions);
       res.json(store);
     })
   );
