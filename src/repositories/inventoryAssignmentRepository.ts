@@ -37,7 +37,8 @@ export interface InventoryAssignmentRepository {
     status?: StatusType
   ): Promise<InventoryAssignmentType[]>;
 
-  findById(id: number): Promise<InventoryAssignmentWithDetails>;
+  findById(inventoryId: number): Promise<InventoryAssignmentWithDetails>;
+  findByAssignmentId(assignmentId: number): Promise<InventoryAssignmentType>;
 
   // Create methods
   create(
@@ -127,19 +128,19 @@ export class PgInventoryAssignmentRepository
     }
   }
 
-  async findById(id: number): Promise<InventoryAssignmentWithDetails> {
+  async findById(inventoryId: number): Promise<InventoryAssignmentWithDetails> {
     // Get the base assignment
-    const assignment = await db.query.inventoryAssignments.findFirst({
-      where: eq(inventoryAssignments.inventoryId, id),
+    const inventory = await db.query.inventoryAssignments.findFirst({
+      where: eq(inventoryAssignments.inventoryId, inventoryId),
     });
 
-    if (!assignment) {
+    if (!inventory) {
       throw new NotFoundError("Asignación de inventario no encontrada");
     }
 
     // Get all tank assignments with related tank types
     const tankAssignments = await db.query.assignmentTanks.findMany({
-      where: eq(assignmentTanks.inventoryId, id),
+      where: eq(assignmentTanks.inventoryId, inventoryId),
       with: {
         tankType: true,
       },
@@ -147,7 +148,7 @@ export class PgInventoryAssignmentRepository
 
     // Get all item assignments with related inventory items
     const itemAssignments = await db.query.assignmentItems.findMany({
-      where: eq(assignmentItems.inventoryId, id),
+      where: eq(assignmentItems.inventoryId, inventoryId),
       with: {
         inventoryItem: true,
       },
@@ -155,7 +156,7 @@ export class PgInventoryAssignmentRepository
 
     // Return the assignment with all related data
     return {
-      ...assignment,
+      ...inventory,
       tanks: tankAssignments.map((ta) => ({
         ...ta,
         tankDetails: ta.tankType,
@@ -165,6 +166,21 @@ export class PgInventoryAssignmentRepository
         itemDetails: ia.inventoryItem,
       })),
     };
+  }
+
+  async findByAssignmentId(
+    assignmentId: number
+  ): Promise<InventoryAssignmentType> {
+    // Get the base assignment
+    const assignment = await db.query.inventoryAssignments.findFirst({
+      where: eq(inventoryAssignments.assignmentId, assignmentId),
+    });
+
+    if (!assignment) {
+      throw new NotFoundError("Asignación de inventario no encontrada");
+    }
+
+    return assignment;
   }
 
   async create(
@@ -222,11 +238,11 @@ export class PgInventoryAssignmentRepository
     assignedEmptyTanks: number
   ): Promise<AssignmentTankType> {
     // Validate that the assignment and tank type exist
-    const assignment = await db.query.inventoryAssignments.findFirst({
+    const inventoryAssignment = await db.query.inventoryAssignments.findFirst({
       where: eq(inventoryAssignments.inventoryId, inventoryId),
     });
 
-    if (!assignment) {
+    if (!inventoryAssignment) {
       throw new NotFoundError("Asignación de inventario no encontrada");
     }
 

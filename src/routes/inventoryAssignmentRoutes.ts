@@ -20,7 +20,7 @@ export function buildInventoryAssignmentRouter(
 
   /**
    * @openapi
-   * /api/inventory/assignments:
+   * /inventory/assignments:
    *   get:
    *     tags: [Inventory]
    *     summary: Get inventory assignments
@@ -83,7 +83,7 @@ export function buildInventoryAssignmentRouter(
 
   /**
    * @openapi
-   * /api/inventory/assignments/{id}:
+   * /inventory/assignments/{id}:
    *   get:
    *     tags: [Inventory]
    *     summary: Get inventory assignment by ID
@@ -122,7 +122,7 @@ export function buildInventoryAssignmentRouter(
 
   /**
    * @openapi
-   * /api/inventory/assignments:
+   * /inventory/assignment:
    *   post:
    *     tags: [Inventory]
    *     summary: Create a new inventory assignment
@@ -170,7 +170,7 @@ export function buildInventoryAssignmentRouter(
 
   /**
    * @openapi
-   * /api/inventory/assignments/{id}/status:
+   * /inventory/assignments/{id}/status:
    *   patch:
    *     tags: [Inventory]
    *     summary: Update inventory assignment status

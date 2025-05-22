@@ -20,19 +20,23 @@ export interface IInventoryAssignmentService {
     assignmentDate: string,
     assignedBy: number,
     notes: string | undefined,
-    tanks: {
-      tankTypeId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedFullTanks: number;
-      assignedEmptyTanks: number;
-    }[],
-    items: {
-      inventoryItemId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedItems: number;
-    }[]
+    tanks:
+      | {
+          tankTypeId: number;
+          purchase_price: string;
+          sell_price: string;
+          assignedFullTanks: number;
+          assignedEmptyTanks: number;
+        }[]
+      | undefined,
+    items:
+      | {
+          inventoryItemId: number;
+          purchase_price: string;
+          sell_price: string;
+          assignedItems: number;
+        }[]
+      | undefined
   ): Promise<InventoryAssignmentWithDetails>;
 
   updateAssignmentStatus(
@@ -92,13 +96,18 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
     // Convert date string to Date object
     const dateObj = !assignmentDate ? new Date().toISOString() : assignmentDate;
 
-    // Create the base assignment
-    const assignment = await this.inventoryAssignmentRepository.create(
-      assignmentId,
-      dateObj,
-      assignedBy,
-      notes
-    );
+    const foundAssignment =
+      await this.inventoryAssignmentRepository.findByAssignmentId(assignmentId);
+
+    // Create the base assignment, or just assign the found one if already exists
+    const assignment = !!foundAssignment
+      ? await this.inventoryAssignmentRepository.create(
+          assignmentId,
+          dateObj,
+          assignedBy,
+          notes
+        )
+      : foundAssignment;
 
     // Create tank assignments
     const tankPromises = tanks.map((tank) =>

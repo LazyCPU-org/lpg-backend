@@ -32,5 +32,5 @@ export const defineRoutes = function (app: Express, container: Container) {
   app.use(`${v1BasePath}/auth`, authRouter);
   app.use(`${v1BasePath}/users`, userRouter);
   app.use(`${v1BasePath}/stores`, storeRouter);
-  app.use(`${v1BasePath}/assignments`, inventoryAssignments);
+  app.use(`${v1BasePath}/inventory/assignments`, inventoryAssignments);
 };

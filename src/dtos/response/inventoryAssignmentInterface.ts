@@ -2,12 +2,11 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import {
   AssignmentStatusEnum,
-  inventoryAssignmentItems,
+  assignmentItems,
+  assignmentTanks,
   inventoryAssignments,
-  inventoryAssignmentTanks,
-  inventoryItem,
-  tankType,
 } from "../../db/schemas/inventory";
+import { InventoryItem, TankType } from "./inventoryInterface";
 
 /**
  * @openapi
@@ -104,10 +103,8 @@ export type StatusType = z.infer<typeof statusSchema>;
  *          type: integer
  *          description: Current number of empty tanks
  */
-export const InsertAssignmentTankSchema = createInsertSchema(
-  inventoryAssignmentTanks
-);
-const SelectAssignmentTankSchema = createSelectSchema(inventoryAssignmentTanks);
+export const InsertAssignmentTankSchema = createInsertSchema(assignmentTanks);
+const SelectAssignmentTankSchema = createSelectSchema(assignmentTanks);
 
 export type AssignmentTankType = z.infer<typeof SelectAssignmentTankSchema>;
 export type NewAssignmentTankType = z.infer<typeof InsertAssignmentTankSchema>;
@@ -143,10 +140,8 @@ export type NewAssignmentTankType = z.infer<typeof InsertAssignmentTankSchema>;
  *          type: integer
  *          description: Current number of items
  */
-export const InsertAssignmentItemSchema = createInsertSchema(
-  inventoryAssignmentItems
-);
-const SelectAssignmentItemSchema = createSelectSchema(inventoryAssignmentItems);
+export const InsertAssignmentItemSchema = createInsertSchema(assignmentItems);
+const SelectAssignmentItemSchema = createSelectSchema(assignmentItems);
 
 export type AssignmentItemType = z.infer<typeof SelectAssignmentItemSchema>;
 export type NewAssignmentItemType = z.infer<typeof InsertAssignmentItemSchema>;
@@ -154,6 +149,6 @@ export type NewAssignmentItemType = z.infer<typeof InsertAssignmentItemSchema>;
 // Extended types for responses with relations
 export interface InventoryAssignmentWithDetails
   extends InventoryAssignmentType {
-  tanks: (AssignmentTankType & { tankDetails: typeof tankType })[];
-  items: (AssignmentItemType & { itemDetails: typeof inventoryItem })[];
+  tanks: (AssignmentTankType & { tankDetails: TankType })[];
+  items: (AssignmentItemType & { itemDetails: InventoryItem })[];
 }

@@ -50,15 +50,7 @@ export const inventoryAssignments = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
-  (table) => {
-    return {
-      // Add unique constraint to ensure only one inventory assignment per store assignment per day
-      assignmentDateUnique: unique().on(
-        table.assignmentId,
-        table.assignmentDate
-      ),
-    };
-  }
+  (table) => [unique().on(table.assignmentId, table.assignmentDate)]
 );
 
 // Define relations

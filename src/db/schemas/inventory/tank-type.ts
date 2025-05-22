@@ -7,8 +7,6 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 
 /**
  * Defines specifically the types of tanks managed
@@ -33,13 +31,6 @@ export const tankType = pgTable("tank_type", {
 export const tankTypeRelations = relations(tankType, ({ many }) => ({
   assignmentTanks: many(assignmentTanks),
 }));
-
-// Create Zod schemas for validation
-export const insertTankTypeSchema = createInsertSchema(tankType);
-export const selectTankTypeSchema = createSelectSchema(tankType);
-
-export type TankType = z.infer<typeof selectTankTypeSchema>;
-export type NewTankType = z.infer<typeof insertTankTypeSchema>;
 
 export default tankType;
 

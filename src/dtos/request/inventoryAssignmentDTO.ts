@@ -130,8 +130,8 @@ export const CreateInventoryAssignmentRequestSchema = z.object({
       message: "Fecha de asignación inválida",
     }),
   notes: z.string().optional(),
-  tanks: z.array(TankAssignmentRequestSchema),
-  items: z.array(ItemAssignmentRequestSchema),
+  tanks: z.array(TankAssignmentRequestSchema).optional(),
+  items: z.array(ItemAssignmentRequestSchema).optional(),
 });
 
 /**
