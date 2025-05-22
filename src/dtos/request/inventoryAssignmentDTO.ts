@@ -96,9 +96,9 @@ export const ItemAssignmentRequestSchema = z.object({
  *     CreateInventoryAssignmentRequest:
  *       type: object
  *       properties:
- *         inventoryId:
+ *         assignmentId:
  *           type: integer
- *           description: ID of the inventory assignment
+ *           description: ID of the store assignment
  *         assignmentDate:
  *           type: string
  *           format: date-time
@@ -117,12 +117,12 @@ export const ItemAssignmentRequestSchema = z.object({
  *             $ref: '#/components/schemas/ItemAssignmentRequest'
  *           description: List of item assignments
  *       required:
- *         - inventoryId
+ *         - assignmentId
  *         - tanks
  *         - items
  */
 export const CreateInventoryAssignmentRequestSchema = z.object({
-  inventoryId: z.number().positive("Id de asignación inválido"),
+  assignmentId: z.number().positive("ID de asignación en tienda inválido"),
   assignmentDate: z
     .string()
     .default(new Date().toISOString())

@@ -4,12 +4,14 @@ import {
   GetInventoryAssignmentsRequestSchema,
   UpdateInventoryAssignmentStatusRequestSchema,
 } from "../dtos/request/inventoryAssignmentDTO";
+import { InventoryAssignmentRelationOptions } from "../dtos/response/inventoryAssignmentInterface";
 import { asyncHandler } from "../middlewares/async-handler";
 import {
   AuthRequest,
   isAuthenticated,
   requirePermission,
 } from "../middlewares/authorization";
+import { parseIncludeRelations } from "../middlewares/include-relations";
 import { IInventoryAssignmentService } from "../services/inventoryAssignmentService";
 import { ActionEnum, ModuleEnum } from "../utils/permissions";
 
@@ -24,7 +26,7 @@ export function buildInventoryAssignmentRouter(
    *   get:
    *     tags: [Inventory]
    *     summary: Get inventory assignments
-   *     description: Retrieves inventory assignments filtered by user, store, date, and/or status
+   *     description: Retrieves inventory assignments filtered by user, store, date, and/or status with optional related data
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -50,9 +52,25 @@ export function buildInventoryAssignmentRouter(
    *           type: string
    *           enum: [created, assigned, validated]
    *         description: Filter by status
+   *       - in: query
+   *         name: include
+   *         schema:
+   *           type: string
+   *         required: false
+   *         description: |
+   *           Relations to include in the response.
+   *           Format options:
+   *           - Comma-separated: `user,store`
+   *           - JSON format: `{"user":true,"store":true}`
+   *
+   *           Available relations:
+   *           - `user`: Include assigned user information through storeAssignment
+   *           - `store`: Include store information through storeAssignment
    *     responses:
    *       200:
-   *         description: A list of inventory assignments
+   *         description: A list of inventory assignments with requested relations
+   *       400:
+   *         description: Invalid include parameter format
    *       401:
    *         description: Unauthorized
    *       403:
@@ -62,6 +80,7 @@ export function buildInventoryAssignmentRouter(
     "/",
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.READ),
+    parseIncludeRelations,
     asyncHandler(async (req: Request, res: Response) => {
       const queryParams = GetInventoryAssignmentsRequestSchema.parse({
         userId: req.query.userId ? Number(req.query.userId) : undefined,
@@ -70,11 +89,18 @@ export function buildInventoryAssignmentRouter(
         status: req.query.status,
       });
 
+      // Convert include relations to repository options
+      const relationOptions: InventoryAssignmentRelationOptions = {
+        user: Boolean(req.includeRelations.user),
+        store: Boolean(req.includeRelations.store),
+      };
+
       const assignments = await inventoryAssignmentService.findAssignments(
         queryParams.userId,
         queryParams.storeId,
         queryParams.date,
-        queryParams.status
+        queryParams.status,
+        relationOptions // Add relation options parameter
       );
 
       res.json(assignments);
@@ -122,7 +148,7 @@ export function buildInventoryAssignmentRouter(
 
   /**
    * @openapi
-   * /inventory/assignment:
+   * /inventory/assignmentS:
    *   post:
    *     tags: [Inventory]
    *     summary: Create a new inventory assignment
@@ -155,14 +181,15 @@ export function buildInventoryAssignmentRouter(
       // Get the current user ID from the token
       const assignedBy = req.user?.id || "0";
 
-      const assignment = await inventoryAssignmentService.createNewAssignment(
-        data.inventoryId,
-        data.assignmentDate,
-        parseInt(assignedBy),
-        data.notes,
-        data.tanks,
-        data.items
-      );
+      const assignment =
+        await inventoryAssignmentService.createNewInventoryAssignment(
+          data.assignmentId,
+          data.assignmentDate,
+          parseInt(assignedBy),
+          data.notes,
+          data.tanks,
+          data.items
+        );
 
       res.json(assignment);
     })

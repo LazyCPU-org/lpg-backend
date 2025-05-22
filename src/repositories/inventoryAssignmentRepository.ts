@@ -1,5 +1,3 @@
-// repositories/inventoryAssignmentRepository.ts
-
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import {
@@ -15,8 +13,14 @@ import { users } from "../db/schemas/user-management/users";
 import {
   AssignmentItemType,
   AssignmentTankType,
+  InventoryAssignmentBasic,
+  InventoryAssignmentRelationOptions,
   InventoryAssignmentType,
   InventoryAssignmentWithDetails,
+  InventoryAssignmentWithRelations,
+  InventoryAssignmentWithStore,
+  InventoryAssignmentWithUser,
+  InventoryAssignmentWithUserAndStore,
   NewAssignmentItemType,
   NewAssignmentTankType,
   NewInventoryAssignmentType,
@@ -34,11 +38,14 @@ export interface InventoryAssignmentRepository {
     userId?: number,
     storeId?: number,
     date?: string,
-    status?: StatusType
-  ): Promise<InventoryAssignmentType[]>;
+    status?: StatusType,
+    relations?: InventoryAssignmentRelationOptions
+  ): Promise<InventoryAssignmentWithRelations[]>;
 
   findById(inventoryId: number): Promise<InventoryAssignmentWithDetails>;
-  findByAssignmentId(assignmentId: number): Promise<InventoryAssignmentType>;
+  findByAssignmentId(
+    assignmentId: number
+  ): Promise<InventoryAssignmentType | undefined>;
 
   // Create methods
   create(
@@ -66,6 +73,23 @@ export interface InventoryAssignmentRepository {
     assignedItems: number
   ): Promise<AssignmentItemType>;
 
+  createOrFindTankAssignment(
+    inventoryId: number,
+    tankTypeId: number,
+    purchase_price: string,
+    sell_price: string,
+    assignedFullTanks: number,
+    assignedEmptyTanks: number
+  ): Promise<AssignmentTankType>;
+
+  createOrFindItemAssignment(
+    inventoryId: number,
+    inventoryItemId: number,
+    purchase_price: string,
+    sell_price: string,
+    assignedItems: number
+  ): Promise<AssignmentItemType>;
+
   // Update methods
   updateStatus(
     id: number,
@@ -80,8 +104,9 @@ export class PgInventoryAssignmentRepository
     userId?: number,
     storeId?: number,
     date?: string,
-    status?: StatusType
-  ): Promise<InventoryAssignmentType[]> {
+    status?: StatusType,
+    relations: InventoryAssignmentRelationOptions = {}
+  ): Promise<InventoryAssignmentWithRelations[]> {
     // If we need to filter by userId or storeId, we need to get the relevant assignmentIds first
     let relevantAssignmentIds: number[] | undefined = undefined;
 
@@ -117,15 +142,84 @@ export class PgInventoryAssignmentRepository
       );
     }
 
-    // Execute the query with all conditions
-    if (whereConditions.length > 0) {
-      return await db
-        .select()
-        .from(inventoryAssignments)
-        .where(and(...whereConditions));
-    } else {
-      return await db.select().from(inventoryAssignments);
+    // If no relations are requested, return basic inventory assignments
+    if (!relations.user && !relations.store) {
+      const basicAssignments: InventoryAssignmentBasic[] =
+        whereConditions.length > 0
+          ? await db
+              .select()
+              .from(inventoryAssignments)
+              .where(and(...whereConditions))
+          : await db.select().from(inventoryAssignments);
+
+      return basicAssignments;
     }
+
+    // Build the query with relations
+    let queryWith: any = {};
+
+    // Always include storeAssignment if we need user or store relations
+    queryWith.storeAssignment = {
+      with: {},
+    };
+
+    // Add user relation if requested
+    if (relations.user) {
+      queryWith.storeAssignment.with.user = {
+        columns: {
+          userId: true,
+          name: true,
+        },
+        with: {
+          userProfile: {
+            columns: {
+              firstName: true,
+              lastName: true,
+              entryDate: true,
+            },
+          },
+        },
+      };
+    }
+
+    // Add store relation if requested
+    if (relations.store) {
+      queryWith.storeAssignment.with.store = {
+        columns: {
+          storeId: true,
+          name: true,
+          address: true,
+          latitude: true,
+          longitude: true,
+          phoneNumber: true,
+          mapsUrl: true,
+        },
+      };
+    }
+
+    // Execute the query with relations
+    const queryOptions: any = {
+      with: queryWith,
+    };
+
+    if (whereConditions.length > 0) {
+      queryOptions.where = and(...whereConditions);
+    }
+
+    const assignmentsWithRelations =
+      await db.query.inventoryAssignments.findMany(queryOptions);
+
+    // Type the response based on the relations requested
+    if (relations.user && relations.store) {
+      return assignmentsWithRelations as InventoryAssignmentWithUserAndStore[];
+    } else if (relations.user) {
+      return assignmentsWithRelations as InventoryAssignmentWithUser[];
+    } else if (relations.store) {
+      return assignmentsWithRelations as InventoryAssignmentWithStore[];
+    }
+
+    // This shouldn't happen given our logic above, but for type safety
+    return assignmentsWithRelations as InventoryAssignmentBasic[];
   }
 
   async findById(inventoryId: number): Promise<InventoryAssignmentWithDetails> {
@@ -170,15 +264,11 @@ export class PgInventoryAssignmentRepository
 
   async findByAssignmentId(
     assignmentId: number
-  ): Promise<InventoryAssignmentType> {
+  ): Promise<InventoryAssignmentType | undefined> {
     // Get the base assignment
     const assignment = await db.query.inventoryAssignments.findFirst({
       where: eq(inventoryAssignments.assignmentId, assignmentId),
     });
-
-    if (!assignment) {
-      throw new NotFoundError("Asignación de inventario no encontrada");
-    }
 
     return assignment;
   }
@@ -322,6 +412,62 @@ export class PgInventoryAssignmentRepository
     }
 
     return results[0];
+  }
+
+  async createOrFindTankAssignment(
+    inventoryId: number,
+    tankTypeId: number,
+    purchase_price: string,
+    sell_price: string,
+    assignedFullTanks: number,
+    assignedEmptyTanks: number
+  ): Promise<AssignmentTankType> {
+    // First, try to find an existing assignment
+    const existingAssignment = await db.query.assignmentTanks.findFirst({
+      where: and(
+        eq(assignmentTanks.inventoryId, inventoryId),
+        eq(assignmentTanks.tankTypeId, tankTypeId)
+      ),
+    });
+
+    if (existingAssignment) return existingAssignment;
+
+    // If no existing assignment, create a new one
+    return await this.createTankAssignment(
+      inventoryId,
+      tankTypeId,
+      purchase_price,
+      sell_price,
+      assignedFullTanks,
+      assignedEmptyTanks
+    );
+  }
+
+  async createOrFindItemAssignment(
+    inventoryId: number,
+    inventoryItemId: number,
+    purchase_price: string,
+    sell_price: string,
+    assignedItems: number
+  ): Promise<AssignmentItemType> {
+    // First, try to find an existing assignment
+    const existingAssignment = await db.query.assignmentItems.findFirst({
+      where: and(
+        eq(assignmentItems.inventoryId, inventoryId),
+        eq(assignmentItems.inventoryItemId, inventoryItemId)
+      ),
+    });
+
+    if (existingAssignment) return existingAssignment;
+
+    // If no existing assignment, create a new one
+    return await this.createItemAssignment(
+      inventoryId,
+      inventoryItemId,
+      purchase_price,
+      sell_price,
+      assignedItems
+    );
   }
 
   async updateStatus(

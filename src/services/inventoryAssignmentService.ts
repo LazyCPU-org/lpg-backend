@@ -1,6 +1,10 @@
 import {
+  AssignmentItemType,
+  AssignmentTankType,
+  InventoryAssignmentRelationOptions,
   InventoryAssignmentType,
   InventoryAssignmentWithDetails,
+  InventoryAssignmentWithRelations,
   StatusType,
 } from "../dtos/response/inventoryAssignmentInterface";
 import { InventoryAssignmentRepository } from "../repositories/inventoryAssignmentRepository";
@@ -10,12 +14,13 @@ export interface IInventoryAssignmentService {
     userId?: number,
     storeId?: number,
     date?: string,
-    status?: string
+    status?: string,
+    relations?: InventoryAssignmentRelationOptions
   ): Promise<InventoryAssignmentType[]>;
 
   findAssignmentById(id: number): Promise<InventoryAssignmentWithDetails>;
 
-  createNewAssignment(
+  createNewInventoryAssignment(
     assignmentId: number,
     assignmentDate: string,
     assignedBy: number,
@@ -56,15 +61,17 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
     userId?: number,
     storeId?: number,
     date?: string,
-    status?: StatusType
-  ): Promise<InventoryAssignmentType[]> {
+    status?: StatusType,
+    relations: InventoryAssignmentRelationOptions = {}
+  ): Promise<InventoryAssignmentWithRelations[]> {
     // Convert date string to Date object if provided
     const dateObj = !date ? new Date().toISOString() : date;
     return await this.inventoryAssignmentRepository.find(
       userId,
       storeId,
       dateObj,
-      status
+      status,
+      relations
     );
   }
 
@@ -74,7 +81,7 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
     return await this.inventoryAssignmentRepository.findById(id);
   }
 
-  async createNewAssignment(
+  async createNewInventoryAssignment(
     assignmentId: number,
     assignmentDate: string,
     assignedBy: number,
@@ -100,40 +107,49 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
       await this.inventoryAssignmentRepository.findByAssignmentId(assignmentId);
 
     // Create the base assignment, or just assign the found one if already exists
-    const assignment = !!foundAssignment
-      ? await this.inventoryAssignmentRepository.create(
-          assignmentId,
-          dateObj,
-          assignedBy,
-          notes
-        )
-      : foundAssignment;
+    const assignment =
+      foundAssignment ??
+      (await this.inventoryAssignmentRepository.create(
+        assignmentId,
+        dateObj,
+        assignedBy,
+        notes
+      ));
 
-    // Create tank assignments
-    const tankPromises = tanks.map((tank) =>
-      this.inventoryAssignmentRepository.createTankAssignment(
-        assignment.inventoryId,
-        tank.tankTypeId,
-        tank.purchase_price,
-        tank.sell_price,
-        tank.assignedFullTanks,
-        tank.assignedEmptyTanks
-      )
-    );
+    let tankPromises: Promise<AssignmentTankType>[] = [];
+    let itemPromises: Promise<AssignmentItemType>[] = [];
 
-    // Create item assignments
-    const itemPromises = items.map((item) =>
-      this.inventoryAssignmentRepository.createItemAssignment(
-        assignment.inventoryId,
-        item.inventoryItemId,
-        item.purchase_price,
-        item.sell_price,
-        item.assignedItems
-      )
-    );
+    if (assignment) {
+      // Create tank assignments
+      if (tanks && tanks.length > 0) {
+        tankPromises = tanks.map((tank) =>
+          this.inventoryAssignmentRepository.createOrFindTankAssignment(
+            assignment.inventoryId,
+            tank.tankTypeId,
+            tank.purchase_price,
+            tank.sell_price,
+            tank.assignedFullTanks,
+            tank.assignedEmptyTanks
+          )
+        );
+      }
 
-    // Wait for all assignments to be created
-    await Promise.all([...tankPromises, ...itemPromises]);
+      if (items && items.length > 0) {
+        // Create item assignments
+        itemPromises = items.map((item) =>
+          this.inventoryAssignmentRepository.createOrFindItemAssignment(
+            assignment.inventoryId,
+            item.inventoryItemId,
+            item.purchase_price,
+            item.sell_price,
+            item.assignedItems
+          )
+        );
+      }
+
+      // Wait for all assignments to be created
+      await Promise.all([...tankPromises, ...itemPromises]);
+    }
 
     // Return the full assignment with details
     return await this.inventoryAssignmentRepository.findById(
