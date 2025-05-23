@@ -147,8 +147,6 @@ export type AssignmentItemType = z.infer<typeof SelectAssignmentItemSchema>;
 export type NewAssignmentItemType = z.infer<typeof InsertAssignmentItemSchema>;
 
 /**
- * Add this OpenAPI schema definition to your inventoryAssignmentInterface.ts
- * or wherever you keep your OpenAPI schemas
  *
  * @openapi
  * components:
@@ -310,3 +308,33 @@ export type InventoryAssignmentWithRelations =
   | InventoryAssignmentWithUser
   | InventoryAssignmentWithStore
   | InventoryAssignmentWithUserAndStore;
+
+export interface InventoryAssignmentWithDetailsAndRelations
+  extends InventoryAssignmentType {
+  tanks: (AssignmentTankType & { tankDetails: TankType })[];
+  items: (AssignmentItemType & { itemDetails: InventoryItem })[];
+  storeAssignment?: {
+    assignmentId: number;
+    userId: number;
+    storeId: number;
+    startDate: string;
+    user?: {
+      userId: number;
+      name: string;
+      userProfile?: {
+        firstName: string;
+        lastName: string;
+        entryDate: string;
+      };
+    };
+    store?: {
+      storeId: number;
+      name: string;
+      address: string;
+      latitude?: string;
+      longitude?: string;
+      phoneNumber?: string;
+      mapsUrl?: string;
+    };
+  };
+}

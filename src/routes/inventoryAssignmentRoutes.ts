@@ -113,7 +113,7 @@ export function buildInventoryAssignmentRouter(
    *   get:
    *     tags: [Inventory]
    *     summary: Get inventory assignment by ID
-   *     description: Retrieves a specific inventory assignment with all associated tanks and items
+   *     description: Retrieves a specific inventory assignment with all associated tanks and items, and optional user/store relations
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -123,9 +123,25 @@ export function buildInventoryAssignmentRouter(
    *           type: integer
    *         required: true
    *         description: Inventory assignment ID
+   *       - in: query
+   *         name: include
+   *         schema:
+   *           type: string
+   *         required: false
+   *         description: |
+   *           Relations to include in the response.
+   *           Format options:
+   *           - Comma-separated: `user,store`
+   *           - JSON format: `{"user":true,"store":true}`
+   *
+   *           Available relations:
+   *           - `user`: Include assigned user information through storeAssignment
+   *           - `store`: Include store information through storeAssignment
    *     responses:
    *       200:
-   *         description: Inventory assignment details
+   *         description: Inventory assignment details with requested relations
+   *       400:
+   *         description: Invalid include parameter format
    *       404:
    *         description: Assignment not found
    *       401:
@@ -137,10 +153,19 @@ export function buildInventoryAssignmentRouter(
     "/:id",
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.READ),
+    parseIncludeRelations, // Add the middleware here
     asyncHandler(async (req: Request, res: Response) => {
       const id = parseInt(req.params.id);
+
+      // Convert include relations to repository options
+      const relationOptions: InventoryAssignmentRelationOptions = {
+        user: Boolean(req.includeRelations.user),
+        store: Boolean(req.includeRelations.store),
+      };
+
       const assignment = await inventoryAssignmentService.findAssignmentById(
-        id
+        id,
+        relationOptions // Add relation options parameter
       );
       res.json(assignment);
     })

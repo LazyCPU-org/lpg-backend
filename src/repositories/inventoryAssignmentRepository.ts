@@ -1,15 +1,15 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import {
-  AssignmentStatusEnum,
   assignmentItems,
+  AssignmentStatusEnum,
   assignmentTanks,
   inventoryAssignments,
   inventoryItem,
   tankType,
 } from "../db/schemas/inventory";
 import { storeAssignments } from "../db/schemas/locations";
-import { users } from "../db/schemas/user-management/users";
+import { users } from "../db/schemas/user-management";
 import {
   AssignmentItemType,
   AssignmentTankType,
@@ -17,6 +17,7 @@ import {
   InventoryAssignmentRelationOptions,
   InventoryAssignmentType,
   InventoryAssignmentWithDetails,
+  InventoryAssignmentWithDetailsAndRelations,
   InventoryAssignmentWithRelations,
   InventoryAssignmentWithStore,
   InventoryAssignmentWithUser,
@@ -43,6 +44,13 @@ export interface InventoryAssignmentRepository {
   ): Promise<InventoryAssignmentWithRelations[]>;
 
   findById(inventoryId: number): Promise<InventoryAssignmentWithDetails>;
+
+  // New method to support relations
+  findByIdWithRelations(
+    inventoryId: number,
+    relations?: InventoryAssignmentRelationOptions
+  ): Promise<InventoryAssignmentWithDetailsAndRelations>;
+
   findByAssignmentId(
     assignmentId: number
   ): Promise<InventoryAssignmentType | undefined>;
@@ -100,6 +108,56 @@ export interface InventoryAssignmentRepository {
 export class PgInventoryAssignmentRepository
   implements InventoryAssignmentRepository
 {
+  // Helper method to build relation query options (refactored from find method)
+  private buildRelationQueryOptions(
+    relations: InventoryAssignmentRelationOptions
+  ) {
+    let queryWith: any = {};
+
+    // Always include storeAssignment if we need user or store relations
+    if (relations.user || relations.store) {
+      queryWith.storeAssignment = {
+        with: {},
+      };
+
+      // Add user relation if requested
+      if (relations.user) {
+        queryWith.storeAssignment.with.user = {
+          columns: {
+            userId: true,
+            name: true,
+          },
+          with: {
+            userProfile: {
+              columns: {
+                firstName: true,
+                lastName: true,
+                entryDate: true,
+              },
+            },
+          },
+        };
+      }
+
+      // Add store relation if requested
+      if (relations.store) {
+        queryWith.storeAssignment.with.store = {
+          columns: {
+            storeId: true,
+            name: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+            phoneNumber: true,
+            mapsUrl: true,
+          },
+        };
+      }
+    }
+
+    return queryWith;
+  }
+
   async find(
     userId?: number,
     storeId?: number,
@@ -155,47 +213,8 @@ export class PgInventoryAssignmentRepository
       return basicAssignments;
     }
 
-    // Build the query with relations
-    let queryWith: any = {};
-
-    // Always include storeAssignment if we need user or store relations
-    queryWith.storeAssignment = {
-      with: {},
-    };
-
-    // Add user relation if requested
-    if (relations.user) {
-      queryWith.storeAssignment.with.user = {
-        columns: {
-          userId: true,
-          name: true,
-        },
-        with: {
-          userProfile: {
-            columns: {
-              firstName: true,
-              lastName: true,
-              entryDate: true,
-            },
-          },
-        },
-      };
-    }
-
-    // Add store relation if requested
-    if (relations.store) {
-      queryWith.storeAssignment.with.store = {
-        columns: {
-          storeId: true,
-          name: true,
-          address: true,
-          latitude: true,
-          longitude: true,
-          phoneNumber: true,
-          mapsUrl: true,
-        },
-      };
-    }
+    // Build the query with relations using the refactored helper
+    const queryWith = this.buildRelationQueryOptions(relations);
 
     // Execute the query with relations
     const queryOptions: any = {
@@ -260,6 +279,64 @@ export class PgInventoryAssignmentRepository
         itemDetails: ia.inventoryItem,
       })),
     };
+  }
+
+  // New method that supports both tank/item details AND user/store relations
+  async findByIdWithRelations(
+    inventoryId: number,
+    relations: InventoryAssignmentRelationOptions = {}
+  ): Promise<InventoryAssignmentWithDetailsAndRelations> {
+    // First get the base assignment with user/store relations if requested
+    let baseAssignment: any;
+
+    if (relations.user || relations.store) {
+      // Build query with relations using the refactored helper
+      const queryWith = this.buildRelationQueryOptions(relations);
+
+      baseAssignment = await db.query.inventoryAssignments.findFirst({
+        where: eq(inventoryAssignments.inventoryId, inventoryId),
+        with: queryWith,
+      });
+    } else {
+      // Simple query without relations
+      baseAssignment = await db.query.inventoryAssignments.findFirst({
+        where: eq(inventoryAssignments.inventoryId, inventoryId),
+      });
+    }
+
+    if (!baseAssignment) {
+      throw new NotFoundError("Asignación de inventario no encontrada");
+    }
+
+    // Always get tank and item details (maintaining current behavior)
+    const tankAssignments = await db.query.assignmentTanks.findMany({
+      where: eq(assignmentTanks.inventoryId, inventoryId),
+      with: {
+        tankType: true,
+      },
+    });
+
+    const itemAssignments = await db.query.assignmentItems.findMany({
+      where: eq(assignmentItems.inventoryId, inventoryId),
+      with: {
+        inventoryItem: true,
+      },
+    });
+
+    // Build the result with tank/item details and optional user/store relations
+    const result: InventoryAssignmentWithDetailsAndRelations = {
+      ...baseAssignment,
+      tanks: tankAssignments.map((ta) => ({
+        ...ta,
+        tankDetails: ta.tankType,
+      })),
+      items: itemAssignments.map((ia) => ({
+        ...ia,
+        itemDetails: ia.inventoryItem,
+      })),
+    };
+
+    return result;
   }
 
   async findByAssignmentId(

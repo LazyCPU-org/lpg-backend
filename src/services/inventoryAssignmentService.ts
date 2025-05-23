@@ -4,6 +4,7 @@ import {
   InventoryAssignmentRelationOptions,
   InventoryAssignmentType,
   InventoryAssignmentWithDetails,
+  InventoryAssignmentWithDetailsAndRelations,
   InventoryAssignmentWithRelations,
   StatusType,
 } from "../dtos/response/inventoryAssignmentInterface";
@@ -18,7 +19,11 @@ export interface IInventoryAssignmentService {
     relations?: InventoryAssignmentRelationOptions
   ): Promise<InventoryAssignmentType[]>;
 
-  findAssignmentById(id: number): Promise<InventoryAssignmentWithDetails>;
+  // Updated method signature to accept relations
+  findAssignmentById(
+    id: number,
+    relations?: InventoryAssignmentRelationOptions
+  ): Promise<InventoryAssignmentWithDetailsAndRelations>;
 
   createNewInventoryAssignment(
     assignmentId: number,
@@ -75,10 +80,15 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
     );
   }
 
+  // Updated implementation to accept relations
   async findAssignmentById(
-    id: number
-  ): Promise<InventoryAssignmentWithDetails> {
-    return await this.inventoryAssignmentRepository.findById(id);
+    id: number,
+    relations: InventoryAssignmentRelationOptions = {}
+  ): Promise<InventoryAssignmentWithDetailsAndRelations> {
+    return await this.inventoryAssignmentRepository.findByIdWithRelations(
+      id,
+      relations
+    );
   }
 
   async createNewInventoryAssignment(
@@ -151,7 +161,7 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
       await Promise.all([...tankPromises, ...itemPromises]);
     }
 
-    // Return the full assignment with details
+    // Return the full assignment with details (keeping original behavior)
     return await this.inventoryAssignmentRepository.findById(
       assignment.inventoryId
     );
