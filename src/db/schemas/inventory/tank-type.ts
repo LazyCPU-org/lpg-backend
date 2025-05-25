@@ -30,9 +30,11 @@ export const tankType = pgTable("tank_type", {
 // Define relations
 export const tankTypeRelations = relations(tankType, ({ many }) => ({
   assignmentTanks: many(assignmentTanks),
+  storeCatalogTanks: many(storeCatalogTanks),
 }));
 
 export default tankType;
 
 // Import after relations to avoid circular dependency
+import { storeCatalogTanks } from "../locations";
 import { assignmentTanks } from "./inventory-assignments-tanks";

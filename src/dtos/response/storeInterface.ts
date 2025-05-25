@@ -1,5 +1,8 @@
+// storeInterface.ts - UPDATED with proper type matching
+
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { inventoryItem, tankType } from "../../db/schemas";
 import { storeAssignments, stores } from "../../db/schemas/locations";
 
 /**
@@ -27,6 +30,9 @@ import { storeAssignments, stores } from "../../db/schemas/locations";
  *         phoneNumber:
  *           type: string
  *           description: Contact phone number for the store
+ *         mapsUrl:
+ *           type: string
+ *           description: Google Maps URL for the store location
  *       required:
  *         - storeId
  *         - name
@@ -43,6 +49,80 @@ import { storeAssignments, stores } from "../../db/schemas/locations";
  *         userId:
  *           type: integer
  *           description: The user ID
+ *         startDate:
+ *           type: string
+ *           format: date
+ *           description: When the user assignment started
+ *         endDate:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *           description: When the user assignment ended (null if active)
+ *     StoreCatalogTank:
+ *       type: object
+ *       properties:
+ *         storeInventoryTankId:
+ *           type: integer
+ *         tankTypeId:
+ *           type: integer
+ *         defaultPurchasePrice:
+ *           type: string
+ *           description: Default purchase price for this tank type
+ *         defaultSellPrice:
+ *           type: string
+ *           description: Default selling price for this tank type
+ *         isActive:
+ *           type: boolean
+ *           description: Whether this tank type is currently available for sale
+ *         defaultFullTanks:
+ *           type: integer
+ *           description: Default quantity of full tanks to assign daily
+ *         defaultEmptyTanks:
+ *           type: integer
+ *           description: Default quantity of empty tanks to assign daily
+ *         tankType:
+ *           type: object
+ *           properties:
+ *             typeId:
+ *               type: integer
+ *             name:
+ *               type: string
+ *             weight:
+ *               type: string
+ *             description:
+ *               type: string
+ *             scale:
+ *               type: string
+ *     StoreCatalogItem:
+ *       type: object
+ *       properties:
+ *         storeInventoryItemId:
+ *           type: integer
+ *         inventoryItemId:
+ *           type: integer
+ *         defaultPurchasePrice:
+ *           type: string
+ *           description: Default purchase price for this item
+ *         defaultSellPrice:
+ *           type: string
+ *           description: Default selling price for this item
+ *         isActive:
+ *           type: boolean
+ *           description: Whether this item is currently available for sale
+ *         defaultQuantity:
+ *           type: integer
+ *           description: Default quantity to assign daily
+ *         inventoryItem:
+ *           type: object
+ *           properties:
+ *             inventoryItemId:
+ *               type: integer
+ *             name:
+ *               type: string
+ *             description:
+ *               type: string
+ *             scale:
+ *               type: string
  */
 export const InsertStoreSchema = createInsertSchema(stores);
 const SelectStoreSchema = createSelectSchema(stores);
@@ -56,6 +136,57 @@ const SelectStoreAssignmentSchema = createSelectSchema(storeAssignments);
 
 export type StoreAssignment = z.infer<typeof SelectStoreAssignmentSchema>;
 export type NewStoreAssignment = z.infer<typeof InsertStoreAssignmentSchema>;
+
+// Full database types (used for operations that need complete records)
+const selectTankTypeSchema = createSelectSchema(tankType);
+export type TankType = z.infer<typeof selectTankTypeSchema>;
+
+export const selectInventoryItemSchema = createSelectSchema(inventoryItem);
+export type InventoryItem = z.infer<typeof selectInventoryItemSchema>;
+
+// Catalog-specific types (matching exactly what the repository returns)
+// These are lightweight versions that only include fields needed for the catalog display
+export interface CatalogTankType {
+  typeId: number;
+  name: string;
+  weight: string;
+  description: string | null;
+  scale: string;
+}
+
+export interface CatalogInventoryItem {
+  inventoryItemId: number;
+  name: string;
+  description: string | null;
+  scale: string;
+}
+
+// Store Catalog Types
+export interface StoreCatalogTank {
+  storeCatalogTankId: number;
+  tankTypeId: number;
+  defaultPurchasePrice: string;
+  defaultSellPrice: string;
+  isActive: boolean | null;
+  defaultFullTanks: number | null;
+  defaultEmptyTanks: number | null;
+  tankType: CatalogTankType | null;
+}
+
+export interface StoreCatalogItem {
+  storeCatalogItemId: number;
+  inventoryItemId: number;
+  defaultPurchasePrice: string;
+  defaultSellPrice: string;
+  isActive: boolean | null;
+  defaultQuantity: number | null;
+  inventoryItem: CatalogInventoryItem | null;
+}
+
+export interface StoreCatalog {
+  tanks: StoreCatalogTank[];
+  items: StoreCatalogItem[];
+}
 
 // Refined interfaces for store relations
 /**
@@ -81,7 +212,24 @@ export type NewStoreAssignment = z.infer<typeof InsertStoreAssignmentSchema>;
  *           type: string
  *         assignedUsers:
  *           type: array
- *           description: Only included when 'users' relation is requested
+ *           description: Only included when 'assignments' relation is requested
+ *           items:
+ *             $ref: '#/components/schemas/StoreAssignment'
+ *         catalog:
+ *           type: object
+ *           description: Only included when 'catalog' relation is requested
+ *           properties:
+ *             tanks:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/StoreCatalogTank'
+ *             items:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/StoreCatalogItem'
+ *         currentInventory:
+ *           type: array
+ *           description: Current day's inventory assignments. Only included when 'inventory' relation is requested
  *           items:
  *             type: object
  *             properties:
@@ -89,11 +237,6 @@ export type NewStoreAssignment = z.infer<typeof InsertStoreAssignmentSchema>;
  *                 type: integer
  *               userId:
  *                 type: integer
- *               storeId:
- *                 type: integer
- *               startDate:
- *                 type: string
- *                 format: date
  *               user:
  *                 type: object
  *                 properties:
@@ -106,12 +249,8 @@ export type NewStoreAssignment = z.infer<typeof InsertStoreAssignmentSchema>;
  *                         type: string
  *                       lastName:
  *                         type: string
- *                       entryDate:
- *                         type: string
- *                         format: date
  *               currentInventory:
  *                 type: object
- *                 description: Current day's inventory status. Only included when 'inventory' relation is requested
  *                 properties:
  *                   inventoryId:
  *                     type: integer
@@ -121,23 +260,50 @@ export type NewStoreAssignment = z.infer<typeof InsertStoreAssignmentSchema>;
  *                   assignmentDate:
  *                     type: string
  *                     format: date
- *                   assignedByUser:
- *                     type: object
- *                     properties:
- *                       userId:
- *                         type: integer
- *                       name:
- *                         type: string
  */
 export interface StoreBasic extends Store {}
 
-export interface StoreWithUsers extends StoreBasic {
+export interface StoreWithAssignments extends StoreBasic {
   assignedUsers: StoreAssignment[];
 }
 
-export interface StoreWithInventory extends StoreWithUsers {
-  assignedUsers: (StoreAssignment & {
-    // Single current inventory assignment, not an array
+export interface StoreWithCatalog extends StoreBasic {
+  catalog: StoreCatalog;
+}
+
+export interface StoreWithInventory extends StoreBasic {
+  currentInventory: (StoreAssignment & {
+    user: {
+      userId: number;
+      userProfile: {
+        firstName: string;
+        lastName: string;
+        entryDate: string;
+      };
+    };
+    currentInventory?: {
+      inventoryId: number;
+      status: string;
+      assignmentDate: string;
+      assignedBy: number;
+      notes?: string;
+    };
+  })[];
+}
+
+// Full response type with all possible relations
+export interface StoreWithAllRelations extends StoreBasic {
+  assignedUsers?: StoreAssignment[];
+  catalog?: StoreCatalog;
+  currentInventory?: (StoreAssignment & {
+    user: {
+      userId: number;
+      userProfile: {
+        firstName: string;
+        lastName: string;
+        entryDate: string;
+      };
+    };
     currentInventory?: {
       inventoryId: number;
       status: string;
@@ -149,6 +315,15 @@ export interface StoreWithInventory extends StoreWithUsers {
 }
 
 export interface StoreRelationOptions {
-  users?: boolean;
-  inventory?: boolean; // Simplified - just include current inventory or not
+  assignments?: boolean; // Renamed from 'users' for clarity
+  catalog?: boolean; // NEW: Include store's product catalog
+  inventory?: boolean; // Include current day's inventory assignments
 }
+
+// Union type for repository return
+export type StoreWithRelations =
+  | StoreBasic
+  | StoreWithAssignments
+  | StoreWithCatalog
+  | StoreWithInventory
+  | StoreWithAllRelations;

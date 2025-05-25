@@ -1,18 +1,22 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
 import {
   inventoryAssignments,
+  inventoryItem,
   storeAssignments,
+  storeCatalogItems,
+  storeCatalogTanks,
   stores,
+  tankType,
   users,
 } from "../db/schemas";
+import { InventoryItem, TankType } from "../dtos/response/inventoryInterface";
 import {
   Store,
   StoreAssignment,
-  StoreBasic,
+  StoreCatalog,
   StoreRelationOptions,
-  StoreWithInventory,
-  StoreWithUsers,
+  StoreWithRelations,
 } from "../dtos/response/storeInterface";
 import {
   ConflictError,
@@ -26,7 +30,7 @@ export interface StoreRepository {
   findById(
     storeId: number,
     relations: StoreRelationOptions
-  ): Promise<StoreBasic | StoreWithUsers | StoreWithInventory>;
+  ): Promise<StoreWithRelations>;
   findByName(name: string): Promise<Store | undefined>;
 
   // Create
@@ -46,13 +50,17 @@ export interface StoreRepository {
     latitude: string,
     longitude: string
   ): Promise<Store>;
+
+  // NEW: Catalog Management
+  initializeStoreCatalog(storeId: number): Promise<void>;
+  getStoreCatalog(storeId: number): Promise<StoreCatalog>;
 }
 
 export class PgStoreRepository implements StoreRepository {
   async findById(
     storeId: number,
     relations: StoreRelationOptions = {}
-  ): Promise<StoreBasic | StoreWithUsers | StoreWithInventory> {
+  ): Promise<StoreWithRelations> {
     // Basic store fetch
     const storeBasic = await db.query.stores.findFirst({
       where: eq(stores.storeId, storeId),
@@ -62,28 +70,50 @@ export class PgStoreRepository implements StoreRepository {
       throw new NotFoundError("Id de tienda inválido");
     }
 
-    // Return basic store if no users relation requested
-    if (!relations.users) {
-      return storeBasic;
+    // Start building the response
+    let storeResponse: any = { ...storeBasic };
+
+    // Handle assignments relation (renamed from 'users')
+    if (relations.assignments) {
+      const assignmentsData = await this.getStoreAssignments(
+        storeId,
+        relations.inventory
+      );
+      storeResponse.assignedUsers = assignmentsData;
     }
 
-    // Check if store has assignments before loading relations
+    // Handle catalog relation (NEW)
+    if (relations.catalog) {
+      const catalogData = await this.getStoreCatalog(storeId);
+      storeResponse.catalog = catalogData;
+    }
+
+    // Handle inventory relation
+    if (relations.inventory && !relations.assignments) {
+      // If assignments not already loaded, load them with inventory
+      const inventoryData = await this.getStoreAssignments(storeId, true);
+      storeResponse.currentInventory = inventoryData;
+    }
+
+    return storeResponse;
+  }
+
+  private async getStoreAssignments(
+    storeId: number,
+    includeInventory: boolean = false
+  ) {
     const hasAssignments = await db.query.storeAssignments.findFirst({
       where: eq(storeAssignments.storeId, storeId),
     });
 
     if (!hasAssignments) {
-      return {
-        ...storeBasic,
-        assignedUsers: [],
-      } as StoreWithUsers;
+      return [];
     }
 
-    // Current date for inventory filter
     const today = new Date().toISOString().split("T")[0];
 
     // Build query with user relations
-    let query = {
+    const storeWithUsers = await db.query.stores.findFirst({
       where: eq(stores.storeId, storeId),
       with: {
         assignedUsers: {
@@ -105,25 +135,16 @@ export class PgStoreRepository implements StoreRepository {
           },
         },
       },
-    };
+    });
 
-    // If inventory relation is requested, add a sub-query to get only the current day's inventory
-    if (relations.inventory) {
-      // First, we get the store with assigned users
-      const storeWithUsers: StoreWithUsers | undefined =
-        await db.query.stores.findFirst(query);
+    if (!storeWithUsers || !storeWithUsers.assignedUsers) {
+      return [];
+    }
 
-      if (!storeWithUsers) {
-        return {
-          ...storeBasic,
-          assignedUsers: [],
-        } as StoreWithUsers;
-      }
-
-      // Then for each assigned user, fetch their current inventory (if it exists)
-      const enrichedAssignedUsers = await Promise.all(
+    // If inventory is requested, enrich with current day's inventory
+    if (includeInventory) {
+      const enrichedAssignments = await Promise.all(
         storeWithUsers.assignedUsers.map(async (assignment) => {
-          // Find today's inventory for this assignment
           const currentInventory =
             await db.query.inventoryAssignments.findFirst({
               where: and(
@@ -140,7 +161,6 @@ export class PgStoreRepository implements StoreRepository {
               },
             });
 
-          // Return assignment with current inventory (if exists)
           return {
             ...assignment,
             currentInventory: currentInventory || undefined,
@@ -148,16 +168,56 @@ export class PgStoreRepository implements StoreRepository {
         })
       );
 
-      // Return store with users and their current inventory
-      return {
-        ...storeWithUsers,
-        assignedUsers: enrichedAssignedUsers,
-      } as StoreWithInventory;
+      return enrichedAssignments;
     }
 
-    // Just return store with users (no inventory)
-    const storeResult = await db.query.stores.findFirst(query);
-    return storeResult as StoreWithUsers;
+    return storeWithUsers.assignedUsers;
+  }
+
+  async getStoreCatalog(storeId: number): Promise<StoreCatalog> {
+    // Fetch store tanks with tank type details using query API
+    const tanks = await db.query.storeCatalogTanks.findMany({
+      where: eq(storeCatalogTanks.storeId, storeId),
+      with: {
+        tankType: {
+          columns: {
+            typeId: true,
+            name: true,
+            weight: true,
+            description: true,
+            scale: true,
+          },
+        },
+      },
+      orderBy: (storeCatalogTanks, { asc }) => [
+        // You can add ordering here if needed
+        // asc(storeCatalogTanks.tankTypeId)
+      ],
+    });
+
+    // Fetch store items with item details using query API
+    const items = await db.query.storeCatalogItems.findMany({
+      where: eq(storeCatalogItems.storeId, storeId),
+      with: {
+        inventoryItem: {
+          columns: {
+            inventoryItemId: true,
+            name: true,
+            description: true,
+            scale: true,
+          },
+        },
+      },
+      orderBy: (storeCatalogItems, { asc }) => [
+        // You can add ordering here if needed
+        // asc(storeCatalogItems.inventoryItemId)
+      ],
+    });
+
+    return {
+      tanks,
+      items,
+    };
   }
 
   async find(): Promise<Store[]> {
@@ -178,22 +238,81 @@ export class PgStoreRepository implements StoreRepository {
     phoneNumber: string,
     mapsUrl: string
   ): Promise<Store> {
-    const results = await db
-      .insert(stores)
-      .values({
-        name,
-        address,
-        latitude,
-        longitude,
-        phoneNumber,
-        mapsUrl,
-      })
-      .returning();
-    if (!results) {
-      throw new InternalError("Error creando tienda");
+    const result = await db.transaction(async (tx) => {
+      // Create the store
+      const [newStore] = await tx
+        .insert(stores)
+        .values({
+          name,
+          address,
+          latitude,
+          longitude,
+          phoneNumber,
+          mapsUrl,
+        })
+        .returning();
+
+      if (!newStore) {
+        throw new InternalError("Error creando tienda");
+      }
+
+      // Initialize store catalog with all available products
+      await this.initializeStoreCatalogTransaction(newStore.storeId, tx);
+
+      return newStore;
+    });
+
+    return result;
+  }
+
+  /**
+   * Initializes a store's catalog with all available tanks and items
+   * This method is called automatically when creating a new store
+   */
+  async initializeStoreCatalog(storeId: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      await this.initializeStoreCatalogTransaction(storeId, tx);
+    });
+  }
+
+  private async initializeStoreCatalogTransaction(
+    storeId: number,
+    tx: any
+  ): Promise<void> {
+    // Get all available tank types
+    const allTanks = await tx.select().from(tankType);
+
+    // Get all available inventory items
+    const allItems = await tx.select().from(inventoryItem);
+
+    // Insert tank types for this store with default pricing
+    if (allTanks.length > 0) {
+      await tx.insert(storeCatalogTanks).values(
+        allTanks.map((tank: TankType) => ({
+          storeId,
+          tankTypeId: tank.typeId,
+          defaultPurchasePrice: tank.purchase_price,
+          defaultSellPrice: tank.sell_price,
+          isActive: true,
+          defaultFullTanks: 0,
+          defaultEmptyTanks: 0,
+        }))
+      );
     }
 
-    return results[0];
+    // Insert inventory items for this store with default pricing
+    if (allItems.length > 0) {
+      await tx.insert(storeCatalogItems).values(
+        allItems.map((item: InventoryItem) => ({
+          storeId,
+          inventoryItemId: item.inventoryItemId,
+          defaultPurchasePrice: item.purchase_price,
+          defaultSellPrice: item.sell_price,
+          isActive: true,
+          defaultQuantity: 0,
+        }))
+      );
+    }
   }
 
   async updateLocation(
@@ -206,11 +325,14 @@ export class PgStoreRepository implements StoreRepository {
       .set({
         latitude,
         longitude,
+        updatedAt: new Date(),
       })
       .where(eq(stores.storeId, storeId))
       .returning();
-    if (!results)
+
+    if (!results || results.length === 0) {
       throw new InternalError("Error actualizando ubicación de tienda");
+    }
 
     return results[0];
   }
@@ -219,24 +341,32 @@ export class PgStoreRepository implements StoreRepository {
     storeId: number,
     userId: number
   ): Promise<StoreAssignment> {
-    const store = db.query.stores.findFirst({
+    // Validate store exists
+    const store = await db.query.stores.findFirst({
       where: eq(stores.storeId, storeId),
     });
     if (!store) throw new NotFoundError("Tienda no válida");
 
-    const user = db.query.users.findFirst({
+    // Validate user exists
+    const user = await db.query.users.findFirst({
       where: eq(users.userId, userId),
     });
     if (!user) throw new NotFoundError("Usuario no válido");
 
-    // We're making sure
+    // Check if user is already assigned to any store
     const userAssigned = await db.query.storeAssignments.findFirst({
-      where: eq(storeAssignments.userId, userId),
+      where: and(
+        eq(storeAssignments.userId, userId),
+        // Only check for active assignments (no end date)
+        isNull(storeAssignments.endDate)
+      ),
     });
 
-    if (userAssigned) throw new ConflictError("Usuario ya asignado a tienda");
+    if (userAssigned) {
+      throw new ConflictError("Usuario ya asignado a otra tienda");
+    }
 
-    const result = await db
+    const [result] = await db
       .insert(storeAssignments)
       .values({
         storeId,
@@ -244,8 +374,10 @@ export class PgStoreRepository implements StoreRepository {
       })
       .returning();
 
-    if (!result) throw new InternalError("Error creando nueva asignación");
+    if (!result) {
+      throw new InternalError("Error creando nueva asignación");
+    }
 
-    return result[0];
+    return result;
   }
 }

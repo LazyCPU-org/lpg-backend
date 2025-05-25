@@ -1,11 +1,11 @@
 import { relations } from "drizzle-orm";
 import {
+  decimal,
   pgTable,
   serial,
-  varchar,
   text,
   timestamp,
-  decimal,
+  varchar,
 } from "drizzle-orm/pg-core";
 
 // Define the stores table
@@ -24,9 +24,11 @@ export const stores = pgTable("stores", {
 // Define relations
 export const storesRelations = relations(stores, ({ many }) => ({
   assignedUsers: many(storeAssignments),
+  tanksCatalog: many(storeCatalogTanks),
+  itemsCatalog: many(storeCatalogItems),
 }));
 
 // Resolve circular dependency by importing after defining the relations
-import { storeAssignments } from ".";
+import { storeAssignments, storeCatalogItems, storeCatalogTanks } from ".";
 
 export default stores;
