@@ -173,7 +173,7 @@ export function buildInventoryAssignmentRouter(
 
   /**
    * @openapi
-   * /inventory/assignmentS:
+   * /inventory/assignments:
    *   post:
    *     tags: [Inventory]
    *     summary: Create a new inventory assignment

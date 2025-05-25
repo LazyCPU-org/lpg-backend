@@ -1,14 +1,12 @@
 import {
+  date,
+  integer,
   pgTable,
   serial,
-  integer,
-  varchar,
   text,
-  date,
   timestamp,
+  varchar,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 
 import { relations } from "drizzle-orm";
 
@@ -37,12 +35,5 @@ export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
 
 // Resolve circular dependency by importing after defining the relations
 import { users } from ".";
-
-// Create Zod schemas for validation
-export const insertUserProfileSchema = createInsertSchema(userProfiles);
-export const selectUserProfileSchema = createSelectSchema(userProfiles);
-
-export type UserProfile = z.infer<typeof selectUserProfileSchema>;
-export type NewUserProfile = z.infer<typeof insertUserProfileSchema>;
 
 export default userProfiles;

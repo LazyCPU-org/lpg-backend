@@ -1,7 +1,7 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { users, superadmins } from "../../db/schemas";
 import { UserRoleEnum } from "../../config/roles";
+import { superadmins, userProfiles, users } from "../../db/schemas";
 
 /**
  * @openapi
@@ -71,6 +71,27 @@ export const selectSafeUserSchema = createSelectSchema(users, {
   createdAt: true,
   updatedAt: true,
 });
+
+// Create Zod schemas for validation
+export const insertUserProfileSchema = createInsertSchema(userProfiles);
+export const selectUserProfileSchema = createSelectSchema(userProfiles);
+
+export type UserProfile = z.infer<typeof selectUserProfileSchema>;
+export type NewUserProfile = z.infer<typeof insertUserProfileSchema>;
+
+export const selectSafeUserWithRelationsSchema = selectSafeUserSchema.extend({
+  userProfile: z
+    .object({
+      firstName: z.string(),
+      lastName: z.string(),
+    })
+    .optional()
+    .nullable(),
+});
+
+export type SafeUserWithRelations = z.infer<
+  typeof selectSafeUserWithRelationsSchema
+>;
 
 // SudoAdmin Zod schemas
 export const insertSudoAdminSchema = createInsertSchema(superadmins);
