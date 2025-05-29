@@ -29,6 +29,11 @@ export abstract class IInventoryAssignmentRepository {
     assignmentId: number
   ): Promise<InventoryAssignmentType | null>;
 
+  abstract findByAssignmentAndDate(
+    assignmentId: number,
+    date: string
+  ): Promise<InventoryAssignmentType | null>;
+
   // Create operations
   abstract create(
     assignmentId: number,

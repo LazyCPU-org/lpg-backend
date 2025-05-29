@@ -2,7 +2,6 @@ import { Request, Response, Router } from "express";
 import {
   CreateInventoryAssignmentRequestSchema,
   GetInventoryAssignmentsRequestSchema,
-  UpdateInventoryAssignmentRequestSchema,
   UpdateInventoryAssignmentStatusRequestSchema,
 } from "../dtos/request/inventoryAssignmentDTO";
 import { InventoryAssignmentRelationOptions } from "../dtos/response/inventoryAssignmentInterface";
@@ -14,6 +13,7 @@ import {
 } from "../middlewares/authorization";
 import { parseIncludeRelations } from "../middlewares/include-relations";
 import { IInventoryAssignmentService } from "../services/inventoryAssignmentService";
+import { UnauthorizedError } from "../utils/custom-errors";
 import { ActionEnum, ModuleEnum } from "../utils/permissions";
 
 export function buildInventoryAssignmentRouter(
@@ -253,88 +253,6 @@ export function buildInventoryAssignmentRouter(
 
   /**
    * @openapi
-   * /inventory/assignments/{id}:
-   *   patch:
-   *     tags: [Inventory]
-   *     summary: Update inventory assignment tanks and items
-   *     description: |
-   *       Updates the tanks and items quantities for an existing inventory assignment.
-   *       This endpoint allows you to set the actual assigned quantities for tanks and items
-   *       that were initially populated from the store catalog.
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         schema:
-   *           type: integer
-   *         required: true
-   *         description: Inventory assignment ID
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/UpdateInventoryAssignmentRequest'
-   *     responses:
-   *       200:
-   *         description: Assignment updated successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 inventoryId:
-   *                   type: integer
-   *                 assignmentId:
-   *                   type: integer
-   *                 assignmentDate:
-   *                   type: string
-   *                   format: date
-   *                 status:
-   *                   type: string
-   *                 tanks:
-   *                   type: array
-   *                   description: Updated tank assignments
-   *                   items:
-   *                     type: object
-   *                 items:
-   *                   type: array
-   *                   description: Updated item assignments
-   *                   items:
-   *                     type: object
-   *       400:
-   *         description: Invalid input data
-   *       404:
-   *         description: Assignment not found or tank/item not found in assignment
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden - insufficient permissions
-   */
-  router.patch(
-    "/:id",
-    isAuthenticated,
-    requirePermission(ModuleEnum.INVENTORY, ActionEnum.UPDATE),
-    asyncHandler(async (req: Request, res: Response) => {
-      const id = parseInt(req.params.id);
-      const requestData = UpdateInventoryAssignmentRequestSchema.parse(
-        req.body
-      );
-
-      const assignment =
-        await inventoryAssignmentService.updateInventoryAssignments(
-          id,
-          requestData.tanks,
-          requestData.items
-        );
-
-      res.json(assignment);
-    })
-  );
-
-  /**
-   * @openapi
    * /inventory/assignments/{id}/status:
    *   patch:
    *     tags: [Inventory]
@@ -371,8 +289,11 @@ export function buildInventoryAssignmentRouter(
     "/:id/status",
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.UPDATE),
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler(async (req: AuthRequest, res: Response) => {
       const id = parseInt(req.params.id);
+      const userId = req.user?.id;
+      if (!userId)
+        throw new UnauthorizedError("Usuario autenticado no encontrado");
       const requestData = UpdateInventoryAssignmentStatusRequestSchema.parse(
         req.body
       );
@@ -380,7 +301,8 @@ export function buildInventoryAssignmentRouter(
       const assignment =
         await inventoryAssignmentService.updateAssignmentStatus(
           id,
-          requestData.status
+          requestData.status,
+          Number.parseInt(userId)
         );
 
       res.json(assignment);

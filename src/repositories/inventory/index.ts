@@ -5,6 +5,23 @@ export { PgInventoryAssignmentRepository } from "./PgInventoryAssignmentReposito
 export { PgItemAssignmentRepository } from "./PgItemAssignmentRepository";
 export { PgTankAssignmentRepository } from "./PgTankAssignmentRepository";
 
+// Transaction service exports
+export { IInventoryTransactionRepository } from "./IInventoryTransactionRepository";
+export { PgInventoryTransactionRepository } from "./PgInventoryTransactionRepository";
+export {
+  BUSINESS_OPERATIONS,
+  TRANSACTION_DESCRIPTIONS,
+  TRANSACTION_TYPES,
+  TransactionTypeEnum,
+} from "./transactionTypes";
+export type { TransactionType } from "./transactionTypes";
+
+// Consolidation workflow exports
+export {
+  ConsolidationWorkflow,
+  IConsolidationWorkflow,
+} from "./consolidationWorkflow";
+
 // Future inventory repositories can be added here:
 // export { ITankTypeRepository } from './ITankTypeRepository';
 // export { PgTankTypeRepository } from './PgTankTypeRepository';

@@ -1,4 +1,3 @@
-// config/di.ts - Using Domain Structure
 import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
 import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import {
@@ -17,9 +16,11 @@ import {
 // Clean domain-based imports for inventory
 import {
   IInventoryAssignmentRepository,
+  IInventoryTransactionRepository,
   IItemAssignmentRepository,
   ITankAssignmentRepository,
   PgInventoryAssignmentRepository,
+  PgInventoryTransactionRepository,
   PgItemAssignmentRepository,
   PgTankAssignmentRepository,
 } from "../repositories/inventory";
@@ -49,8 +50,9 @@ export interface Container {
   registrationStrategyFactory: RegistrationStrategyFactory;
   permissionManager: PermissionManager;
 
-  // Inventory module
+  // Inventory module - split repositories
   inventoryAssignmentRepository: IInventoryAssignmentRepository;
+  inventoryTransactionRepository: IInventoryTransactionRepository;
   tankAssignmentRepository: ITankAssignmentRepository;
   itemAssignmentRepository: IItemAssignmentRepository;
   inventoryAssignmentService: IInventoryAssignmentService;
@@ -79,18 +81,18 @@ export function createContainer(): Container {
   // Create inventory module dependencies with new domain structure
   const tankAssignmentRepository = new PgTankAssignmentRepository();
   const itemAssignmentRepository = new PgItemAssignmentRepository();
+  const inventoryTransactionRepository = new PgInventoryTransactionRepository();
 
-  // Main repository depends on the specialized ones
   const inventoryAssignmentRepository = new PgInventoryAssignmentRepository(
     tankAssignmentRepository,
     itemAssignmentRepository
   );
 
-  // Service gets all three repositories
   const inventoryAssignmentService = new InventoryAssignmentService(
     inventoryAssignmentRepository,
     tankAssignmentRepository,
-    itemAssignmentRepository
+    itemAssignmentRepository,
+    inventoryTransactionRepository
   );
 
   // Return container with all dependencies
@@ -112,6 +114,7 @@ export function createContainer(): Container {
 
     // Inventory module
     inventoryAssignmentRepository,
+    inventoryTransactionRepository,
     tankAssignmentRepository,
     itemAssignmentRepository,
     inventoryAssignmentService,

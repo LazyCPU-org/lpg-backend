@@ -15,16 +15,20 @@ import { users } from "../user-management/users";
 
 // Define status enum values
 export const AssignmentStatusEnum = {
-  CREATED: "created", // 1. Base status after validation or creation
-  ASSIGNED: "assigned", // 2. Confirmation to start day sales
-  VALIDATED: "validated", // 3. End of day conformity
+  CREATED: "created",
+  ASSIGNED: "assigned",
+  CONSOLIDATED: "consolidated",
+  VALIDATED: "validated",
+  OBSERVED: "observed",
 } as const;
 
 // Define enum values restriction in database
 export const inventoryStatusEnum = pgEnum("assignment_status_check", [
-  AssignmentStatusEnum.ASSIGNED,
   AssignmentStatusEnum.CREATED,
+  AssignmentStatusEnum.ASSIGNED,
+  AssignmentStatusEnum.CONSOLIDATED,
   AssignmentStatusEnum.VALIDATED,
+  AssignmentStatusEnum.OBSERVED,
 ]);
 
 /**

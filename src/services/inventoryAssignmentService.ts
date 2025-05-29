@@ -1,9 +1,9 @@
+// src/services/inventoryAssignmentService.ts - Enhanced with consolidation workflow
 import { eq } from "drizzle-orm";
 import { db } from "../db";
+import { AssignmentStatusEnum } from "../db/schemas/inventory";
 import { storeAssignments } from "../db/schemas/locations";
 import {
-  AssignmentItemType,
-  AssignmentTankType,
   InventoryAssignmentRelationOptions,
   InventoryAssignmentType,
   InventoryAssignmentWithDetailsAndRelations,
@@ -11,9 +11,13 @@ import {
   StatusType,
 } from "../dtos/response/inventoryAssignmentInterface";
 import {
+  ConsolidationWorkflow,
+  IConsolidationWorkflow,
   IInventoryAssignmentRepository,
+  IInventoryTransactionRepository,
   IItemAssignmentRepository,
   ITankAssignmentRepository,
+  TransactionTypeEnum,
 } from "../repositories/inventory";
 import { NotFoundError } from "../utils/custom-errors";
 
@@ -32,7 +36,7 @@ export interface IInventoryAssignmentService {
     relations?: InventoryAssignmentRelationOptions
   ): Promise<InventoryAssignmentWithDetailsAndRelations>;
 
-  // Create method - creates assignment with catalog data
+  // Create methods
   createInventoryAssignment(
     assignmentId: number,
     assignmentDate: string,
@@ -40,57 +44,80 @@ export interface IInventoryAssignmentService {
     notes?: string
   ): Promise<InventoryAssignmentWithDetailsAndRelations>;
 
-  // Update methods for PATCH operations
-  updateTankAssignments(
-    inventoryId: number,
-    tanks: {
-      tankTypeId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedFullTanks: number;
-      assignedEmptyTanks: number;
-    }[]
-  ): Promise<AssignmentTankType[]>;
-
-  updateItemAssignments(
-    inventoryId: number,
-    items: {
-      inventoryItemId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedItems: number;
-    }[]
-  ): Promise<AssignmentItemType[]>;
-
-  updateInventoryAssignments(
-    inventoryId: number,
-    tanks: {
-      tankTypeId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedFullTanks: number;
-      assignedEmptyTanks: number;
-    }[],
-    items: {
-      inventoryItemId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedItems: number;
-    }[]
+  createOrGetTodaysInventory(
+    assignmentId: number,
+    assignedBy: number
   ): Promise<InventoryAssignmentWithDetailsAndRelations>;
 
+  // Status update methods
   updateAssignmentStatus(
     id: number,
-    status: string
+    status: string,
+    userId: number
   ): Promise<InventoryAssignmentType>;
+
+  // NEW: Consolidation workflow
+  consolidateAndCreateNext(
+    inventoryId: number,
+    userId: number,
+    skipWeekends?: boolean
+  ): Promise<{
+    currentInventory: InventoryAssignmentType;
+    nextDayInventory: InventoryAssignmentWithDetailsAndRelations;
+  }>;
+
+  // Transaction-based updates
+  deliveryOut(
+    inventoryId: number,
+    userId: number,
+    items: {
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      quantity: number;
+      referenceId?: number;
+    }[]
+  ): Promise<void>;
+
+  deliveryReturn(
+    inventoryId: number,
+    userId: number,
+    items: {
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      quantity: number;
+      isEmpty?: boolean;
+      referenceId?: number;
+    }[]
+  ): Promise<void>;
+
+  stockAdjustment(
+    inventoryId: number,
+    userId: number,
+    adjustments: {
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      currentQuantity: number;
+      adjustedQuantity: number;
+      reason: string;
+    }[]
+  ): Promise<void>;
 }
 
 export class InventoryAssignmentService implements IInventoryAssignmentService {
+  private consolidationWorkflow: IConsolidationWorkflow;
+
   constructor(
     private inventoryAssignmentRepository: IInventoryAssignmentRepository,
     private tankAssignmentRepository: ITankAssignmentRepository,
-    private itemAssignmentRepository: IItemAssignmentRepository
-  ) {}
+    private itemAssignmentRepository: IItemAssignmentRepository,
+    private inventoryTransactionRepository: IInventoryTransactionRepository
+  ) {
+    this.consolidationWorkflow = new ConsolidationWorkflow(
+      inventoryAssignmentRepository,
+      tankAssignmentRepository,
+      itemAssignmentRepository
+    );
+  }
 
   async findAssignments(
     userId?: number,
@@ -121,8 +148,7 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
   }
 
   /**
-   * Creates a new inventory assignment and populates it with store catalog data
-   * This is the main POST operation implementation
+   * Creates a new inventory assignment with catalog data
    */
   async createInventoryAssignment(
     assignmentId: number,
@@ -132,32 +158,23 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
   ): Promise<InventoryAssignmentWithDetailsAndRelations> {
     const dateObj = assignmentDate || new Date().toISOString().split("T")[0];
 
-    // Step 1: Create the base inventory assignment
+    // Create base assignment
     const baseAssignment = await this.inventoryAssignmentRepository.create(
       assignmentId,
       dateObj,
       assignedBy,
       notes,
-      true // autoAssignment = true for catalog-based creation
+      true
     );
 
-    // Step 2: Get the store information and its catalog from the assignment
+    // Get store catalog
     const storeAssignment = await db.query.storeAssignments.findFirst({
       where: eq(storeAssignments.assignmentId, assignmentId),
       with: {
         store: {
           with: {
-            // Get the store's catalog items and tank types
-            itemsCatalog: {
-              with: {
-                inventoryItem: true,
-              },
-            },
-            tanksCatalog: {
-              with: {
-                tankType: true,
-              },
-            },
+            itemsCatalog: { with: { inventoryItem: true } },
+            tanksCatalog: { with: { tankType: true } },
           },
         },
       },
@@ -169,36 +186,33 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
 
     const { itemsCatalog, tanksCatalog } = storeAssignment.store;
 
-    // Step 3: Create tank assignments with 0 initial quantities from store catalog
-    const tankPromises = tanksCatalog.map((catalogTank) =>
-      this.tankAssignmentRepository.create(
-        baseAssignment.inventoryId,
-        catalogTank.tankType.typeId,
-        catalogTank.tankType.purchase_price || "0.00", // Use catalog price as default
-        catalogTank.tankType.sell_price || "0.00", // Use catalog price as default
-        0, // assignedFullTanks
-        0 // assignedEmptyTanks
-      )
-    );
-
-    // Step 4: Create item assignments with 0 initial quantities from store catalog
-    const itemPromises = itemsCatalog.map((catalogItem) =>
-      this.itemAssignmentRepository.create(
-        baseAssignment.inventoryId,
-        catalogItem.inventoryItem.inventoryItemId,
-        catalogItem.inventoryItem.purchase_price || "0.00", // Use catalog price as default
-        catalogItem.inventoryItem.sell_price || "0.00", // Use catalog price as default
-        0 // assignedItems
-      )
-    );
-
-    // Step 5: Execute all assignments in parallel
+    // Create assignments with 0 initial quantities
     const [tankAssignments, itemAssignments] = await Promise.all([
-      Promise.all(tankPromises),
-      Promise.all(itemPromises),
+      Promise.all(
+        tanksCatalog.map((catalogTank) =>
+          this.tankAssignmentRepository.create(
+            baseAssignment.inventoryId,
+            catalogTank.tankType.typeId,
+            catalogTank.tankType.purchase_price || "0.00",
+            catalogTank.tankType.sell_price || "0.00",
+            0,
+            0 // Start with 0 quantities
+          )
+        )
+      ),
+      Promise.all(
+        itemsCatalog.map((catalogItem) =>
+          this.itemAssignmentRepository.create(
+            baseAssignment.inventoryId,
+            catalogItem.inventoryItem.inventoryItemId,
+            catalogItem.inventoryItem.purchase_price || "0.00",
+            catalogItem.inventoryItem.sell_price || "0.00",
+            0 // Start with 0 quantity
+          )
+        )
+      ),
     ]);
 
-    // Step 6: Return the complete assignment with populated data
     return {
       ...baseAssignment,
       tanks: tankAssignments.map((ta) => ({
@@ -216,63 +230,234 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
     };
   }
 
-  async updateTankAssignments(
-    inventoryId: number,
-    tanks: {
-      tankTypeId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedFullTanks: number;
-      assignedEmptyTanks: number;
-    }[]
-  ): Promise<AssignmentTankType[]> {
-    return await this.tankAssignmentRepository.updateBatch(inventoryId, tanks);
-  }
-
-  async updateItemAssignments(
-    inventoryId: number,
-    items: {
-      inventoryItemId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedItems: number;
-    }[]
-  ): Promise<AssignmentItemType[]> {
-    return await this.itemAssignmentRepository.updateBatch(inventoryId, items);
-  }
-
-  async updateInventoryAssignments(
-    inventoryId: number,
-    tanks: {
-      tankTypeId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedFullTanks: number;
-      assignedEmptyTanks: number;
-    }[],
-    items: {
-      inventoryItemId: number;
-      purchase_price: string;
-      sell_price: string;
-      assignedItems: number;
-    }[]
+  /**
+   * Creates inventory for today if it doesn't exist, or returns existing one
+   * Prevents duplicate daily inventories
+   */
+  async createOrGetTodaysInventory(
+    assignmentId: number,
+    assignedBy: number
   ): Promise<InventoryAssignmentWithDetailsAndRelations> {
-    // Update tanks and items in parallel
-    await Promise.all([
-      this.updateTankAssignments(inventoryId, tanks),
-      this.updateItemAssignments(inventoryId, items),
-    ]);
+    const today = new Date().toISOString().split("T")[0];
 
-    // Return the updated assignment with details
-    return await this.inventoryAssignmentRepository.findByIdWithRelations(
-      inventoryId
+    // Check if inventory already exists for today
+    const existingInventory =
+      await this.inventoryAssignmentRepository.findByAssignmentAndDate(
+        assignmentId,
+        today
+      );
+
+    if (existingInventory) {
+      // Return existing inventory with details
+      return await this.inventoryAssignmentRepository.findByIdWithRelations(
+        existingInventory.inventoryId
+      );
+    }
+
+    // Create new inventory for today
+    return await this.createInventoryAssignment(
+      assignmentId,
+      today,
+      assignedBy,
+      "Inventario creado para la fecha de hoy"
     );
   }
 
+  /**
+   * Updates assignment status with enhanced business logic
+   */
   async updateAssignmentStatus(
     id: number,
-    status: StatusType
+    status: string,
+    userId: number
   ): Promise<InventoryAssignmentType> {
-    return await this.inventoryAssignmentRepository.updateStatus(id, status);
+    // Special handling for CONSOLIDATED status - triggers next day creation
+    if (status === AssignmentStatusEnum.CONSOLIDATED) {
+      const result = await this.consolidateAndCreateNext(id, userId);
+      return result.currentInventory;
+    }
+
+    // Standard status update for other transitions
+    return await this.inventoryAssignmentRepository.updateStatus(
+      id,
+      status as StatusType
+    );
+  }
+
+  /**
+   * NEW: Consolidates current inventory and creates next day with carried quantities
+   */
+  async consolidateAndCreateNext(
+    inventoryId: number,
+    userId: number,
+    skipWeekends = false
+  ): Promise<{
+    currentInventory: InventoryAssignmentType;
+    nextDayInventory: InventoryAssignmentWithDetailsAndRelations;
+  }> {
+    return await this.consolidationWorkflow.consolidateAndCreateNext(
+      inventoryId,
+      userId,
+      skipWeekends
+    );
+  }
+
+  // Transaction-based business operations
+  async deliveryOut(
+    inventoryId: number,
+    userId: number,
+    items: {
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      quantity: number;
+      referenceId?: number;
+    }[]
+  ): Promise<void> {
+    const tankTransactions = items
+      .filter((item) => item.tankTypeId)
+      .map((item) => ({
+        tankTypeId: item.tankTypeId!,
+        fullTanksChange: -item.quantity, // Negative for delivery out
+        emptyTanksChange: 0,
+        transactionType: TransactionTypeEnum.SALE,
+        userId,
+        notes: `Entrega realizada: ${item.quantity} tanques`,
+        referenceId: item.referenceId,
+      }));
+
+    const itemTransactions = items
+      .filter((item) => item.inventoryItemId)
+      .map((item) => ({
+        inventoryItemId: item.inventoryItemId!,
+        itemChange: -item.quantity, // Negative for delivery out
+        transactionType: TransactionTypeEnum.SALE,
+        userId,
+        notes: `Entrega realizada: ${item.quantity} artículos`,
+      }));
+
+    await Promise.all([
+      this.inventoryTransactionRepository.processTankTransactions(
+        inventoryId,
+        tankTransactions,
+        true
+      ),
+      this.inventoryTransactionRepository.processItemTransactions(
+        inventoryId,
+        itemTransactions,
+        true
+      ),
+    ]);
+  }
+
+  async deliveryReturn(
+    inventoryId: number,
+    userId: number,
+    items: {
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      quantity: number;
+      isEmpty?: boolean;
+      referenceId?: number;
+    }[]
+  ): Promise<void> {
+    const tankTransactions = items
+      .filter((item) => item.tankTypeId)
+      .map((item) => ({
+        tankTypeId: item.tankTypeId!,
+        fullTanksChange: item.isEmpty ? 0 : item.quantity,
+        emptyTanksChange: item.isEmpty ? item.quantity : 0,
+        transactionType: TransactionTypeEnum.RETURN,
+        userId,
+        notes: `Devolución: ${item.quantity} tanques ${
+          item.isEmpty ? "vacíos" : "llenos"
+        }`,
+        referenceId: item.referenceId,
+      }));
+
+    const itemTransactions = items
+      .filter((item) => item.inventoryItemId)
+      .map((item) => ({
+        inventoryItemId: item.inventoryItemId!,
+        itemChange: item.quantity, // Positive for return
+        transactionType: TransactionTypeEnum.RETURN,
+        userId,
+        notes: `Devolución: ${item.quantity} artículos`,
+      }));
+
+    await Promise.all([
+      this.inventoryTransactionRepository.processTankTransactions(
+        inventoryId,
+        tankTransactions,
+        true
+      ),
+      this.inventoryTransactionRepository.processItemTransactions(
+        inventoryId,
+        itemTransactions,
+        true
+      ),
+    ]);
+  }
+
+  async stockAdjustment(
+    inventoryId: number,
+    userId: number,
+    adjustments: {
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      currentQuantity: number;
+      adjustedQuantity: number;
+      reason: string;
+    }[]
+  ): Promise<void> {
+    for (const adjustment of adjustments) {
+      const difference =
+        adjustment.adjustedQuantity - adjustment.currentQuantity;
+
+      if (adjustment.tankTypeId && difference !== 0) {
+        if (difference > 0) {
+          await this.inventoryTransactionRepository.incrementTankByInventoryId(
+            inventoryId,
+            adjustment.tankTypeId,
+            difference,
+            0,
+            TransactionTypeEnum.PURCHASE,
+            userId,
+            `Ajuste de inventario: ${adjustment.reason}`
+          );
+        } else {
+          await this.inventoryTransactionRepository.decrementTankByInventoryId(
+            inventoryId,
+            adjustment.tankTypeId,
+            Math.abs(difference),
+            0,
+            TransactionTypeEnum.PURCHASE,
+            userId,
+            `Ajuste de inventario: ${adjustment.reason}`
+          );
+        }
+      }
+
+      if (adjustment.inventoryItemId && difference !== 0) {
+        if (difference > 0) {
+          await this.inventoryTransactionRepository.incrementItemByInventoryId(
+            inventoryId,
+            adjustment.inventoryItemId,
+            difference,
+            TransactionTypeEnum.PURCHASE,
+            userId,
+            `Ajuste de inventario: ${adjustment.reason}`
+          );
+        } else {
+          await this.inventoryTransactionRepository.decrementItemByInventoryId(
+            inventoryId,
+            adjustment.inventoryItemId,
+            Math.abs(difference),
+            TransactionTypeEnum.PURCHASE,
+            userId,
+            `Ajuste de inventario: ${adjustment.reason}`
+          );
+        }
+      }
+    }
   }
 }

@@ -1,9 +1,5 @@
+// src/repositories/inventory/PgInventoryAssignmentRepository.ts - Updated with consolidation support
 import { and, eq } from "drizzle-orm";
-import {
-  IInventoryAssignmentRepository,
-  IItemAssignmentRepository,
-  ITankAssignmentRepository,
-} from ".";
 import { db } from "../../db";
 import {
   AssignmentStatusEnum,
@@ -11,7 +7,7 @@ import {
 } from "../../db/schemas/inventory";
 import { storeAssignments } from "../../db/schemas/locations";
 import { users } from "../../db/schemas/user-management";
-import type {
+import {
   InventoryAssignmentBasic,
   InventoryAssignmentRelationOptions,
   InventoryAssignmentType,
@@ -29,6 +25,9 @@ import {
   InternalError,
   NotFoundError,
 } from "../../utils/custom-errors";
+import { IInventoryAssignmentRepository } from "./IInventoryAssignmentRepository";
+import { IItemAssignmentRepository } from "./IItemAssignmentRepository";
+import { ITankAssignmentRepository } from "./ITankAssignmentRepository";
 
 export class PgInventoryAssignmentRepository
   implements IInventoryAssignmentRepository
@@ -37,9 +36,8 @@ export class PgInventoryAssignmentRepository
     private tankAssignmentRepo: ITankAssignmentRepository,
     private itemAssignmentRepo: IItemAssignmentRepository
   ) {}
-  test(): void {
-    throw new Error("Method not implemented.");
-  }
+
+  // ... existing methods (find, findById, findByIdWithRelations, findByAssignmentId, create) remain the same
 
   async find(
     userId?: number,
@@ -251,19 +249,61 @@ export class PgInventoryAssignmentRepository
     currentStatus: string | null,
     newStatus: string
   ): boolean {
-    // Valid transitions: CREATED -> ASSIGNED -> VALIDATED
-    if (
-      currentStatus === AssignmentStatusEnum.CREATED &&
-      newStatus === AssignmentStatusEnum.ASSIGNED
-    ) {
-      return true;
-    }
-    if (
-      currentStatus === AssignmentStatusEnum.ASSIGNED &&
-      newStatus === AssignmentStatusEnum.VALIDATED
-    ) {
-      return true;
-    }
-    return false;
+    // Updated status transitions: CREATED → ASSIGNED → CONSOLIDATED → VALIDATED/OBSERVED
+    const validTransitions = [
+      // Basic workflow
+      [AssignmentStatusEnum.CREATED, AssignmentStatusEnum.ASSIGNED],
+      [AssignmentStatusEnum.ASSIGNED, AssignmentStatusEnum.CONSOLIDATED],
+
+      // Operator validation
+      [AssignmentStatusEnum.CONSOLIDATED, AssignmentStatusEnum.VALIDATED],
+      [AssignmentStatusEnum.CONSOLIDATED, AssignmentStatusEnum.OBSERVED],
+
+      // Re-validation after observation
+      [AssignmentStatusEnum.OBSERVED, AssignmentStatusEnum.VALIDATED],
+      [AssignmentStatusEnum.OBSERVED, AssignmentStatusEnum.CONSOLIDATED], // To fix issues and reconsolidate
+
+      // Admin overrides (can move backwards for corrections)
+      [AssignmentStatusEnum.CONSOLIDATED, AssignmentStatusEnum.ASSIGNED], // Reopen for corrections
+      [AssignmentStatusEnum.VALIDATED, AssignmentStatusEnum.OBSERVED], // Admin found issues
+    ];
+
+    return validTransitions.some(
+      ([from, to]) => currentStatus === from && newStatus === to
+    );
+  }
+
+  // New method: Check if next day inventory already exists
+  async checkNextDayExists(
+    assignmentId: number,
+    currentDate: string
+  ): Promise<boolean> {
+    const nextDay = new Date(currentDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const nextDateStr = nextDay.toISOString().split("T")[0];
+
+    const existing = await db.query.inventoryAssignments.findFirst({
+      where: and(
+        eq(inventoryAssignments.assignmentId, assignmentId),
+        eq(inventoryAssignments.assignmentDate, nextDateStr)
+      ),
+    });
+
+    return !!existing;
+  }
+
+  // New method: Find existing inventory for specific date
+  async findByAssignmentAndDate(
+    assignmentId: number,
+    date: string
+  ): Promise<InventoryAssignmentType | null> {
+    const assignment = await db.query.inventoryAssignments.findFirst({
+      where: and(
+        eq(inventoryAssignments.assignmentId, assignmentId),
+        eq(inventoryAssignments.assignmentDate, date)
+      ),
+    });
+
+    return assignment || null;
   }
 }
