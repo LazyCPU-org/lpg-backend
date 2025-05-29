@@ -10,6 +10,37 @@ const validatePrice = (val: string) => {
  * @openapi
  * components:
  *   schemas:
+ *     CreateInventoryAssignmentRequest:
+ *       type: object
+ *       properties:
+ *         assignmentId:
+ *           type: integer
+ *           description: ID of the store assignment
+ *         assignmentDate:
+ *           type: string
+ *           format: date
+ *           description: Date of the inventory assignment (defaults to current date)
+ *         notes:
+ *           type: string
+ *           description: Additional notes for the assignment
+ *       required:
+ *         - assignmentId
+ */
+export const CreateInventoryAssignmentRequestSchema = z.object({
+  assignmentId: z.number().positive("ID de asignación en tienda inválido"),
+  assignmentDate: z
+    .string()
+    .default(new Date().toISOString().split("T")[0]) // Only date part
+    .refine((value) => !isNaN(Date.parse(value)), {
+      message: "Fecha de asignación inválida",
+    }),
+  notes: z.string().optional(),
+});
+
+/**
+ * @openapi
+ * components:
+ *   schemas:
  *     TankAssignmentRequest:
  *       type: object
  *       properties:
@@ -93,45 +124,26 @@ export const ItemAssignmentRequestSchema = z.object({
  * @openapi
  * components:
  *   schemas:
- *     CreateInventoryAssignmentRequest:
+ *     UpdateInventoryAssignmentRequest:
  *       type: object
  *       properties:
- *         assignmentId:
- *           type: integer
- *           description: ID of the store assignment
- *         assignmentDate:
- *           type: string
- *           format: date-time
- *           description: Date of the inventory assignment (defaults to current date)
- *         notes:
- *           type: string
- *           description: Additional notes for the assignment
  *         tanks:
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/TankAssignmentRequest'
- *           description: List of tank assignments
+ *           description: List of tank assignments to update
  *         items:
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/ItemAssignmentRequest'
- *           description: List of item assignments
+ *           description: List of item assignments to update
  *       required:
- *         - assignmentId
  *         - tanks
  *         - items
  */
-export const CreateInventoryAssignmentRequestSchema = z.object({
-  assignmentId: z.number().positive("ID de asignación en tienda inválido"),
-  assignmentDate: z
-    .string()
-    .default(new Date().toISOString())
-    .refine((value) => !isNaN(Date.parse(value)), {
-      message: "Fecha de asignación inválida",
-    }),
-  notes: z.string().optional(),
-  tanks: z.array(TankAssignmentRequestSchema).optional(),
-  items: z.array(ItemAssignmentRequestSchema).optional(),
+export const UpdateInventoryAssignmentRequestSchema = z.object({
+  tanks: z.array(TankAssignmentRequestSchema),
+  items: z.array(ItemAssignmentRequestSchema),
 });
 
 /**
@@ -206,9 +218,12 @@ export const GetInventoryAssignmentsRequestSchema = z.object({
     .optional(),
 });
 
-// Types with OpenAPI documentation now complete
+// Export types
 export type CreateInventoryAssignmentRequest = z.infer<
   typeof CreateInventoryAssignmentRequestSchema
+>;
+export type UpdateInventoryAssignmentRequest = z.infer<
+  typeof UpdateInventoryAssignmentRequestSchema
 >;
 export type UpdateInventoryAssignmentStatusRequest = z.infer<
   typeof UpdateInventoryAssignmentStatusRequestSchema

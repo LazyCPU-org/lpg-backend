@@ -1,13 +1,10 @@
+// config/di.ts - Using Domain Structure
 import { LoginStrategyFactory } from "../factories/auth/loginStrategyFactory";
 import { RegistrationStrategyFactory } from "../factories/auth/registrationStrategyFactory";
 import {
   AuthRepository,
   PgAuthRepository,
 } from "../repositories/authRepository";
-import {
-  InventoryAssignmentRepository,
-  PgInventoryAssignmentRepository,
-} from "../repositories/inventoryAssignmentRepository";
 import {
   PgStoreRepository,
   StoreRepository,
@@ -16,6 +13,17 @@ import {
   PgUserRepository,
   UserRepository,
 } from "../repositories/userRepository";
+
+// Clean domain-based imports for inventory
+import {
+  IInventoryAssignmentRepository,
+  IItemAssignmentRepository,
+  ITankAssignmentRepository,
+  PgInventoryAssignmentRepository,
+  PgItemAssignmentRepository,
+  PgTankAssignmentRepository,
+} from "../repositories/inventory";
+
 import { AuthService, IAuthService } from "../services/authService";
 import {
   IInventoryAssignmentService,
@@ -42,7 +50,9 @@ export interface Container {
   permissionManager: PermissionManager;
 
   // Inventory module
-  inventoryAssignmentRepository: InventoryAssignmentRepository;
+  inventoryAssignmentRepository: IInventoryAssignmentRepository;
+  tankAssignmentRepository: ITankAssignmentRepository;
+  itemAssignmentRepository: IItemAssignmentRepository;
   inventoryAssignmentService: IInventoryAssignmentService;
 }
 
@@ -66,10 +76,21 @@ export function createContainer(): Container {
   const userService = new UserService(userRepository);
   const storeService = new StoreService(storeRepository);
 
-  // Create inventory module dependencies
-  const inventoryAssignmentRepository = new PgInventoryAssignmentRepository();
+  // Create inventory module dependencies with new domain structure
+  const tankAssignmentRepository = new PgTankAssignmentRepository();
+  const itemAssignmentRepository = new PgItemAssignmentRepository();
+
+  // Main repository depends on the specialized ones
+  const inventoryAssignmentRepository = new PgInventoryAssignmentRepository(
+    tankAssignmentRepository,
+    itemAssignmentRepository
+  );
+
+  // Service gets all three repositories
   const inventoryAssignmentService = new InventoryAssignmentService(
-    inventoryAssignmentRepository
+    inventoryAssignmentRepository,
+    tankAssignmentRepository,
+    itemAssignmentRepository
   );
 
   // Return container with all dependencies
@@ -89,7 +110,10 @@ export function createContainer(): Container {
     userService,
     storeService,
 
+    // Inventory module
     inventoryAssignmentRepository,
+    tankAssignmentRepository,
+    itemAssignmentRepository,
     inventoryAssignmentService,
   };
 }

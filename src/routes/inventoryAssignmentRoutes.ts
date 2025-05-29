@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import {
   CreateInventoryAssignmentRequestSchema,
   GetInventoryAssignmentsRequestSchema,
+  UpdateInventoryAssignmentRequestSchema,
   UpdateInventoryAssignmentStatusRequestSchema,
 } from "../dtos/request/inventoryAssignmentDTO";
 import { InventoryAssignmentRelationOptions } from "../dtos/response/inventoryAssignmentInterface";
@@ -100,7 +101,7 @@ export function buildInventoryAssignmentRouter(
         queryParams.storeId,
         queryParams.date,
         queryParams.status,
-        relationOptions // Add relation options parameter
+        relationOptions
       );
 
       res.json(assignments);
@@ -153,7 +154,7 @@ export function buildInventoryAssignmentRouter(
     "/:id",
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.READ),
-    parseIncludeRelations, // Add the middleware here
+    parseIncludeRelations,
     asyncHandler(async (req: Request, res: Response) => {
       const id = parseInt(req.params.id);
 
@@ -165,7 +166,7 @@ export function buildInventoryAssignmentRouter(
 
       const assignment = await inventoryAssignmentService.findAssignmentById(
         id,
-        relationOptions // Add relation options parameter
+        relationOptions
       );
       res.json(assignment);
     })
@@ -177,7 +178,11 @@ export function buildInventoryAssignmentRouter(
    *   post:
    *     tags: [Inventory]
    *     summary: Create a new inventory assignment
-   *     description: Creates a new inventory assignment with associated tanks and items for any given date
+   *     description: |
+   *       Creates a new inventory assignment with catalog-based items and tanks.
+   *       This endpoint automatically populates tanks and items from the store catalog
+   *       with initial assigned quantities set to 0. To update actual quantities,
+   *       use the PATCH /inventory/assignments/{id} endpoint.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -188,13 +193,41 @@ export function buildInventoryAssignmentRouter(
    *             $ref: '#/components/schemas/CreateInventoryAssignmentRequest'
    *     responses:
    *       200:
-   *         description: Assignment created successfully
+   *         description: Assignment created successfully with catalog items populated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 inventoryId:
+   *                   type: integer
+   *                   description: The created inventory assignment ID
+   *                 assignmentId:
+   *                   type: integer
+   *                 assignmentDate:
+   *                   type: string
+   *                   format: date
+   *                 status:
+   *                   type: string
+   *                   enum: [created]
+   *                 tanks:
+   *                   type: array
+   *                   description: Auto-populated from store catalog with initial quantities of 0
+   *                   items:
+   *                     type: object
+   *                 items:
+   *                   type: array
+   *                   description: Auto-populated from store catalog with initial quantities of 0
+   *                   items:
+   *                     type: object
    *       400:
-   *         description: Invalid input data
+   *         description: Invalid input data or assignment already exists for this date
    *       401:
    *         description: Unauthorized
    *       403:
    *         description: Forbidden - insufficient permissions
+   *       404:
+   *         description: Store assignment not found
    */
   router.post(
     "/",
@@ -207,13 +240,93 @@ export function buildInventoryAssignmentRouter(
       const assignedBy = req.user?.id || "0";
 
       const assignment =
-        await inventoryAssignmentService.createNewInventoryAssignment(
+        await inventoryAssignmentService.createInventoryAssignment(
           data.assignmentId,
           data.assignmentDate,
           parseInt(assignedBy),
-          data.notes,
-          data.tanks,
-          data.items
+          data.notes
+        );
+
+      res.json(assignment);
+    })
+  );
+
+  /**
+   * @openapi
+   * /inventory/assignments/{id}:
+   *   patch:
+   *     tags: [Inventory]
+   *     summary: Update inventory assignment tanks and items
+   *     description: |
+   *       Updates the tanks and items quantities for an existing inventory assignment.
+   *       This endpoint allows you to set the actual assigned quantities for tanks and items
+   *       that were initially populated from the store catalog.
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: integer
+   *         required: true
+   *         description: Inventory assignment ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateInventoryAssignmentRequest'
+   *     responses:
+   *       200:
+   *         description: Assignment updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 inventoryId:
+   *                   type: integer
+   *                 assignmentId:
+   *                   type: integer
+   *                 assignmentDate:
+   *                   type: string
+   *                   format: date
+   *                 status:
+   *                   type: string
+   *                 tanks:
+   *                   type: array
+   *                   description: Updated tank assignments
+   *                   items:
+   *                     type: object
+   *                 items:
+   *                   type: array
+   *                   description: Updated item assignments
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Invalid input data
+   *       404:
+   *         description: Assignment not found or tank/item not found in assignment
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - insufficient permissions
+   */
+  router.patch(
+    "/:id",
+    isAuthenticated,
+    requirePermission(ModuleEnum.INVENTORY, ActionEnum.UPDATE),
+    asyncHandler(async (req: Request, res: Response) => {
+      const id = parseInt(req.params.id);
+      const requestData = UpdateInventoryAssignmentRequestSchema.parse(
+        req.body
+      );
+
+      const assignment =
+        await inventoryAssignmentService.updateInventoryAssignments(
+          id,
+          requestData.tanks,
+          requestData.items
         );
 
       res.json(assignment);

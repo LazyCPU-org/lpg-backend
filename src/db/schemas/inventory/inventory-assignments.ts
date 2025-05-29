@@ -67,11 +67,13 @@ export const inventoryAssignmentsRelations = relations(
     }),
     assignmentTanks: many(assignmentTanks),
     assignmentItems: many(assignmentItems),
+    statusHistory: many(inventoryStatusHistory),
   })
 );
 
 export default inventoryAssignments;
 
 // Import after relations to avoid circular dependency
+import { inventoryStatusHistory } from "../audit";
 import { assignmentItems } from "./inventory-assignments-items";
 import { assignmentTanks } from "./inventory-assignments-tanks";

@@ -1,5 +1,12 @@
-import auditLogs from './audit-logs';
+import auditLogs from "./audit-logs";
+import inventoryStatusHistory, {
+  inventoryStatusHistoryRelations,
+} from "./inventory-status-history";
 
 export {
-  auditLogs
+  // Models
+  auditLogs,
+  inventoryStatusHistory,
+  //Relations
+  inventoryStatusHistoryRelations,
 };
