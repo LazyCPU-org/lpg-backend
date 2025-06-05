@@ -181,8 +181,7 @@ export function buildInventoryAssignmentRouter(
    *     description: |
    *       Creates a new inventory assignment with catalog-based items and tanks.
    *       This endpoint automatically populates tanks and items from the store catalog
-   *       with initial assigned quantities set to 0. To update actual quantities,
-   *       use the PATCH /inventory/assignments/{id} endpoint.
+   *       with initial assigned quantities set to 0.
    *     security:
    *       - bearerAuth: []
    *     requestBody:

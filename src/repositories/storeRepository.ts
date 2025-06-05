@@ -57,6 +57,25 @@ export interface StoreRepository {
 }
 
 export class PgStoreRepository implements StoreRepository {
+  /**
+   * Get current date in GMT-5 timezone formatted as YYYY-MM-DD
+   * This ensures we always work with dates in the application's timezone
+   */
+  private getCurrentDateInTimezone(): string {
+    // Get current UTC time
+    const now = new Date();
+
+    // Convert to GMT-5 (subtract 5 hours from UTC)
+    const gmt5Time = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+
+    // Format as YYYY-MM-DD
+    const year = gmt5Time.getUTCFullYear();
+    const month = String(gmt5Time.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(gmt5Time.getUTCDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
   async findById(
     storeId: number,
     relations: StoreRelationOptions = {}
@@ -110,7 +129,8 @@ export class PgStoreRepository implements StoreRepository {
       return [];
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    // ✅ FIXED: Now uses GMT-5 timezone instead of UTC
+    const today = this.getCurrentDateInTimezone();
 
     // Build query with user relations
     const storeWithUsers = await db.query.stores.findFirst({
@@ -325,6 +345,7 @@ export class PgStoreRepository implements StoreRepository {
       .set({
         latitude,
         longitude,
+        // ✅ KEPT AS UTC: updatedAt should remain in UTC for system timestamps
         updatedAt: new Date(),
       })
       .where(eq(stores.storeId, storeId))
