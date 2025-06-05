@@ -104,10 +104,29 @@ export type StatusType = z.infer<typeof statusSchema>;
  *          description: Current number of empty tanks
  */
 export const InsertAssignmentTankSchema = createInsertSchema(assignmentTanks);
-const SelectAssignmentTankSchema = createSelectSchema(assignmentTanks);
+export const SelectAssignmentTankSchema = createSelectSchema(assignmentTanks);
 
-export type AssignmentTankType = z.infer<typeof SelectAssignmentTankSchema>;
+// Update the AssignmentTankType to include the tankType relation
+export type AssignmentTankType = z.infer<typeof SelectAssignmentTankSchema> & {
+  tankType?: TankType;
+};
 export type NewAssignmentTankType = z.infer<typeof InsertAssignmentTankSchema>;
+
+// Add explicit interface for tank with details
+export interface AssignmentTankWithDetails {
+  inventoryAssignmentTankId: number;
+  inventoryId: number;
+  tankTypeId: number;
+  purchase_price: string;
+  sell_price: string;
+  assignedFullTanks: number;
+  currentFullTanks: number;
+  assignedEmptyTanks: number;
+  currentEmptyTanks: number;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  tankDetails: TankType;
+}
 
 /**
  * @openapi

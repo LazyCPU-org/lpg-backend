@@ -30,7 +30,13 @@ export const CreateInventoryAssignmentRequestSchema = z.object({
   assignmentId: z.number().positive("ID de asignación en tienda inválido"),
   assignmentDate: z
     .string()
-    .default(new Date().toISOString().split("T")[0]) // Only date part
+    .default(() => {
+      const now = new Date();
+      // Get local date in YYYY-MM-DD format using the local timezone
+      return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split("T")[0];
+    })
     .refine((value) => !isNaN(Date.parse(value)), {
       message: "Fecha de asignación inválida",
     }),
@@ -166,6 +172,8 @@ export const UpdateInventoryAssignmentStatusRequestSchema = z.object({
       AssignmentStatusEnum.ASSIGNED,
       AssignmentStatusEnum.CREATED,
       AssignmentStatusEnum.VALIDATED,
+      AssignmentStatusEnum.CONSOLIDATED,
+      AssignmentStatusEnum.OBSERVED,
     ],
     {
       errorMap: () => ({ message: "Estado de inventario inválido" }),

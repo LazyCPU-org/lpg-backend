@@ -17,7 +17,9 @@ import inventoryItem from "./inventory-item";
 export const assignmentItems = pgTable(
   "assignment_items",
   {
-    assignmentItemId: serial("assignment_item_id").primaryKey(),
+    inventoryAssignmentItemId: serial(
+      "inventory_assignment_item_id"
+    ).primaryKey(),
     inventoryId: integer("inventory_id")
       .notNull()
       .references(() => inventoryAssignments.inventoryId),

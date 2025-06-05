@@ -34,7 +34,7 @@ export const itemTransactions = pgTable("item_transactions", {
   itemTransactionId: serial("item_transaction_id").primaryKey(),
   assignmentItemId: integer("assignment_item_id")
     .notNull()
-    .references(() => assignmentItems.assignmentItemId),
+    .references(() => assignmentItems.inventoryAssignmentItemId),
   transactionType: itemTransactionTypeEnum().default(TransactionTypeEnum.SALE),
   itemChange: integer("item_change").notNull().default(0),
   userId: integer("user_id")
@@ -52,7 +52,7 @@ export const itemTransactionsRelations = relations(
   ({ one }) => ({
     assignmentItem: one(assignmentItems, {
       fields: [itemTransactions.assignmentItemId],
-      references: [assignmentItems.assignmentItemId],
+      references: [assignmentItems.inventoryAssignmentItemId],
     }),
     user: one(users, {
       fields: [itemTransactions.userId],

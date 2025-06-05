@@ -56,7 +56,7 @@ export interface IInventoryAssignmentService {
     userId: number
   ): Promise<InventoryAssignmentType>;
 
-  // NEW: Consolidation workflow
+  // Consolidation workflow
   consolidateAndCreateNext(
     inventoryId: number,
     userId: number,
@@ -267,25 +267,28 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
    * Updates assignment status with enhanced business logic
    */
   async updateAssignmentStatus(
-    id: number,
+    inventoryAssignmentId: number,
     status: string,
     userId: number
   ): Promise<InventoryAssignmentType> {
     // Special handling for CONSOLIDATED status - triggers next day creation
     if (status === AssignmentStatusEnum.CONSOLIDATED) {
-      const result = await this.consolidateAndCreateNext(id, userId);
+      const result = await this.consolidateAndCreateNext(
+        inventoryAssignmentId,
+        userId
+      );
       return result.currentInventory;
     }
 
     // Standard status update for other transitions
     return await this.inventoryAssignmentRepository.updateStatus(
-      id,
+      inventoryAssignmentId,
       status as StatusType
     );
   }
 
   /**
-   * NEW: Consolidates current inventory and creates next day with carried quantities
+   * Consolidates current inventory and creates next day with carried quantities
    */
   async consolidateAndCreateNext(
     inventoryId: number,
@@ -303,6 +306,7 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
   }
 
   // Transaction-based business operations
+
   async deliveryOut(
     inventoryId: number,
     userId: number,

@@ -26,7 +26,7 @@ export const tankTransactions = pgTable("tank_transactions", {
   transactionId: serial("transaction_id").primaryKey(),
   assignmentTankId: integer("assignment_tank_id")
     .notNull()
-    .references(() => assignmentTanks.assignmentTankId),
+    .references(() => assignmentTanks.inventoryAssignmentTankId),
   transactionType: tankTransactionTypeEnum().default(TransactionTypeEnum.SALE),
   fullTanksChange: integer("full_tanks_change").notNull().default(0),
   emptyTanksChange: integer("empty_tanks_change").notNull().default(0),
@@ -46,7 +46,7 @@ export const tankTransactionsRelations = relations(
   ({ one }) => ({
     assignmentTank: one(assignmentTanks, {
       fields: [tankTransactions.assignmentTankId],
-      references: [assignmentTanks.assignmentTankId],
+      references: [assignmentTanks.inventoryAssignmentTankId],
     }),
     user: one(users, {
       fields: [tankTransactions.userId],

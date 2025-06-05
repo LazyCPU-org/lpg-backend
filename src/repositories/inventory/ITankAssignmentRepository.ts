@@ -1,4 +1,7 @@
-import type { AssignmentTankType } from "../../dtos/response/inventoryAssignmentInterface";
+import type {
+  AssignmentTankType,
+  AssignmentTankWithDetails,
+} from "../../dtos/response/inventoryAssignmentInterface";
 
 export abstract class ITankAssignmentRepository {
   // Find operations
@@ -8,7 +11,7 @@ export abstract class ITankAssignmentRepository {
 
   abstract findByInventoryIdWithDetails(
     inventoryId: number
-  ): Promise<(AssignmentTankType & { tankDetails: any })[]>;
+  ): Promise<AssignmentTankWithDetails[]>;
 
   // Create operations
   abstract create(

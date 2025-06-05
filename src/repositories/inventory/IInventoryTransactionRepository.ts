@@ -1,7 +1,7 @@
 import { TransactionType } from "./transactionTypes";
 
 export abstract class IInventoryTransactionRepository {
-  // Tank transaction methods (matches your existing schema)
+  // Tank transaction methods
   abstract incrementTankQuantity(
     assignmentTankId: number,
     fullTanksChange: number,
@@ -22,9 +22,9 @@ export abstract class IInventoryTransactionRepository {
     referenceId?: number
   ): Promise<void>;
 
-  // Item transaction methods (matches your existing schema)
+  // Item transaction methods
   abstract incrementItemQuantity(
-    assignmentItemId: number,
+    inventoryAssignmentItemId: number,
     itemChange: number,
     transactionType: TransactionType,
     userId: number,
@@ -32,7 +32,7 @@ export abstract class IInventoryTransactionRepository {
   ): Promise<void>;
 
   abstract decrementItemQuantity(
-    assignmentItemId: number,
+    inventoryAssignmentItemId: number,
     itemChange: number,
     transactionType: TransactionType,
     userId: number,

@@ -16,7 +16,9 @@ import { tankType } from "./tank-type";
 export const assignmentTanks = pgTable(
   "assignment_tanks",
   {
-    assignmentTankId: serial("assignment_tank_id").primaryKey(),
+    inventoryAssignmentTankId: serial(
+      "inventory_assignment_tank_id"
+    ).primaryKey(),
     inventoryId: integer("inventory_id")
       .notNull()
       .references(() => inventoryAssignments.inventoryId),

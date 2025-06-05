@@ -7,8 +7,10 @@ import {
 import tankType from "../../db/schemas/inventory/tank-type";
 import {
   AssignmentTankType,
+  AssignmentTankWithDetails,
   NewAssignmentTankType,
 } from "../../dtos/response/inventoryAssignmentInterface";
+import { TankType } from "../../dtos/response/inventoryInterface";
 import { InternalError, NotFoundError } from "../../utils/custom-errors";
 import { ITankAssignmentRepository } from "./ITankAssignmentRepository";
 
@@ -21,7 +23,7 @@ export class PgTankAssignmentRepository implements ITankAssignmentRepository {
 
   async findByInventoryIdWithDetails(
     inventoryId: number
-  ): Promise<(AssignmentTankType & { tankDetails: any })[]> {
+  ): Promise<AssignmentTankWithDetails[]> {
     const tankAssignments = await db.query.assignmentTanks.findMany({
       where: eq(assignmentTanks.inventoryId, inventoryId),
       with: {
@@ -29,10 +31,17 @@ export class PgTankAssignmentRepository implements ITankAssignmentRepository {
       },
     });
 
-    return tankAssignments.map((ta) => ({
-      ...ta,
-      tankDetails: ta.tankType,
-    }));
+    return tankAssignments.map((ta) => {
+      const { tankType: tankTypeData, ...assignmentData } = ta;
+
+      // Create the AssignmentTankWithDetails object
+      const tankWithDetails: AssignmentTankWithDetails = {
+        ...assignmentData,
+        tankDetails: tankTypeData as TankType,
+      };
+
+      return tankWithDetails;
+    });
   }
 
   async create(

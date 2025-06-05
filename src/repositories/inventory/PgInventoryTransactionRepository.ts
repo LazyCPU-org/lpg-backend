@@ -27,7 +27,7 @@ export class PgInventoryTransactionRepository
     await db.transaction(async (trx) => {
       // Get current assignment
       const assignment = await trx.query.assignmentTanks.findFirst({
-        where: eq(assignmentTanks.assignmentTankId, assignmentTankId),
+        where: eq(assignmentTanks.inventoryAssignmentTankId, assignmentTankId),
       });
 
       if (!assignment) {
@@ -54,7 +54,7 @@ export class PgInventoryTransactionRepository
           currentEmptyTanks: assignment.currentEmptyTanks + emptyTanksChange,
           updatedAt: new Date(),
         })
-        .where(eq(assignmentTanks.assignmentTankId, assignmentTankId));
+        .where(eq(assignmentTanks.inventoryAssignmentTankId, assignmentTankId));
     });
   }
 
@@ -70,7 +70,7 @@ export class PgInventoryTransactionRepository
     await db.transaction(async (trx) => {
       // Get current assignment
       const assignment = await trx.query.assignmentTanks.findFirst({
-        where: eq(assignmentTanks.assignmentTankId, assignmentTankId),
+        where: eq(assignmentTanks.inventoryAssignmentTankId, assignmentTankId),
       });
 
       if (!assignment) {
@@ -107,7 +107,7 @@ export class PgInventoryTransactionRepository
           currentEmptyTanks: assignment.currentEmptyTanks - emptyTanksChange,
           updatedAt: new Date(),
         })
-        .where(eq(assignmentTanks.assignmentTankId, assignmentTankId));
+        .where(eq(assignmentTanks.inventoryAssignmentTankId, assignmentTankId));
     });
   }
 
@@ -121,7 +121,7 @@ export class PgInventoryTransactionRepository
     await db.transaction(async (trx) => {
       // Get current assignment
       const assignment = await trx.query.assignmentItems.findFirst({
-        where: eq(assignmentItems.assignmentItemId, assignmentItemId),
+        where: eq(assignmentItems.inventoryAssignmentItemId, assignmentItemId),
       });
 
       if (!assignment) {
@@ -145,7 +145,7 @@ export class PgInventoryTransactionRepository
           currentItems: assignment.currentItems + itemChange,
           updatedAt: new Date(),
         })
-        .where(eq(assignmentItems.assignmentItemId, assignmentItemId));
+        .where(eq(assignmentItems.inventoryAssignmentItemId, assignmentItemId));
     });
   }
 
@@ -159,7 +159,7 @@ export class PgInventoryTransactionRepository
     await db.transaction(async (trx) => {
       // Get current assignment
       const assignment = await trx.query.assignmentItems.findFirst({
-        where: eq(assignmentItems.assignmentItemId, assignmentItemId),
+        where: eq(assignmentItems.inventoryAssignmentItemId, assignmentItemId),
       });
 
       if (!assignment) {
@@ -190,7 +190,7 @@ export class PgInventoryTransactionRepository
           currentItems: assignment.currentItems - itemChange,
           updatedAt: new Date(),
         })
-        .where(eq(assignmentItems.assignmentItemId, assignmentItemId));
+        .where(eq(assignmentItems.inventoryAssignmentItemId, assignmentItemId));
     });
   }
 
@@ -219,7 +219,7 @@ export class PgInventoryTransactionRepository
     }
 
     await this.incrementTankQuantity(
-      assignment.assignmentTankId,
+      assignment.inventoryAssignmentTankId,
       fullTanksChange,
       emptyTanksChange,
       transactionType,
@@ -253,7 +253,7 @@ export class PgInventoryTransactionRepository
     }
 
     await this.decrementTankQuantity(
-      assignment.assignmentTankId,
+      assignment.inventoryAssignmentTankId,
       fullTanksChange,
       emptyTanksChange,
       transactionType,
@@ -285,7 +285,7 @@ export class PgInventoryTransactionRepository
     }
 
     await this.incrementItemQuantity(
-      assignment.assignmentItemId,
+      assignment.inventoryAssignmentItemId,
       itemChange,
       transactionType,
       userId,
@@ -315,7 +315,7 @@ export class PgInventoryTransactionRepository
     }
 
     await this.decrementItemQuantity(
-      assignment.assignmentItemId,
+      assignment.inventoryAssignmentItemId,
       itemChange,
       transactionType,
       userId,
