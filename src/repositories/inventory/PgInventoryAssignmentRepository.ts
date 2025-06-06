@@ -1,4 +1,3 @@
-// src/repositories/inventory/PgInventoryAssignmentRepository.ts - Updated with consolidation support
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db";
 import {
@@ -29,6 +28,9 @@ import { IInventoryAssignmentRepository } from "./IInventoryAssignmentRepository
 import { IItemAssignmentRepository } from "./IItemAssignmentRepository";
 import { ITankAssignmentRepository } from "./ITankAssignmentRepository";
 
+// Transaction type for consistency
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export class PgInventoryAssignmentRepository
   implements IInventoryAssignmentRepository
 {
@@ -36,8 +38,6 @@ export class PgInventoryAssignmentRepository
     private tankAssignmentRepo: ITankAssignmentRepository,
     private itemAssignmentRepo: IItemAssignmentRepository
   ) {}
-
-  // ... existing methods (find, findById, findByIdWithRelations, findByAssignmentId, create) remain the same
 
   async find(
     userId?: number,
@@ -196,6 +196,52 @@ export class PgInventoryAssignmentRepository
     };
 
     const results = await db
+      .insert(inventoryAssignments)
+      .values(newAssignment)
+      .returning();
+
+    if (!results || results.length === 0) {
+      throw new InternalError("Error creando asignación de inventario");
+    }
+
+    return results[0];
+  }
+
+  async createWithTransaction(
+    trx: DbTransaction,
+    assignmentId: number,
+    assignmentDate: string,
+    assignedBy: number,
+    notes?: string,
+    autoAssignment = false
+  ): Promise<InventoryAssignmentType> {
+    // Validate that the assignment and assignedBy user exist using transaction
+    const storeAssignment = await trx.query.storeAssignments.findFirst({
+      where: eq(storeAssignments.assignmentId, assignmentId),
+    });
+
+    if (!storeAssignment) {
+      throw new NotFoundError("Asignación de tienda no encontrada");
+    }
+
+    const assigningUser = await trx.query.users.findFirst({
+      where: eq(users.userId, assignedBy),
+    });
+
+    if (!assigningUser) {
+      throw new NotFoundError("Usuario asignador no encontrado");
+    }
+
+    const newAssignment: NewInventoryAssignmentType = {
+      assignmentId,
+      assignmentDate: assignmentDate,
+      assignedBy,
+      status: AssignmentStatusEnum.CREATED,
+      autoAssignment,
+      notes,
+    };
+
+    const results = await trx
       .insert(inventoryAssignments)
       .values(newAssignment)
       .returning();

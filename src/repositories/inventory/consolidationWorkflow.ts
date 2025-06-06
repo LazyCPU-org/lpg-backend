@@ -1,21 +1,28 @@
-// src/repositories/inventory/consolidationWorkflow.ts
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db";
+import { inventoryStatusHistory } from "../../db/schemas/audit/inventory-status-history";
 import {
   assignmentItems,
   AssignmentStatusEnum,
   assignmentTanks,
   inventoryAssignments,
 } from "../../db/schemas/inventory";
+import inventoryItem from "../../db/schemas/inventory/inventory-item";
+import tankType from "../../db/schemas/inventory/tank-type";
 import {
   InventoryAssignmentType,
   InventoryAssignmentWithDetailsAndRelations,
+  StatusType,
 } from "../../dtos/response/inventoryAssignmentInterface";
+import { IInventoryDateService } from "../../services/inventoryDateService";
 import {
   BadRequestError,
   InternalError,
   NotFoundError,
 } from "../../utils/custom-errors";
+import { IInventoryAssignmentRepository } from "./IInventoryAssignmentRepository";
+import { IItemAssignmentRepository } from "./IItemAssignmentRepository";
+import { ITankAssignmentRepository } from "./ITankAssignmentRepository";
 
 // Simple approach: Extract the transaction type from the db.transaction callback
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -50,20 +57,14 @@ export abstract class IConsolidationWorkflow {
       }[];
     }
   ): Promise<InventoryAssignmentWithDetailsAndRelations>;
-
-  abstract getNextWorkingDay(
-    currentDate: string,
-    skipWeekends?: boolean
-  ): string;
-
-  abstract getCurrentDateInTimezone(): string;
 }
 
 export class ConsolidationWorkflow implements IConsolidationWorkflow {
   constructor(
-    private inventoryAssignmentRepository: any,
-    private tankAssignmentRepository: any,
-    private itemAssignmentRepository: any
+    private inventoryAssignmentRepository: IInventoryAssignmentRepository,
+    private tankAssignmentRepository: ITankAssignmentRepository,
+    private itemAssignmentRepository: IItemAssignmentRepository,
+    private inventoryDateService: IInventoryDateService
   ) {}
 
   async consolidateAndCreateNext(
@@ -85,9 +86,12 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
       }
 
       // Validate current status allows consolidation
-      if (currentInventory.status !== AssignmentStatusEnum.ASSIGNED) {
+      if (
+        currentInventory.status !== AssignmentStatusEnum.ASSIGNED &&
+        currentInventory.status !== AssignmentStatusEnum.CREATED
+      ) {
         throw new BadRequestError(
-          `No se puede consolidar inventario con estado: ${currentInventory.status}. Debe estar en estado 'assigned'.`
+          `No se puede consolidar inventario con estado: ${currentInventory.status}. Debe estar en estado 'Creado' ó 'En Curso'.`
         );
       }
 
@@ -104,9 +108,16 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
       ]);
 
       // 3. Calculate next working day - with smart date handling
-      const nextDate = this.calculateNextInventoryDate(
+      const nextDate = this.inventoryDateService.calculateNextInventoryDate(
         currentInventory.assignmentDate,
         skipWeekends
+      );
+
+      // Check if this is a stale inventory scenario
+      const currentDate = this.inventoryDateService.getCurrentDateInTimezone();
+      const isStaleInventory = this.inventoryDateService.isStaleInventory(
+        currentInventory.assignmentDate,
+        currentDate
       );
 
       // 4. Check if next day inventory already exists (prevent duplicates)
@@ -137,31 +148,68 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
         throw new InternalError("Error actualizando estado de inventario");
       }
 
-      // 6. Prepare carried quantities (current becomes assigned for next day)
+      // 6. Create status history record for consolidation with context
+      await this.createStatusHistoryRecordInTransaction(
+        trx,
+        inventoryId,
+        AssignmentStatusEnum.ASSIGNED as StatusType,
+        AssignmentStatusEnum.CONSOLIDATED as StatusType,
+        userId,
+        "Consolidación automática del workflow",
+        this.generateConsolidationNotes(
+          currentInventory.assignmentDate,
+          nextDate,
+          isStaleInventory
+        )
+      );
+
+      // 7. Prepare carried quantities (current becomes assigned for next day)
+      // Filter out items/tanks that had 0 assigned AND 0 current quantities
       const carriedQuantities = {
-        tanks: currentTanks.map((tank) => ({
-          tankTypeId: tank.tankTypeId,
-          fullTanks: tank.currentFullTanks,
-          emptyTanks: tank.currentEmptyTanks,
-          purchase_price: tank.purchase_price,
-          sell_price: tank.sell_price,
-        })),
-        items: currentItems.map((item) => ({
-          inventoryItemId: item.inventoryItemId,
-          quantity: item.currentItems,
-          purchase_price: item.purchase_price,
-          sell_price: item.sell_price,
-        })),
+        tanks: currentTanks
+          .filter((tank) => {
+            // Include tank if it had any assigned quantities OR any current quantities
+            const hadAssignedQuantities =
+              tank.assignedFullTanks > 0 || tank.assignedEmptyTanks > 0;
+            const hasCurrentQuantities =
+              tank.currentFullTanks > 0 || tank.currentEmptyTanks > 0;
+
+            // Include if either assigned OR current had quantities (exclude only if BOTH are 0)
+            return hadAssignedQuantities || hasCurrentQuantities;
+          })
+          .map((tank) => ({
+            tankTypeId: tank.tankTypeId,
+            fullTanks: tank.currentFullTanks,
+            emptyTanks: tank.currentEmptyTanks,
+            purchase_price: tank.purchase_price,
+            sell_price: tank.sell_price,
+          })),
+        items: currentItems
+          .filter((item) => {
+            // Include item if it had any assigned quantity OR any current quantity
+            const hadAssignedQuantity = item.assignedItems > 0;
+            const hasCurrentQuantity = item.currentItems > 0;
+
+            // Include if either assigned OR current had quantities (exclude only if BOTH are 0)
+            return hadAssignedQuantity || hasCurrentQuantity;
+          })
+          .map((item) => ({
+            inventoryItemId: item.inventoryItemId,
+            quantity: item.currentItems,
+            purchase_price: item.purchase_price,
+            sell_price: item.sell_price,
+          })),
       };
 
-      // 7. Create next day inventory with carried quantities
+      // 8. Create next day inventory with carried quantities
       const nextDayInventory =
         await this.createInventoryWithCarriedQuantitiesInTransaction(
           trx,
           currentInventory.assignmentId,
           nextDate,
           userId,
-          carriedQuantities
+          carriedQuantities,
+          isStaleInventory
         );
 
       return {
@@ -172,56 +220,21 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
   }
 
   /**
-   * Smart date calculation for next inventory
-   * If inventory date is more than 1 day old, use current date as base
+   * Generate contextual notes for consolidation process
    */
-  private calculateNextInventoryDate(
-    inventoryAssignmentDate: string,
-    skipWeekends = false
+  private generateConsolidationNotes(
+    originalDate: string,
+    nextDate: string,
+    isStaleInventory: boolean
   ): string {
-    const currentDate = this.getCurrentDateInTimezone();
-    const daysDifference = this.getDaysDifference(
-      inventoryAssignmentDate,
-      currentDate
-    );
+    let notes = `Inventario consolidado automáticamente. Próximo inventario programado para: ${nextDate}.`;
 
-    // If more than 1 day difference, use current date as base
-    // Otherwise use the inventory assignment date
-    const baseDate = daysDifference > 1 ? currentDate : inventoryAssignmentDate;
+    if (isStaleInventory) {
+      const currentDate = this.inventoryDateService.getCurrentDateInTimezone();
+      notes += ` | RECUPERACIÓN DE WORKFLOW: Inventario rezagado (fecha original: ${originalDate}, consolidado: ${currentDate}). Próximo inventario creado para HOY para permitir operaciones inmediatas.`;
+    }
 
-    return this.getNextWorkingDay(baseDate, skipWeekends);
-  }
-
-  /**
-   * Calculate difference in days between two date strings
-   */
-  private getDaysDifference(date1: string, date2: string): number {
-    const [year1, month1, day1] = date1.split("-").map(Number);
-    const [year2, month2, day2] = date2.split("-").map(Number);
-
-    const d1 = new Date(year1, month1 - 1, day1);
-    const d2 = new Date(year2, month2 - 1, day2);
-
-    const timeDifference = Math.abs(d2.getTime() - d1.getTime());
-    return Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
-  }
-
-  /**
-   * Get current date in GMT-5 timezone formatted as YYYY-MM-DD
-   */
-  getCurrentDateInTimezone(): string {
-    // Get current UTC time
-    const now = new Date();
-
-    // Convert to GMT-5 (subtract 5 hours from UTC)
-    const gmt5Time = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-
-    // Format as YYYY-MM-DD
-    const year = gmt5Time.getUTCFullYear();
-    const month = String(gmt5Time.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(gmt5Time.getUTCDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
+    return notes;
   }
 
   async createInventoryWithCarriedQuantities(
@@ -251,7 +264,8 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
         assignmentId,
         assignmentDate,
         assignedBy,
-        carriedQuantities
+        carriedQuantities,
+        false
       );
     });
   }
@@ -276,7 +290,8 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
         purchase_price: string;
         sell_price: string;
       }[];
-    }
+    },
+    isStaleRecovery: boolean = false
   ): Promise<InventoryAssignmentWithDetailsAndRelations> {
     // Create base inventory assignment (repository should accept transaction)
     const baseAssignment =
@@ -285,9 +300,24 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
         assignmentId,
         assignmentDate,
         assignedBy,
-        "Inventario creado automáticamente por consolidación del día anterior",
+        isStaleRecovery
+          ? "Inventario creado por recuperación de workflow rezagado"
+          : "Inventario creado automáticamente por consolidación del día anterior",
         true // autoAssignment = true
       );
+
+    // Create status history for the new inventory creation
+    await this.createStatusHistoryRecordInTransaction(
+      trx,
+      baseAssignment.inventoryId,
+      null, // fromStatus is null for new creation
+      baseAssignment.status as StatusType,
+      assignedBy,
+      "Creación automática de inventario",
+      isStaleRecovery
+        ? `Inventario creado para fecha ${assignmentDate} como parte de recuperación de workflow rezagado. Cantidades iniciales basadas en consolidación anterior.`
+        : `Inventario creado automáticamente para fecha ${assignmentDate} con cantidades heredadas del inventario consolidado anterior.`
+    );
 
     // Create tank assignments with carried quantities
     const tankPromises = carriedQuantities.tanks.map((tank) =>
@@ -320,47 +350,61 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
       Promise.all(itemPromises),
     ]);
 
+    // Fetch tank type details and item details using transaction queries
+    const tankDetailsPromises = tankAssignments.map(async (ta) => {
+      const tankTypeDetails = await trx.query.tankType.findFirst({
+        where: eq(tankType.typeId, ta.tankTypeId),
+      });
+      return {
+        ...ta,
+        tankDetails: tankTypeDetails!,
+      };
+    });
+
+    const itemDetailsPromises = itemAssignments.map(async (ia) => {
+      const itemDetails = await trx.query.inventoryItem.findFirst({
+        where: eq(inventoryItem.inventoryItemId, ia.inventoryItemId),
+      });
+      return {
+        ...ia,
+        itemDetails: itemDetails!,
+      };
+    });
+
+    // Resolve all details
+    const [tanksWithDetails, itemsWithDetails] = await Promise.all([
+      Promise.all(tankDetailsPromises),
+      Promise.all(itemDetailsPromises),
+    ]);
+
     // Return complete assignment
     return {
       ...baseAssignment,
-      tanks: tankAssignments.map((ta, index) => ({
-        ...ta,
-        tankDetails: carriedQuantities.tanks[index],
-      })),
-      items: itemAssignments.map((ia, index) => ({
-        ...ia,
-        itemDetails: carriedQuantities.items[index],
-      })),
+      tanks: tanksWithDetails,
+      items: itemsWithDetails,
     };
   }
 
-  getNextWorkingDay(currentDate: string, skipWeekends = false): string {
-    // Parse date string as local date in GMT-5 timezone
-    // Split the date string to avoid timezone interpretation issues
-    const [year, month, day] = currentDate.split("-").map(Number);
-
-    // Create date in local timezone (GMT-5) - month is 0-indexed in JavaScript
-    const current = new Date(year, month - 1, day);
-
-    // Create next day
-    let nextDay = new Date(current);
-    nextDay.setDate(current.getDate() + 1);
-
-    if (skipWeekends) {
-      // Skip Saturday (6) and Sunday (0)
-      // Now getDay() will correctly reflect the day in GMT-5 timezone
-      while (nextDay.getDay() === 0 || nextDay.getDay() === 6) {
-        nextDay.setDate(nextDay.getDate() + 1);
-      }
-    }
-
-    // Format back to YYYY-MM-DD string
-    // Using local date components to avoid timezone conversion
-    const nextYear = nextDay.getFullYear();
-    const nextMonth = String(nextDay.getMonth() + 1).padStart(2, "0");
-    const nextDayNum = String(nextDay.getDate()).padStart(2, "0");
-
-    return `${nextYear}-${nextMonth}-${nextDayNum}`;
+  /**
+   * Create status history record within a transaction
+   */
+  private async createStatusHistoryRecordInTransaction(
+    trx: DbTransaction,
+    inventoryId: number,
+    fromStatus: StatusType | null,
+    toStatus: StatusType,
+    changedBy: number,
+    reason: string,
+    notes?: string
+  ): Promise<void> {
+    await trx.insert(inventoryStatusHistory).values({
+      inventoryId,
+      fromStatus,
+      toStatus,
+      changedBy,
+      reason,
+      notes,
+    });
   }
 
   // Fixed transaction wrapper that passes trx to the operation

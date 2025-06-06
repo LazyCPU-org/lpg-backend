@@ -3,6 +3,11 @@ import type {
   AssignmentTankWithDetails,
 } from "../../dtos/response/inventoryAssignmentInterface";
 
+// Transaction type for dependency injection
+type DbTransaction = Parameters<
+  Parameters<typeof import("../../db").db.transaction>[0]
+>[0];
+
 export abstract class ITankAssignmentRepository {
   // Find operations
   abstract findByInventoryId(
@@ -15,6 +20,17 @@ export abstract class ITankAssignmentRepository {
 
   // Create operations
   abstract create(
+    inventoryId: number,
+    tankTypeId: number,
+    purchase_price: string,
+    sell_price: string,
+    assignedFullTanks: number,
+    assignedEmptyTanks: number
+  ): Promise<AssignmentTankType>;
+
+  // Create with transaction support
+  abstract createWithTransaction(
+    trx: DbTransaction,
     inventoryId: number,
     tankTypeId: number,
     purchase_price: string,

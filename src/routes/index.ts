@@ -2,6 +2,7 @@ import { Express, NextFunction, Request, Response } from "express";
 import { Container } from "../config/di";
 import { buildAuthRouter } from "./authRoutes";
 import { buildInventoryAssignmentRouter } from "./inventoryAssignmentRoutes";
+import { buildInventoryStatusHistoryRouter } from "./inventoryStatusHistoryRoutes";
 import { buildStoreRouter } from "./storeRoutes";
 import { buildUserRouter } from "./userRoutes";
 
@@ -24,13 +25,21 @@ export const defineRoutes = function (app: Express, container: Container) {
   const authRouter = buildAuthRouter(container.authService);
   const userRouter = buildUserRouter(container.userService);
   const storeRouter = buildStoreRouter(container.storeService);
+
+  // Inventory module routers
   const inventoryAssignments = buildInventoryAssignmentRouter(
     container.inventoryAssignmentService
+  );
+  const inventoryStatusHistory = buildInventoryStatusHistoryRouter(
+    container.inventoryStatusHistoryService
   );
 
   // Mount routers
   app.use(`${v1BasePath}/auth`, authRouter);
   app.use(`${v1BasePath}/users`, userRouter);
   app.use(`${v1BasePath}/stores`, storeRouter);
+
+  // Inventory module routes
   app.use(`${v1BasePath}/inventory/assignments`, inventoryAssignments);
+  app.use(`${v1BasePath}/inventory/status-history`, inventoryStatusHistory);
 };

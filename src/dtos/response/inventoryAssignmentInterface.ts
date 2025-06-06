@@ -61,6 +61,8 @@ const statusSchema = z.enum([
   AssignmentStatusEnum.CREATED,
   AssignmentStatusEnum.ASSIGNED,
   AssignmentStatusEnum.VALIDATED,
+  AssignmentStatusEnum.CONSOLIDATED,
+  AssignmentStatusEnum.OBSERVED,
 ]);
 
 // Infer the type from the schema

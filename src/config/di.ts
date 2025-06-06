@@ -26,10 +26,19 @@ import {
 } from "../repositories/inventory";
 
 import { AuthService, IAuthService } from "../services/authService";
+import { DateService, IDateService } from "../services/dateService";
+import {
+  IInventoryDateService,
+  InventoryDateService,
+} from "../services/inventoryDateService";
 import {
   IInventoryAssignmentService,
   InventoryAssignmentService,
 } from "../services/inventoryAssignmentService";
+import {
+  IInventoryStatusHistoryService,
+  InventoryStatusHistoryService,
+} from "../services/inventoryStatusHistoryService";
 import { IStoreService, StoreService } from "../services/storeService";
 import { IUserService, UserService } from "../services/userService";
 import { PermissionManager } from "../utils/permission-actions";
@@ -44,6 +53,8 @@ export interface Container {
   authService: IAuthService;
   userService: IUserService;
   storeService: IStoreService;
+  dateService: IDateService;
+  inventoryDateService: IInventoryDateService;
 
   // Strategies
   loginStrategyFactory: LoginStrategyFactory;
@@ -56,6 +67,9 @@ export interface Container {
   tankAssignmentRepository: ITankAssignmentRepository;
   itemAssignmentRepository: IItemAssignmentRepository;
   inventoryAssignmentService: IInventoryAssignmentService;
+
+  // Inventory audit module
+  inventoryStatusHistoryService: IInventoryStatusHistoryService;
 }
 
 export function createContainer(): Container {
@@ -78,7 +92,11 @@ export function createContainer(): Container {
   const userService = new UserService(userRepository);
   const storeService = new StoreService(storeRepository);
 
-  // Create inventory module dependencies with new domain structure
+  // Create date services
+  const dateService = new DateService();
+  const inventoryDateService = new InventoryDateService(dateService);
+
+  // Create inventory module dependencies with improved domain structure
   const tankAssignmentRepository = new PgTankAssignmentRepository();
   const itemAssignmentRepository = new PgItemAssignmentRepository();
   const inventoryTransactionRepository = new PgInventoryTransactionRepository();
@@ -92,8 +110,12 @@ export function createContainer(): Container {
     inventoryAssignmentRepository,
     tankAssignmentRepository,
     itemAssignmentRepository,
-    inventoryTransactionRepository
+    inventoryTransactionRepository,
+    inventoryDateService
   );
+
+  // Create inventory status history service
+  const inventoryStatusHistoryService = new InventoryStatusHistoryService();
 
   // Return container with all dependencies
   return {
@@ -111,6 +133,8 @@ export function createContainer(): Container {
     authService,
     userService,
     storeService,
+    dateService,
+    inventoryDateService,
 
     // Inventory module
     inventoryAssignmentRepository,
@@ -118,5 +142,8 @@ export function createContainer(): Container {
     tankAssignmentRepository,
     itemAssignmentRepository,
     inventoryAssignmentService,
+
+    // Inventory audit module
+    inventoryStatusHistoryService,
   };
 }

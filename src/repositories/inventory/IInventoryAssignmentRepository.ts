@@ -6,6 +6,11 @@ import type {
   StatusType,
 } from "../../dtos/response/inventoryAssignmentInterface";
 
+// Transaction type for dependency injection
+type DbTransaction = Parameters<
+  Parameters<typeof import("../../db").db.transaction>[0]
+>[0];
+
 export abstract class IInventoryAssignmentRepository {
   // Core CRUD operations
   abstract find(
@@ -36,6 +41,16 @@ export abstract class IInventoryAssignmentRepository {
 
   // Create operations
   abstract create(
+    assignmentId: number,
+    assignmentDate: string,
+    assignedBy: number,
+    notes?: string,
+    autoAssignment?: boolean
+  ): Promise<InventoryAssignmentType>;
+
+  // Create with transaction support
+  abstract createWithTransaction(
+    trx: DbTransaction,
     assignmentId: number,
     assignmentDate: string,
     assignedBy: number,

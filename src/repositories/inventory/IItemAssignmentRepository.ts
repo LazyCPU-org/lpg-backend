@@ -1,5 +1,10 @@
 import type { AssignmentItemType } from "../../dtos/response/inventoryAssignmentInterface";
 
+// Transaction type for dependency injection
+type DbTransaction = Parameters<
+  Parameters<typeof import("../../db").db.transaction>[0]
+>[0];
+
 export abstract class IItemAssignmentRepository {
   // Find operations
   abstract findByInventoryId(
@@ -12,6 +17,16 @@ export abstract class IItemAssignmentRepository {
 
   // Create operations
   abstract create(
+    inventoryId: number,
+    inventoryItemId: number,
+    purchase_price: string,
+    sell_price: string,
+    assignedItems: number
+  ): Promise<AssignmentItemType>;
+
+  // Create with transaction support
+  abstract createWithTransaction(
+    trx: DbTransaction,
     inventoryId: number,
     inventoryItemId: number,
     purchase_price: string,

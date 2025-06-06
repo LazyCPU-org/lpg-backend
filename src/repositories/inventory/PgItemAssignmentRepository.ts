@@ -12,6 +12,9 @@ import {
 import { InternalError, NotFoundError } from "../../utils/custom-errors";
 import { IItemAssignmentRepository } from "./IItemAssignmentRepository";
 
+// Transaction type for consistency
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export class PgItemAssignmentRepository implements IItemAssignmentRepository {
   async findByInventoryId(inventoryId: number): Promise<AssignmentItemType[]> {
     return await db.query.assignmentItems.findMany({
@@ -69,6 +72,52 @@ export class PgItemAssignmentRepository implements IItemAssignmentRepository {
     };
 
     const results = await db
+      .insert(assignmentItems)
+      .values(newItemAssignment)
+      .returning();
+
+    if (!results || results.length === 0) {
+      throw new InternalError("Error creando asignación de artículo");
+    }
+
+    return results[0];
+  }
+
+  async createWithTransaction(
+    trx: DbTransaction,
+    inventoryId: number,
+    inventoryItemId: number,
+    purchase_price: string,
+    sell_price: string,
+    assignedItems: number
+  ): Promise<AssignmentItemType> {
+    // Validate that the assignment and item exist using transaction
+    const assignment = await trx.query.inventoryAssignments.findFirst({
+      where: eq(inventoryAssignments.inventoryId, inventoryId),
+    });
+
+    if (!assignment) {
+      throw new NotFoundError("Asignación de inventario no encontrada");
+    }
+
+    const item = await trx.query.inventoryItem.findFirst({
+      where: eq(inventoryItem.inventoryItemId, inventoryItemId),
+    });
+
+    if (!item) {
+      throw new NotFoundError("Artículo de inventario no encontrado");
+    }
+
+    const newItemAssignment: NewAssignmentItemType = {
+      inventoryId,
+      inventoryItemId,
+      purchase_price,
+      sell_price,
+      assignedItems,
+      currentItems: assignedItems, // Initially, current = assigned
+    };
+
+    const results = await trx
       .insert(assignmentItems)
       .values(newItemAssignment)
       .returning();

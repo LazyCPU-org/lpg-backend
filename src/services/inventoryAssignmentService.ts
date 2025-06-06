@@ -1,6 +1,6 @@
-// src/services/inventoryAssignmentService.ts - Enhanced with consolidation workflow
 import { eq } from "drizzle-orm";
 import { db } from "../db";
+import { inventoryStatusHistory } from "../db/schemas/audit/inventory-status-history";
 import { AssignmentStatusEnum } from "../db/schemas/inventory";
 import { storeAssignments } from "../db/schemas/locations";
 import {
@@ -20,6 +20,7 @@ import {
   TransactionTypeEnum,
 } from "../repositories/inventory";
 import { NotFoundError } from "../utils/custom-errors";
+import { IInventoryDateService } from "./inventoryDateService";
 
 export interface IInventoryAssignmentService {
   // Find methods
@@ -56,7 +57,7 @@ export interface IInventoryAssignmentService {
     userId: number
   ): Promise<InventoryAssignmentType>;
 
-  // Consolidation workflow
+  // NEW: Consolidation workflow
   consolidateAndCreateNext(
     inventoryId: number,
     userId: number,
@@ -110,12 +111,14 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
     private inventoryAssignmentRepository: IInventoryAssignmentRepository,
     private tankAssignmentRepository: ITankAssignmentRepository,
     private itemAssignmentRepository: IItemAssignmentRepository,
-    private inventoryTransactionRepository: IInventoryTransactionRepository
+    private inventoryTransactionRepository: IInventoryTransactionRepository,
+    private inventoryDateService: IInventoryDateService
   ) {
     this.consolidationWorkflow = new ConsolidationWorkflow(
       inventoryAssignmentRepository,
       tankAssignmentRepository,
-      itemAssignmentRepository
+      itemAssignmentRepository,
+      inventoryDateService
     );
   }
 
@@ -165,6 +168,16 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
       assignedBy,
       notes,
       true
+    );
+
+    // Log initial status creation
+    await this.createStatusHistoryRecord(
+      baseAssignment.inventoryId,
+      null, // fromStatus is null for initial creation
+      baseAssignment.status as StatusType,
+      assignedBy,
+      "Inventario creado",
+      "Asignación inicial de inventario creada automáticamente"
     );
 
     // Get store catalog
@@ -264,27 +277,66 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
   }
 
   /**
-   * Updates assignment status with enhanced business logic
+   * Updates assignment status with enhanced business logic and audit trail
    */
   async updateAssignmentStatus(
     inventoryAssignmentId: number,
     status: string,
     userId: number
   ): Promise<InventoryAssignmentType> {
+    // Get current assignment to track from status
+    const currentAssignment = await this.inventoryAssignmentRepository.findById(
+      inventoryAssignmentId
+    );
+
+    if (!currentAssignment) {
+      throw new NotFoundError("Asignación de inventario no encontrada");
+    }
+
+    const fromStatus = currentAssignment.status as StatusType;
+    const toStatus = status as StatusType;
+
     // Special handling for CONSOLIDATED status - triggers next day creation
     if (status === AssignmentStatusEnum.CONSOLIDATED) {
       const result = await this.consolidateAndCreateNext(
         inventoryAssignmentId,
         userId
       );
+
+      // Create status history record for consolidation
+      await this.createStatusHistoryRecord(
+        inventoryAssignmentId,
+        fromStatus,
+        toStatus,
+        userId,
+        "Consolidación automática",
+        this.generateStatusChangeNotes(fromStatus, toStatus, {
+          isAutoConsolidation: true,
+          inventoryDate: currentAssignment.assignmentDate,
+        })
+      );
+
       return result.currentInventory;
     }
 
     // Standard status update for other transitions
-    return await this.inventoryAssignmentRepository.updateStatus(
+    const updatedAssignment =
+      await this.inventoryAssignmentRepository.updateStatus(
+        inventoryAssignmentId,
+        toStatus
+      );
+
+    // Create status history record
+    await this.createStatusHistoryRecord(
       inventoryAssignmentId,
-      status as StatusType
+      fromStatus,
+      toStatus,
+      userId,
+      "Actualización manual de estado",
+      this.generateStatusChangeNotes(fromStatus, toStatus)
     );
+
+    return updatedAssignment;
   }
 
   /**
@@ -305,7 +357,88 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
     );
   }
 
-  // Transaction-based business operations
+  /**
+   * Creates a status history record for audit trail
+   */
+  private async createStatusHistoryRecord(
+    inventoryId: number,
+    fromStatus: StatusType | null,
+    toStatus: StatusType,
+    changedBy: number,
+    reason: string,
+    notes?: string
+  ): Promise<void> {
+    await db.insert(inventoryStatusHistory).values({
+      inventoryId,
+      fromStatus,
+      toStatus,
+      changedBy,
+      reason,
+      notes,
+    });
+  }
+
+  /**
+   * Generates appropriate notes based on status transition and context
+   */
+  private generateStatusChangeNotes(
+    fromStatus: StatusType | null,
+    toStatus: StatusType,
+    context?: {
+      isAutoConsolidation?: boolean;
+      inventoryDate?: string;
+      isStaleInventory?: boolean;
+    }
+  ): string {
+    const transitions: Record<string, string> = {
+      // Initial creation
+      null_created: "Inventario creado con cantidades iniciales en cero",
+      null_assigned: "Inventario creado y asignado directamente",
+
+      // Normal workflow
+      created_assigned: "Inventario asignado para operaciones del día",
+      assigned_consolidated: "Inventario consolidado - ciclo diario completado",
+      consolidated_verified: "Inventario verificado y aprobado por supervisor",
+
+      // Emergency/manual transitions
+      created_consolidated:
+        "Consolidación directa - saltando asignación normal",
+      assigned_verified: "Verificación directa - saltando consolidación",
+      created_verified: "Verificación directa desde creación",
+
+      // Reverse transitions (corrections)
+      consolidated_assigned: "Reversión de consolidación - requiere ajustes",
+      verified_consolidated: "Reversión de verificación - requiere revisión",
+      verified_assigned: "Reversión completa - regreso a estado asignado",
+    };
+
+    const transitionKey = `${fromStatus || "null"}_${toStatus}`;
+    let baseNote =
+      transitions[transitionKey] ||
+      `Cambio de estado de ${fromStatus || "inicial"} a ${toStatus}`;
+
+    // Add context-specific information
+    if (context?.isAutoConsolidation) {
+      const currentDate = new Date().toISOString().split("T")[0];
+      const inventoryDate = context.inventoryDate;
+
+      if (inventoryDate && inventoryDate !== currentDate) {
+        const daysDiff =
+          Math.abs(
+            new Date(currentDate).getTime() - new Date(inventoryDate).getTime()
+          ) /
+          (1000 * 60 * 60 * 24);
+
+        if (daysDiff >= 1) {
+          baseNote += ` | Recuperación de workflow: fecha original ${inventoryDate}, consolidado en ${currentDate}. Próximo inventario creado para HOY para operaciones inmediatas.`;
+        }
+      }
+    }
+
+    return baseNote;
+  }
+
+  // Transaction-based business operations (unchanged)
 
   async deliveryOut(
     inventoryId: number,

@@ -14,6 +14,9 @@ import { TankType } from "../../dtos/response/inventoryInterface";
 import { InternalError, NotFoundError } from "../../utils/custom-errors";
 import { ITankAssignmentRepository } from "./ITankAssignmentRepository";
 
+// Transaction type for consistency
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 export class PgTankAssignmentRepository implements ITankAssignmentRepository {
   async findByInventoryId(inventoryId: number): Promise<AssignmentTankType[]> {
     return await db.query.assignmentTanks.findMany({
@@ -81,6 +84,55 @@ export class PgTankAssignmentRepository implements ITankAssignmentRepository {
     };
 
     const results = await db
+      .insert(assignmentTanks)
+      .values(newTankAssignment)
+      .returning();
+
+    if (!results || results.length === 0) {
+      throw new InternalError("Error creando asignación de tanque");
+    }
+
+    return results[0];
+  }
+
+  async createWithTransaction(
+    trx: DbTransaction,
+    inventoryId: number,
+    tankTypeId: number,
+    purchase_price: string,
+    sell_price: string,
+    assignedFullTanks: number,
+    assignedEmptyTanks: number
+  ): Promise<AssignmentTankType> {
+    // Validate that the assignment and tank type exist using transaction
+    const inventoryAssignment = await trx.query.inventoryAssignments.findFirst({
+      where: eq(inventoryAssignments.inventoryId, inventoryId),
+    });
+
+    if (!inventoryAssignment) {
+      throw new NotFoundError("Asignación de inventario no encontrada");
+    }
+
+    const tank = await trx.query.tankType.findFirst({
+      where: eq(tankType.typeId, tankTypeId),
+    });
+
+    if (!tank) {
+      throw new NotFoundError("Tipo de tanque no encontrado");
+    }
+
+    const newTankAssignment: NewAssignmentTankType = {
+      inventoryId,
+      tankTypeId,
+      purchase_price: purchase_price,
+      sell_price,
+      assignedFullTanks,
+      currentFullTanks: assignedFullTanks, // Initially, current = assigned
+      assignedEmptyTanks,
+      currentEmptyTanks: assignedEmptyTanks,
+    };
+
+    const results = await trx
       .insert(assignmentTanks)
       .values(newTankAssignment)
       .returning();
