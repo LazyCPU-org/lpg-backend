@@ -11,7 +11,7 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "../user-management/users";
 import { assignmentTanks } from "./inventory-assignments-tanks";
-import { TransactionTypeEnum } from "./item-transactions";
+import { TransactionTypeEnum } from "./transaction-types";
 
 export const tankTransactionTypeEnum = pgEnum("tank_transaction_type", [
   TransactionTypeEnum.PURCHASE,

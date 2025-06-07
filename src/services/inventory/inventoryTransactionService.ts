@@ -1,248 +1,403 @@
-import { IInventoryTransactionRepository, TransactionType } from "../../repositories/inventory";
+import { TransactionProcessor } from "../../strategies/transactions";
+import { IInventoryTransactionRepository } from "../../repositories/inventory";
 import {
-  BatchTransactionResult,
-  CurrentItemQuantity,
-  CurrentTankQuantities,
-  ItemTransactionResult,
-  TankTransactionResult,
-} from "../../dtos/response/inventoryTransactionInterface";
+  SimplifiedTankTransactionRequest,
+  SimplifiedItemTransactionRequest,
+  SimplifiedBatchTankTransactionsRequest,
+  SimplifiedBatchItemTransactionsRequest,
+  convertTankTransactionToStrategyRequest,
+  convertItemTransactionToStrategyRequest,
+} from "../../dtos/request/simplifiedTransactionDTO";
 import {
-  BatchItemTransactionsRequest,
-  BatchTankTransactionsRequest,
-  CreateItemTransactionRequest,
-  CreateTankTransactionRequest,
-} from "../../dtos/request/inventoryTransactionDTO";
+  TankTransactionResponse,
+  ItemTransactionResponse,
+  BatchTransactionResponse,
+  TransactionValidationResponse,
+  SupportedTransactionsResponse,
+  TransactionTypeInfo,
+} from "../../dtos/response/simplifiedTransactionInterface";
+import { TransactionTypeEnum, TransactionType } from "../../db/schemas/inventory/item-transactions";
 import { InternalError, NotFoundError } from "../../utils/custom-errors";
 
-export interface IInventoryTransactionService {
+export abstract class ISimplifiedInventoryTransactionService {
   // Single transaction methods
-  createTankTransaction(
-    request: CreateTankTransactionRequest,
+  abstract createTankTransaction(
+    request: SimplifiedTankTransactionRequest,
     userId: number
-  ): Promise<TankTransactionResult>;
+  ): Promise<TankTransactionResponse>;
 
-  createItemTransaction(
-    request: CreateItemTransactionRequest,
+  abstract createItemTransaction(
+    request: SimplifiedItemTransactionRequest,
     userId: number
-  ): Promise<ItemTransactionResult>;
+  ): Promise<ItemTransactionResponse>;
 
   // Batch transaction methods
-  processTankTransactions(
-    request: BatchTankTransactionsRequest,
+  abstract processBatchTankTransactions(
+    request: SimplifiedBatchTankTransactionsRequest,
     userId: number
-  ): Promise<BatchTransactionResult>;
+  ): Promise<BatchTransactionResponse>;
 
-  processItemTransactions(
-    request: BatchItemTransactionsRequest,
+  abstract processBatchItemTransactions(
+    request: SimplifiedBatchItemTransactionsRequest,
     userId: number
-  ): Promise<BatchTransactionResult>;
+  ): Promise<BatchTransactionResponse>;
 
-  // Quantity query methods
-  getCurrentTankQuantities(
+  // Validation and info methods
+  abstract validateTankTransaction(
+    request: SimplifiedTankTransactionRequest,
+    userId: number
+  ): Promise<TransactionValidationResponse>;
+
+  abstract validateItemTransaction(
+    request: SimplifiedItemTransactionRequest,
+    userId: number
+  ): Promise<TransactionValidationResponse>;
+
+  abstract getSupportedTransactionTypes(
+    entityType: "tank" | "item"
+  ): Promise<SupportedTransactionsResponse>;
+
+  // Quantity query methods for compatibility
+  abstract getCurrentTankQuantities(
     inventoryId: number,
     tankTypeId: number
-  ): Promise<CurrentTankQuantities>;
+  ): Promise<{ inventoryId: number; tankTypeId: number; currentFullTanks: number; currentEmptyTanks: number; }>;
 
-  getCurrentItemQuantity(
+  abstract getCurrentItemQuantity(
     inventoryId: number,
     inventoryItemId: number
-  ): Promise<CurrentItemQuantity>;
+  ): Promise<{ inventoryId: number; inventoryItemId: number; currentItems: number; }>;
 }
 
-export class InventoryTransactionService implements IInventoryTransactionService {
+export class SimplifiedInventoryTransactionService implements ISimplifiedInventoryTransactionService {
+  private readonly transactionProcessor: TransactionProcessor;
+
   constructor(
     private readonly inventoryTransactionRepository: IInventoryTransactionRepository
-  ) {}
+  ) {
+    this.transactionProcessor = new TransactionProcessor(inventoryTransactionRepository);
+  }
 
   async createTankTransaction(
-    request: CreateTankTransactionRequest,
+    request: SimplifiedTankTransactionRequest,
     userId: number
-  ): Promise<TankTransactionResult> {
+  ): Promise<TankTransactionResponse> {
     try {
       const { inventoryId, transaction } = request;
-      const {
-        tankTypeId,
-        fullTanksChange,
-        emptyTanksChange,
-        transactionType,
-        notes,
-        referenceId,
-      } = transaction;
 
-      // Determine if it's an increment or decrement based on the values
-      const isIncrement = fullTanksChange >= 0 && emptyTanksChange >= 0;
-      
-      if (isIncrement) {
-        await this.inventoryTransactionRepository.incrementTankByInventoryId(
-          inventoryId,
-          tankTypeId,
-          fullTanksChange,
-          emptyTanksChange,
-          transactionType,
-          userId,
-          notes,
-          referenceId
-        );
-      } else {
-        await this.inventoryTransactionRepository.decrementTankByInventoryId(
-          inventoryId,
-          tankTypeId,
-          Math.abs(fullTanksChange),
-          Math.abs(emptyTanksChange),
-          transactionType,
-          userId,
-          notes,
-          referenceId
-        );
-      }
-
-      // Get updated quantities
-      const currentQuantities = await this.inventoryTransactionRepository.getCurrentTankQuantities(
+      // Convert to strategy request
+      const strategyRequest = convertTankTransactionToStrategyRequest(
         inventoryId,
-        tankTypeId
+        transaction,
+        userId
       );
 
+      // Process transaction using strategy
+      const result = await this.transactionProcessor.processTransaction(strategyRequest);
+
+      // Convert to simplified response
+      if (!('currentQuantities' in result)) {
+        throw new InternalError("Invalid result type for tank transaction");
+      }
+
       return {
-        success: true,
-        message: `Transacción de tanques ${isIncrement ? 'agregada' : 'reducida'} exitosamente`,
-        currentQuantities,
+        success: result.success,
+        message: result.message,
+        timestamp: new Date().toISOString(),
+        inventory: {
+          inventoryId: result.currentQuantities.inventoryId,
+          tankType: {
+            tankTypeId: result.currentQuantities.tankTypeId,
+          },
+          quantities: {
+            fullTanks: result.currentQuantities.currentFullTanks,
+            emptyTanks: result.currentQuantities.currentEmptyTanks,
+            totalTanks: result.currentQuantities.currentFullTanks + result.currentQuantities.currentEmptyTanks,
+          },
+        },
       };
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof InternalError) {
         throw error;
       }
-      throw new InternalError(`Error procesando transacción de tanques: ${error}`);
+      throw new InternalError(`Error procesando transacción simplificada de tanques: ${error}`);
     }
   }
 
   async createItemTransaction(
-    request: CreateItemTransactionRequest,
+    request: SimplifiedItemTransactionRequest,
     userId: number
-  ): Promise<ItemTransactionResult> {
+  ): Promise<ItemTransactionResponse> {
     try {
       const { inventoryId, transaction } = request;
-      const { inventoryItemId, itemChange, transactionType, notes } = transaction;
 
-      // Determine if it's an increment or decrement
-      const isIncrement = itemChange >= 0;
-
-      if (isIncrement) {
-        await this.inventoryTransactionRepository.incrementItemByInventoryId(
-          inventoryId,
-          inventoryItemId,
-          itemChange,
-          transactionType,
-          userId,
-          notes
-        );
-      } else {
-        await this.inventoryTransactionRepository.decrementItemByInventoryId(
-          inventoryId,
-          inventoryItemId,
-          Math.abs(itemChange),
-          transactionType,
-          userId,
-          notes
-        );
-      }
-
-      // Get updated quantity
-      const currentQuantity = await this.inventoryTransactionRepository.getCurrentItemQuantity(
+      // Convert to strategy request
+      const strategyRequest = convertItemTransactionToStrategyRequest(
         inventoryId,
-        inventoryItemId
+        transaction,
+        userId
       );
 
+      // Process transaction using strategy
+      const result = await this.transactionProcessor.processTransaction(strategyRequest);
+
+      // Convert to simplified response
+      if (!('currentQuantity' in result)) {
+        throw new InternalError("Invalid result type for item transaction");
+      }
+
       return {
-        success: true,
-        message: `Transacción de artículos ${isIncrement ? 'agregada' : 'reducida'} exitosamente`,
-        currentQuantity,
+        success: result.success,
+        message: result.message,
+        timestamp: new Date().toISOString(),
+        inventory: {
+          inventoryId: result.currentQuantity.inventoryId,
+          item: {
+            inventoryItemId: result.currentQuantity.inventoryItemId,
+          },
+          quantity: {
+            currentItems: result.currentQuantity.currentItems,
+          },
+        },
       };
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof InternalError) {
         throw error;
       }
-      throw new InternalError(`Error procesando transacción de artículos: ${error}`);
+      throw new InternalError(`Error procesando transacción simplificada de artículos: ${error}`);
     }
   }
 
-  async processTankTransactions(
-    request: BatchTankTransactionsRequest,
+  async processBatchTankTransactions(
+    request: SimplifiedBatchTankTransactionsRequest,
     userId: number
-  ): Promise<BatchTransactionResult> {
+  ): Promise<BatchTransactionResponse> {
     try {
       const { inventoryId, transactions } = request;
+      const results: TankTransactionResponse[] = [];
+      const failures: Array<{ index: number; error: string; transaction: any }> = [];
 
-      // Convert to repository format
-      const repoTransactions = transactions.map((transaction) => ({
-        tankTypeId: transaction.tankTypeId,
-        fullTanksChange: transaction.fullTanksChange,
-        emptyTanksChange: transaction.emptyTanksChange,
-        transactionType: transaction.transactionType,
-        userId,
-        notes: transaction.notes,
-        referenceId: transaction.referenceId,
-      }));
-
-      await this.inventoryTransactionRepository.processTankTransactions(
-        inventoryId,
-        repoTransactions,
-        true // Use database transaction for batch operations
-      );
+      for (let i = 0; i < transactions.length; i++) {
+        try {
+          const singleRequest = { inventoryId, transaction: transactions[i] };
+          const result = await this.createTankTransaction(singleRequest, userId);
+          results.push(result);
+        } catch (error) {
+          failures.push({
+            index: i,
+            error: error instanceof Error ? error.message : String(error),
+            transaction: transactions[i],
+          });
+        }
+      }
 
       return {
-        success: true,
-        message: `${transactions.length} transacciones de tanques procesadas exitosamente`,
-        processedCount: transactions.length,
-        totalCount: transactions.length,
+        success: failures.length === 0,
+        message: failures.length === 0 
+          ? `${transactions.length} transacciones de tanques procesadas exitosamente`
+          : `${results.length}/${transactions.length} transacciones procesadas. ${failures.length} fallaron.`,
+        timestamp: new Date().toISOString(),
+        batch: {
+          totalRequested: transactions.length,
+          successfullyProcessed: results.length,
+          failed: failures.length,
+        },
+        results,
+        failures: failures.length > 0 ? failures : undefined,
       };
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof InternalError) {
-        throw error;
-      }
-      throw new InternalError(`Error procesando transacciones de tanques en lote: ${error}`);
+      throw new InternalError(`Error procesando transacciones en lote de tanques: ${error}`);
     }
   }
 
-  async processItemTransactions(
-    request: BatchItemTransactionsRequest,
+  async processBatchItemTransactions(
+    request: SimplifiedBatchItemTransactionsRequest,
     userId: number
-  ): Promise<BatchTransactionResult> {
+  ): Promise<BatchTransactionResponse> {
     try {
       const { inventoryId, transactions } = request;
+      const results: ItemTransactionResponse[] = [];
+      const failures: Array<{ index: number; error: string; transaction: any }> = [];
 
-      // Convert to repository format
-      const repoTransactions = transactions.map((transaction) => ({
-        inventoryItemId: transaction.inventoryItemId,
-        itemChange: transaction.itemChange,
-        transactionType: transaction.transactionType,
-        userId,
-        notes: transaction.notes,
-      }));
-
-      await this.inventoryTransactionRepository.processItemTransactions(
-        inventoryId,
-        repoTransactions,
-        true // Use database transaction for batch operations
-      );
+      for (let i = 0; i < transactions.length; i++) {
+        try {
+          const singleRequest = { inventoryId, transaction: transactions[i] };
+          const result = await this.createItemTransaction(singleRequest, userId);
+          results.push(result);
+        } catch (error) {
+          failures.push({
+            index: i,
+            error: error instanceof Error ? error.message : String(error),
+            transaction: transactions[i],
+          });
+        }
+      }
 
       return {
-        success: true,
-        message: `${transactions.length} transacciones de artículos procesadas exitosamente`,
-        processedCount: transactions.length,
-        totalCount: transactions.length,
+        success: failures.length === 0,
+        message: failures.length === 0 
+          ? `${transactions.length} transacciones de artículos procesadas exitosamente`
+          : `${results.length}/${transactions.length} transacciones procesadas. ${failures.length} fallaron.`,
+        timestamp: new Date().toISOString(),
+        batch: {
+          totalRequested: transactions.length,
+          successfullyProcessed: results.length,
+          failed: failures.length,
+        },
+        results,
+        failures: failures.length > 0 ? failures : undefined,
       };
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof InternalError) {
-        throw error;
-      }
-      throw new InternalError(`Error procesando transacciones de artículos en lote: ${error}`);
+      throw new InternalError(`Error procesando transacciones en lote de artículos: ${error}`);
     }
   }
 
+  async validateTankTransaction(
+    request: SimplifiedTankTransactionRequest,
+    userId: number
+  ): Promise<TransactionValidationResponse> {
+    try {
+      const { inventoryId, transaction } = request;
+      
+      // Convert to strategy request
+      const strategyRequest = convertTankTransactionToStrategyRequest(
+        inventoryId,
+        transaction,
+        userId
+      );
+
+      // Validate using strategy
+      await this.transactionProcessor.validateTransaction(strategyRequest);
+
+      // Calculate changes
+      const changes = this.transactionProcessor.calculateTransactionChanges(strategyRequest);
+
+      return {
+        valid: true,
+        calculatedChanges: 'fullTanksChange' in changes ? {
+          fullTanksChange: changes.fullTanksChange,
+          emptyTanksChange: changes.emptyTanksChange,
+        } : undefined,
+      };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [error instanceof Error ? error.message : String(error)],
+      };
+    }
+  }
+
+  async validateItemTransaction(
+    request: SimplifiedItemTransactionRequest,
+    userId: number
+  ): Promise<TransactionValidationResponse> {
+    try {
+      const { inventoryId, transaction } = request;
+      
+      // Convert to strategy request
+      const strategyRequest = convertItemTransactionToStrategyRequest(
+        inventoryId,
+        transaction,
+        userId
+      );
+
+      // Validate using strategy
+      await this.transactionProcessor.validateTransaction(strategyRequest);
+
+      // Calculate changes
+      const changes = this.transactionProcessor.calculateTransactionChanges(strategyRequest);
+
+      return {
+        valid: true,
+        calculatedChanges: 'itemChange' in changes ? {
+          itemChange: changes.itemChange,
+        } : undefined,
+      };
+    } catch (error) {
+      return {
+        valid: false,
+        errors: [error instanceof Error ? error.message : String(error)],
+      };
+    }
+  }
+
+  async getSupportedTransactionTypes(
+    entityType: "tank" | "item"
+  ): Promise<SupportedTransactionsResponse> {
+    const supportedTypes = this.transactionProcessor.getSupportedTransactionTypes(entityType);
+    
+    const transactionInfoMap: Record<TransactionType, TransactionTypeInfo> = {
+      [TransactionTypeEnum.SALE]: {
+        transactionType: "sale",
+        description: "Venta a cliente",
+        businessLogic: entityType === "tank" 
+          ? "Cliente toma tanque lleno, devuelve tanque vacío" 
+          : "Reduce cantidad de artículos",
+        requiredFields: ["quantity"],
+        examples: [{
+          description: "Venta de 2 tanques",
+          example: { transactionType: "sale", quantity: 2 }
+        }],
+      },
+      [TransactionTypeEnum.PURCHASE]: {
+        transactionType: "purchase",
+        description: "Compra a proveedor",
+        businessLogic: entityType === "tank" 
+          ? "Intercambio con proveedor: entrega tanques vacíos, recibe tanques llenos" 
+          : "Aumenta cantidad de artículos",
+        requiredFields: ["quantity"],
+        examples: [{
+          description: "Compra de 10 tanques",
+          example: { transactionType: "purchase", quantity: 10 }
+        }],
+      },
+      [TransactionTypeEnum.RETURN]: {
+        transactionType: "return",
+        description: "Devolución de cliente",
+        businessLogic: entityType === "tank" 
+          ? "Cliente devuelve tanques (especificar si llenos o vacíos)" 
+          : "Aumenta cantidad de artículos",
+        requiredFields: entityType === "tank" ? ["quantity", "tankType"] : ["quantity"],
+        examples: [{
+          description: "Devolución de 1 tanque vacío",
+          example: { transactionType: "return", quantity: 1, tankType: "empty" }
+        }],
+      },
+      [TransactionTypeEnum.TRANSFER]: {
+        transactionType: "transfer",
+        description: "Transferencia entre tiendas",
+        businessLogic: "Mueve inventario de una asignación de tienda a otra",
+        requiredFields: entityType === "tank" 
+          ? ["quantity", "tankType", "targetStoreAssignmentId"] 
+          : ["quantity", "targetStoreAssignmentId"],
+        examples: [{
+          description: "Transferir 5 tanques llenos a otra tienda",
+          example: { transactionType: "transfer", quantity: 5, tankType: "full", targetStoreAssignmentId: 123 }
+        }],
+      },
+      [TransactionTypeEnum.ASSIGNMENT]: {
+        transactionType: "assignment",
+        description: "Asignación inicial",
+        businessLogic: "Asignación directa de inventario (configuración inicial o correcciones)",
+        requiredFields: entityType === "tank" ? ["quantity", "tankType"] : ["quantity"],
+        examples: [{
+          description: "Asignación inicial de 20 tanques llenos",
+          example: { transactionType: "assignment", quantity: 20, tankType: "full" }
+        }],
+      },
+    };
+
+    return {
+      entityType,
+      supportedTransactions: supportedTypes.map(type => transactionInfoMap[type]),
+    };
+  }
+
+  // Quantity query methods for compatibility
   async getCurrentTankQuantities(
     inventoryId: number,
     tankTypeId: number
-  ): Promise<CurrentTankQuantities> {
+  ): Promise<{ inventoryId: number; tankTypeId: number; currentFullTanks: number; currentEmptyTanks: number; }> {
     try {
       const quantities = await this.inventoryTransactionRepository.getCurrentTankQuantities(
         inventoryId,
@@ -266,7 +421,7 @@ export class InventoryTransactionService implements IInventoryTransactionService
   async getCurrentItemQuantity(
     inventoryId: number,
     inventoryItemId: number
-  ): Promise<CurrentItemQuantity> {
+  ): Promise<{ inventoryId: number; inventoryItemId: number; currentItems: number; }> {
     try {
       const quantity = await this.inventoryTransactionRepository.getCurrentItemQuantity(
         inventoryId,

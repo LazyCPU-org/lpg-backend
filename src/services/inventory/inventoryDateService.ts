@@ -1,15 +1,15 @@
 import { IDateService } from "../dateService";
 
-export interface IInventoryDateService {
-  calculateNextInventoryDate(
+export abstract class IInventoryDateService {
+  abstract calculateNextInventoryDate(
     inventoryAssignmentDate: string,
     skipWeekends?: boolean
   ): string;
-  getNextWorkingDay(currentDate: string, skipWeekends?: boolean): string;
-  getCurrentDateInTimezone(): string;
-  applyWeekendRules(date: string, skipWeekends?: boolean): string;
-  getDaysDifference(date1: string, date2: string): number;
-  isStaleInventory(inventoryDate: string, currentDate?: string): boolean;
+  abstract getNextWorkingDay(currentDate: string, skipWeekends?: boolean): string;
+  abstract getCurrentDateInTimezone(): string;
+  abstract applyWeekendRules(date: string, skipWeekends?: boolean): string;
+  abstract getDaysDifference(date1: string, date2: string): number;
+  abstract isStaleInventory(inventoryDate: string, currentDate?: string): boolean;
 }
 
 export class InventoryDateService implements IInventoryDateService {

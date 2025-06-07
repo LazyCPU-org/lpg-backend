@@ -2,7 +2,10 @@ import { eq } from "drizzle-orm";
 import { db } from "../../db";
 import { inventoryStatusHistory } from "../../db/schemas/audit/inventory-status-history";
 import { AssignmentStatusEnum } from "../../db/schemas/inventory";
-import { storeAssignments, storeAssignmentCurrentInventory } from "../../db/schemas/locations";
+import {
+  storeAssignmentCurrentInventory,
+  storeAssignments,
+} from "../../db/schemas/locations";
 import {
   InventoryAssignmentRelationOptions,
   InventoryAssignmentType,
@@ -22,9 +25,9 @@ import {
 import { NotFoundError } from "../../utils/custom-errors";
 import { IInventoryDateService } from "./inventoryDateService";
 
-export interface IInventoryAssignmentService {
+export abstract class IInventoryAssignmentService {
   // Find methods
-  findAssignments(
+  abstract findAssignments(
     userId?: number,
     storeId?: number,
     date?: string,
@@ -32,33 +35,33 @@ export interface IInventoryAssignmentService {
     relations?: InventoryAssignmentRelationOptions
   ): Promise<InventoryAssignmentWithRelations[]>;
 
-  findAssignmentById(
+  abstract findAssignmentById(
     id: number,
     relations?: InventoryAssignmentRelationOptions
   ): Promise<InventoryAssignmentWithDetailsAndRelations>;
 
   // Create methods
-  createInventoryAssignment(
+  abstract createInventoryAssignment(
     assignmentId: number,
     assignmentDate: string,
     assignedBy: number,
     notes?: string
   ): Promise<InventoryAssignmentWithDetailsAndRelations>;
 
-  createOrGetTodaysInventory(
+  abstract createOrGetTodaysInventory(
     assignmentId: number,
     assignedBy: number
   ): Promise<InventoryAssignmentWithDetailsAndRelations>;
 
   // Status update methods
-  updateAssignmentStatus(
+  abstract updateAssignmentStatus(
     id: number,
     status: string,
     userId: number
   ): Promise<InventoryAssignmentType>;
 
-  // NEW: Consolidation workflow
-  consolidateAndCreateNext(
+  // Consolidation workflow
+  abstract consolidateAndCreateNext(
     inventoryId: number,
     userId: number,
     skipWeekends?: boolean
@@ -68,7 +71,7 @@ export interface IInventoryAssignmentService {
   }>;
 
   // Transaction-based updates
-  deliveryOut(
+  abstract deliveryOut(
     inventoryId: number,
     userId: number,
     items: {
@@ -79,7 +82,7 @@ export interface IInventoryAssignmentService {
     }[]
   ): Promise<void>;
 
-  deliveryReturn(
+  abstract deliveryReturn(
     inventoryId: number,
     userId: number,
     items: {
@@ -91,7 +94,7 @@ export interface IInventoryAssignmentService {
     }[]
   ): Promise<void>;
 
-  stockAdjustment(
+  abstract stockAdjustment(
     inventoryId: number,
     userId: number,
     adjustments: {
@@ -373,9 +376,10 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
     setBy: number
   ): Promise<void> {
     // Check if current inventory state already exists
-    const existingState = await db.query.storeAssignmentCurrentInventory.findFirst({
-      where: eq(storeAssignmentCurrentInventory.assignmentId, assignmentId)
-    });
+    const existingState =
+      await db.query.storeAssignmentCurrentInventory.findFirst({
+        where: eq(storeAssignmentCurrentInventory.assignmentId, assignmentId),
+      });
 
     if (existingState) {
       // Update existing current inventory state
@@ -384,7 +388,7 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
         .set({
           currentInventoryId: inventoryId,
           setAt: new Date(),
-          setBy: setBy
+          setBy: setBy,
         })
         .where(eq(storeAssignmentCurrentInventory.assignmentId, assignmentId));
     } else {
@@ -392,7 +396,7 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
       await db.insert(storeAssignmentCurrentInventory).values({
         assignmentId,
         currentInventoryId: inventoryId,
-        setBy: setBy
+        setBy: setBy,
       });
     }
   }

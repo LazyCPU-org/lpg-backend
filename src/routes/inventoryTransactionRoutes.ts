@@ -1,10 +1,10 @@
 import { Request, Response, Router } from "express";
 import {
-  BatchItemTransactionsRequestSchema,
-  BatchTankTransactionsRequestSchema,
-  CreateItemTransactionRequestSchema,
-  CreateTankTransactionRequestSchema,
-} from "../dtos/request/inventoryTransactionDTO";
+  SimplifiedBatchItemTransactionsRequestSchema,
+  SimplifiedBatchTankTransactionsRequestSchema,
+  SimplifiedItemTransactionRequestSchema,
+  SimplifiedTankTransactionRequestSchema,
+} from "../dtos/request/simplifiedTransactionDTO";
 import { asyncHandler } from "../middlewares/async-handler";
 import {
   AuthRequest,
@@ -21,11 +21,11 @@ export function buildInventoryTransactionRouter(
 
   /**
    * @openapi
-   * /v1/inventory/transactions/tanks:
+   * /inventory/transactions/tanks:
    *   post:
-   *     summary: Create a tank transaction
-   *     description: Creates a transaction to increment or decrement tank quantities for a specific inventory
-   *     tags: [Inventory Transactions]
+   *     summary: Create a tank transaction (Simplified API)
+   *     description: Creates a business-level tank transaction (sale, purchase, return, etc.) with automatic validation
+   *     tags: [Simplified Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -33,7 +33,7 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/CreateTankTransactionRequest'
+   *             $ref: '#/components/schemas/SimplifiedTankTransactionRequest'
    *     responses:
    *       201:
    *         description: Tank transaction created successfully
@@ -45,9 +45,9 @@ export function buildInventoryTransactionRouter(
    *                 success:
    *                   type: boolean
    *                 data:
-   *                   $ref: '#/components/schemas/TankTransactionResult'
+   *                   $ref: '#/components/schemas/TankTransactionResponse'
    *       400:
-   *         description: Invalid request data
+   *         description: Invalid request data or business rule violation
    *       401:
    *         description: Unauthorized
    *       403:
@@ -62,7 +62,9 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = CreateTankTransactionRequestSchema.parse(req.body);
+      const validatedData = SimplifiedTankTransactionRequestSchema.parse(
+        req.body
+      );
       const userId = parseInt(req.user!.id);
 
       const result = await inventoryTransactionService.createTankTransaction(
@@ -79,11 +81,11 @@ export function buildInventoryTransactionRouter(
 
   /**
    * @openapi
-   * /v1/inventory/transactions/items:
+   * /inventory/transactions/items:
    *   post:
-   *     summary: Create an item transaction
-   *     description: Creates a transaction to increment or decrement item quantities for a specific inventory
-   *     tags: [Inventory Transactions]
+   *     summary: Create an item transaction (Simplified API)
+   *     description: Creates a business-level item transaction (sale, purchase, return, etc.) with automatic validation
+   *     tags: [Simplified Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -91,7 +93,7 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/CreateItemTransactionRequest'
+   *             $ref: '#/components/schemas/SimplifiedItemTransactionRequest'
    *     responses:
    *       201:
    *         description: Item transaction created successfully
@@ -103,9 +105,9 @@ export function buildInventoryTransactionRouter(
    *                 success:
    *                   type: boolean
    *                 data:
-   *                   $ref: '#/components/schemas/ItemTransactionResult'
+   *                   $ref: '#/components/schemas/ItemTransactionResponse'
    *       400:
-   *         description: Invalid request data
+   *         description: Invalid request data or business rule violation
    *       401:
    *         description: Unauthorized
    *       403:
@@ -120,7 +122,9 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = CreateItemTransactionRequestSchema.parse(req.body);
+      const validatedData = SimplifiedItemTransactionRequestSchema.parse(
+        req.body
+      );
       const userId = parseInt(req.user!.id);
 
       const result = await inventoryTransactionService.createItemTransaction(
@@ -137,11 +141,11 @@ export function buildInventoryTransactionRouter(
 
   /**
    * @openapi
-   * /v1/inventory/transactions/tanks/batch:
+   * /inventory/transactions/tanks/batch:
    *   post:
-   *     summary: Process multiple tank transactions
-   *     description: Processes multiple tank transactions in a single atomic operation
-   *     tags: [Inventory Transactions]
+   *     summary: Process multiple tank transactions (Simplified API)
+   *     description: Processes multiple business-level tank transactions with individual validation
+   *     tags: [Simplified Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -149,10 +153,10 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/BatchTankTransactionsRequest'
+   *             $ref: '#/components/schemas/SimplifiedBatchTankTransactionsRequest'
    *     responses:
    *       201:
-   *         description: Tank transactions processed successfully
+   *         description: Tank transactions processed (may include partial failures)
    *         content:
    *           application/json:
    *             schema:
@@ -161,15 +165,13 @@ export function buildInventoryTransactionRouter(
    *                 success:
    *                   type: boolean
    *                 data:
-   *                   $ref: '#/components/schemas/BatchTransactionResult'
+   *                   $ref: '#/components/schemas/BatchTransactionResponse'
    *       400:
    *         description: Invalid request data
    *       401:
    *         description: Unauthorized
    *       403:
    *         description: Forbidden - insufficient permissions
-   *       404:
-   *         description: Inventory assignment or tank type not found
    *       500:
    *         description: Internal server error
    */
@@ -178,13 +180,16 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = BatchTankTransactionsRequestSchema.parse(req.body);
+      const validatedData = SimplifiedBatchTankTransactionsRequestSchema.parse(
+        req.body
+      );
       const userId = parseInt(req.user!.id);
 
-      const result = await inventoryTransactionService.processTankTransactions(
-        validatedData,
-        userId
-      );
+      const result =
+        await inventoryTransactionService.processBatchTankTransactions(
+          validatedData,
+          userId
+        );
 
       res.status(201).json({
         success: true,
@@ -195,11 +200,11 @@ export function buildInventoryTransactionRouter(
 
   /**
    * @openapi
-   * /v1/inventory/transactions/items/batch:
+   * /inventory/transactions/items/batch:
    *   post:
-   *     summary: Process multiple item transactions
-   *     description: Processes multiple item transactions in a single atomic operation
-   *     tags: [Inventory Transactions]
+   *     summary: Process multiple item transactions (Simplified API)
+   *     description: Processes multiple business-level item transactions with individual validation
+   *     tags: [Simplified Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -207,10 +212,10 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/BatchItemTransactionsRequest'
+   *             $ref: '#/components/schemas/SimplifiedBatchItemTransactionsRequest'
    *     responses:
    *       201:
-   *         description: Item transactions processed successfully
+   *         description: Item transactions processed (may include partial failures)
    *         content:
    *           application/json:
    *             schema:
@@ -219,15 +224,13 @@ export function buildInventoryTransactionRouter(
    *                 success:
    *                   type: boolean
    *                 data:
-   *                   $ref: '#/components/schemas/BatchTransactionResult'
+   *                   $ref: '#/components/schemas/BatchTransactionResponse'
    *       400:
    *         description: Invalid request data
    *       401:
    *         description: Unauthorized
    *       403:
    *         description: Forbidden - insufficient permissions
-   *       404:
-   *         description: Inventory assignment or item not found
    *       500:
    *         description: Internal server error
    */
@@ -236,13 +239,16 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = BatchItemTransactionsRequestSchema.parse(req.body);
+      const validatedData = SimplifiedBatchItemTransactionsRequestSchema.parse(
+        req.body
+      );
       const userId = parseInt(req.user!.id);
 
-      const result = await inventoryTransactionService.processItemTransactions(
-        validatedData,
-        userId
-      );
+      const result =
+        await inventoryTransactionService.processBatchItemTransactions(
+          validatedData,
+          userId
+        );
 
       res.status(201).json({
         success: true,
@@ -253,29 +259,22 @@ export function buildInventoryTransactionRouter(
 
   /**
    * @openapi
-   * /v1/inventory/transactions/tanks/{inventoryId}/{tankTypeId}/quantities:
-   *   get:
-   *     summary: Get current tank quantities
-   *     description: Retrieves the current quantities of tanks for a specific inventory and tank type
-   *     tags: [Inventory Transactions]
+   * /inventory/transactions/tanks/validate:
+   *   post:
+   *     summary: Validate tank transaction (Simplified API)
+   *     description: Validates a tank transaction without executing it, returns calculated changes
+   *     tags: [Simplified Inventory Transactions]
    *     security:
    *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: inventoryId
-   *         required: true
-   *         schema:
-   *           type: integer
-   *         description: ID of the inventory assignment
-   *       - in: path
-   *         name: tankTypeId
-   *         required: true
-   *         schema:
-   *           type: integer
-   *         description: ID of the tank type
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SimplifiedTankTransactionRequest'
    *     responses:
    *       200:
-   *         description: Current tank quantities retrieved successfully
+   *         description: Transaction validation result
    *         content:
    *           application/json:
    *             schema:
@@ -284,34 +283,29 @@ export function buildInventoryTransactionRouter(
    *                 success:
    *                   type: boolean
    *                 data:
-   *                   $ref: '#/components/schemas/CurrentTankQuantities'
+   *                   $ref: '#/components/schemas/TransactionValidationResponse'
+   *       400:
+   *         description: Invalid request data
    *       401:
    *         description: Unauthorized
    *       403:
    *         description: Forbidden - insufficient permissions
-   *       404:
-   *         description: Inventory assignment or tank type not found
    *       500:
    *         description: Internal server error
    */
-  router.get(
-    "/tanks/:inventoryId/:tankTypeId/quantities",
+  router.post(
+    "/tanks/validate",
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.READ),
-    asyncHandler(async (req: Request, res: Response) => {
-      const inventoryId = parseInt(req.params.inventoryId);
-      const tankTypeId = parseInt(req.params.tankTypeId);
+    asyncHandler(async (req: AuthRequest, res: Response) => {
+      const validatedData = SimplifiedTankTransactionRequestSchema.parse(
+        req.body
+      );
+      const userId = parseInt(req.user!.id);
 
-      if (isNaN(inventoryId) || isNaN(tankTypeId)) {
-        return res.status(400).json({
-          success: false,
-          error: "ID de inventario o tipo de tanque inválido",
-        });
-      }
-
-      const result = await inventoryTransactionService.getCurrentTankQuantities(
-        inventoryId,
-        tankTypeId
+      const result = await inventoryTransactionService.validateTankTransaction(
+        validatedData,
+        userId
       );
 
       res.json({
@@ -323,29 +317,22 @@ export function buildInventoryTransactionRouter(
 
   /**
    * @openapi
-   * /v1/inventory/transactions/items/{inventoryId}/{inventoryItemId}/quantities:
-   *   get:
-   *     summary: Get current item quantity
-   *     description: Retrieves the current quantity of items for a specific inventory and item
-   *     tags: [Inventory Transactions]
+   * /inventory/transactions/items/validate:
+   *   post:
+   *     summary: Validate item transaction (Simplified API)
+   *     description: Validates an item transaction without executing it, returns calculated changes
+   *     tags: [Simplified Inventory Transactions]
    *     security:
    *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: inventoryId
-   *         required: true
-   *         schema:
-   *           type: integer
-   *         description: ID of the inventory assignment
-   *       - in: path
-   *         name: inventoryItemId
-   *         required: true
-   *         schema:
-   *           type: integer
-   *         description: ID of the inventory item
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SimplifiedItemTransactionRequest'
    *     responses:
    *       200:
-   *         description: Current item quantity retrieved successfully
+   *         description: Transaction validation result
    *         content:
    *           application/json:
    *             schema:
@@ -354,35 +341,94 @@ export function buildInventoryTransactionRouter(
    *                 success:
    *                   type: boolean
    *                 data:
-   *                   $ref: '#/components/schemas/CurrentItemQuantity'
+   *                   $ref: '#/components/schemas/TransactionValidationResponse'
+   *       400:
+   *         description: Invalid request data
    *       401:
    *         description: Unauthorized
    *       403:
    *         description: Forbidden - insufficient permissions
-   *       404:
-   *         description: Inventory assignment or item not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.post(
+    "/items/validate",
+    isAuthenticated,
+    requirePermission(ModuleEnum.INVENTORY, ActionEnum.READ),
+    asyncHandler(async (req: AuthRequest, res: Response) => {
+      const validatedData = SimplifiedItemTransactionRequestSchema.parse(
+        req.body
+      );
+      const userId = parseInt(req.user!.id);
+
+      const result = await inventoryTransactionService.validateItemTransaction(
+        validatedData,
+        userId
+      );
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    })
+  );
+
+  /**
+   * @openapi
+   * /inventory/transactions/types/{entityType}:
+   *   get:
+   *     summary: Get supported transaction types (Simplified API)
+   *     description: Returns all supported transaction types for tanks or items with documentation
+   *     tags: [Simplified Inventory Transactions]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: entityType
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [tank, item]
+   *         description: Type of entity (tank or item)
+   *     responses:
+   *       200:
+   *         description: Supported transaction types retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 data:
+   *                   $ref: '#/components/schemas/SupportedTransactionsResponse'
+   *       400:
+   *         description: Invalid entity type
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - insufficient permissions
    *       500:
    *         description: Internal server error
    */
   router.get(
-    "/items/:inventoryId/:inventoryItemId/quantities",
+    "/types/:entityType",
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.READ),
     asyncHandler(async (req: Request, res: Response) => {
-      const inventoryId = parseInt(req.params.inventoryId);
-      const inventoryItemId = parseInt(req.params.inventoryItemId);
+      const entityType = req.params.entityType as "tank" | "item";
 
-      if (isNaN(inventoryId) || isNaN(inventoryItemId)) {
+      if (!["tank", "item"].includes(entityType)) {
         return res.status(400).json({
           success: false,
-          error: "ID de inventario o artículo inválido",
+          error: "Tipo de entidad inválido. Debe ser 'tank' o 'item'",
         });
       }
 
-      const result = await inventoryTransactionService.getCurrentItemQuantity(
-        inventoryId,
-        inventoryItemId
-      );
+      const result =
+        await inventoryTransactionService.getSupportedTransactionTypes(
+          entityType
+        );
 
       res.json({
         success: true,

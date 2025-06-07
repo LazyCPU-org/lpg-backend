@@ -29,28 +29,28 @@ export interface StatusHistoryEntry {
   };
 }
 
-export interface IInventoryStatusHistoryService {
-  getHistoryByInventoryId(
+export abstract class IInventoryStatusHistoryService {
+  abstract getHistoryByInventoryId(
     inventoryId: number,
     includeRelations?: boolean
   ): Promise<StatusHistoryEntry[]>;
 
-  getHistoryByDateRange(
+  abstract getHistoryByDateRange(
     startDate: string,
     endDate: string,
     includeRelations?: boolean
   ): Promise<StatusHistoryEntry[]>;
 
-  getHistoryByUser(
+  abstract getHistoryByUser(
     userId: number,
     includeRelations?: boolean
   ): Promise<StatusHistoryEntry[]>;
 
-  getStaleInventoryConsolidations(
+  abstract getStaleInventoryConsolidations(
     daysThreshold?: number
   ): Promise<StatusHistoryEntry[]>;
 
-  getAuditReport(
+  abstract getAuditReport(
     startDate: string,
     endDate: string
   ): Promise<{

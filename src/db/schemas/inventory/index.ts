@@ -24,6 +24,7 @@ import {
   tankTransactionTypeEnum,
 } from "./tank-transactions";
 import { tankType, tankTypeRelations } from "./tank-type";
+import { TransactionTypeEnum, TransactionType } from "./transaction-types";
 
 export {
   assignmentItems,
@@ -49,4 +50,7 @@ export {
   // Base types
   tankType,
   tankTypeRelations,
+  // Transaction types
+  TransactionTypeEnum,
+  TransactionType,
 };

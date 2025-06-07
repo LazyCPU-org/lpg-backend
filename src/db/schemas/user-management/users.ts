@@ -6,6 +6,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+import { rolesEnum, statusEnum } from "./enums";
 
 // Define the users table
 export const users = pgTable("users", {
@@ -45,7 +46,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 }));
 
 // Resolve circular dependency by importing after defining the relations
-import { rolesEnum, statusEnum, userProfiles } from ".";
+import { userProfiles } from ".";
 import { inventoryStatusHistory } from "../audit";
 import { inventoryAssignments } from "../inventory/inventory-assignments";
 import { itemTransactions } from "../inventory/item-transactions";

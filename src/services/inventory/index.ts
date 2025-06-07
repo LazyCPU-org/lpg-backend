@@ -4,22 +4,22 @@
 export {
   IInventoryAssignmentService,
   InventoryAssignmentService,
-} from './inventoryAssignmentService';
+} from "./inventoryAssignmentService";
 
 // Inventory Date Service
 export {
   IInventoryDateService,
   InventoryDateService,
-} from './inventoryDateService';
+} from "./inventoryDateService";
 
 // Inventory Status History Service
 export {
   IInventoryStatusHistoryService,
   InventoryStatusHistoryService,
-} from './inventoryStatusHistoryService';
+} from "./inventoryStatusHistoryService";
 
-// Inventory Transaction Service
+// Inventory Transaction Service (Simplified Implementation)
 export {
-  IInventoryTransactionService,
-  InventoryTransactionService,
-} from './inventoryTransactionService';
+  ISimplifiedInventoryTransactionService as IInventoryTransactionService,
+  SimplifiedInventoryTransactionService as InventoryTransactionService,
+} from "./inventoryTransactionService";
