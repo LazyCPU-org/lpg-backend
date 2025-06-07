@@ -7,6 +7,7 @@ import {
   assignmentTanks,
   inventoryAssignments,
 } from "../../db/schemas/inventory";
+import { storeAssignmentCurrentInventory } from "../../db/schemas/locations";
 import inventoryItem from "../../db/schemas/inventory/inventory-item";
 import tankType from "../../db/schemas/inventory/tank-type";
 import {
@@ -14,7 +15,7 @@ import {
   InventoryAssignmentWithDetailsAndRelations,
   StatusType,
 } from "../../dtos/response/inventoryAssignmentInterface";
-import { IInventoryDateService } from "../../services/inventoryDateService";
+import { IInventoryDateService } from "../../services/inventory";
 import {
   BadRequestError,
   InternalError,
@@ -152,7 +153,7 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
       await this.createStatusHistoryRecordInTransaction(
         trx,
         inventoryId,
-        AssignmentStatusEnum.ASSIGNED as StatusType,
+        currentInventory.status as StatusType,
         AssignmentStatusEnum.CONSOLIDATED as StatusType,
         userId,
         "Consolidación automática del workflow",
@@ -377,12 +378,54 @@ export class ConsolidationWorkflow implements IConsolidationWorkflow {
       Promise.all(itemDetailsPromises),
     ]);
 
+    // Update current inventory state to point to the new inventory
+    await this.updateCurrentInventoryState(
+      trx,
+      assignmentId,
+      baseAssignment.inventoryId,
+      assignedBy
+    );
+
     // Return complete assignment
     return {
       ...baseAssignment,
       tanks: tanksWithDetails,
       items: itemsWithDetails,
     };
+  }
+
+  /**
+   * Update current inventory state within a transaction
+   */
+  private async updateCurrentInventoryState(
+    trx: DbTransaction,
+    assignmentId: number,
+    inventoryId: number,
+    setBy: number
+  ): Promise<void> {
+    // Check if current inventory state already exists
+    const existingState = await trx.query.storeAssignmentCurrentInventory.findFirst({
+      where: eq(storeAssignmentCurrentInventory.assignmentId, assignmentId)
+    });
+
+    if (existingState) {
+      // Update existing current inventory state
+      await trx
+        .update(storeAssignmentCurrentInventory)
+        .set({
+          currentInventoryId: inventoryId,
+          setAt: new Date(),
+          setBy: setBy
+        })
+        .where(eq(storeAssignmentCurrentInventory.assignmentId, assignmentId));
+    } else {
+      // Create new current inventory state
+      await trx.insert(storeAssignmentCurrentInventory).values({
+        assignmentId,
+        currentInventoryId: inventoryId,
+        setBy: setBy
+      });
+    }
   }
 
   /**

@@ -36,7 +36,16 @@ export const storeAssignmentsRelations = relations(
       fields: [storeAssignments.storeId],
       references: [stores.storeId],
     }),
+    // Define the one-to-one relationship with current inventory state
+    currentInventoryState: one(storeAssignmentCurrentInventory, {
+      relationName: "currentInventoryState",
+      fields: [storeAssignments.assignmentId],
+      references: [storeAssignmentCurrentInventory.assignmentId],
+    }),
   })
 );
 
 export default storeAssignments;
+
+// Import after relations to avoid circular dependency
+import { storeAssignmentCurrentInventory } from "./store-assignment-current-inventory";

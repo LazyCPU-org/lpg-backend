@@ -1,6 +1,9 @@
 import storeAssignments, {
   storeAssignmentsRelations,
 } from "./store-assignments";
+import storeAssignmentCurrentInventory, {
+  storeAssignmentCurrentInventoryRelations,
+} from "./store-assignment-current-inventory";
 import {
   storeCatalogItems,
   storeCatalogItemsRelations,
@@ -12,6 +15,8 @@ import stores, { storesRelations } from "./stores";
 export {
   storeAssignments,
   storeAssignmentsRelations,
+  storeAssignmentCurrentInventory,
+  storeAssignmentCurrentInventoryRelations,
   storeCatalogItems,
   storeCatalogItemsRelations,
   storeCatalogTanks,

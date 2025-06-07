@@ -12,7 +12,7 @@ import {
   requirePermission,
 } from "../middlewares/authorization";
 import { parseIncludeRelations } from "../middlewares/include-relations";
-import { IInventoryAssignmentService } from "../services/inventoryAssignmentService";
+import { IInventoryAssignmentService } from "../services/inventory";
 import { UnauthorizedError } from "../utils/custom-errors";
 import { ActionEnum, ModuleEnum } from "../utils/permissions";
 

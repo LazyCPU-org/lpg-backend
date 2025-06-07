@@ -72,6 +72,12 @@ export const inventoryAssignmentsRelations = relations(
     assignmentTanks: many(assignmentTanks),
     assignmentItems: many(assignmentItems),
     statusHistory: many(inventoryStatusHistory),
+    // Reverse relation for current inventory state
+    currentInventoryFor: one(storeAssignmentCurrentInventory, {
+      relationName: "currentInventory",
+      fields: [inventoryAssignments.inventoryId],
+      references: [storeAssignmentCurrentInventory.currentInventoryId],
+    }),
   })
 );
 
@@ -81,3 +87,4 @@ export default inventoryAssignments;
 import { inventoryStatusHistory } from "../audit";
 import { assignmentItems } from "./inventory-assignments-items";
 import { assignmentTanks } from "./inventory-assignments-tanks";
+import { storeAssignmentCurrentInventory } from "../locations/store-assignment-current-inventory";

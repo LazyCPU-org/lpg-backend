@@ -5,7 +5,7 @@ import {
   isAuthenticated,
   requirePermission,
 } from "../middlewares/authorization";
-import { IInventoryStatusHistoryService } from "../services/inventoryStatusHistoryService";
+import { IInventoryStatusHistoryService } from "../services/inventory";
 import { ActionEnum, ModuleEnum } from "../utils/permissions";
 
 export function buildInventoryStatusHistoryRouter(

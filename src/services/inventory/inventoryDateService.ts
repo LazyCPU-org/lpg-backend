@@ -1,4 +1,4 @@
-import { IDateService } from "./dateService";
+import { IDateService } from "../dateService";
 
 export interface IInventoryDateService {
   calculateNextInventoryDate(

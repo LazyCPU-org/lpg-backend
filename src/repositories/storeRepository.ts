@@ -4,6 +4,7 @@ import {
   inventoryAssignments,
   inventoryItem,
   storeAssignments,
+  storeAssignmentCurrentInventory,
   storeCatalogItems,
   storeCatalogTanks,
   stores,
@@ -129,8 +130,7 @@ export class PgStoreRepository implements StoreRepository {
       return [];
     }
 
-    // ✅ FIXED: Now uses GMT-5 timezone instead of UTC
-    const today = this.getCurrentDateInTimezone();
+    // Note: No longer need date calculation for current inventory lookup since we use direct reference
 
     // Build query with user relations
     const storeWithUsers = await db.query.stores.findFirst({
@@ -161,16 +161,19 @@ export class PgStoreRepository implements StoreRepository {
       return [];
     }
 
-    // If inventory is requested, enrich with current day's inventory
+    // If inventory is requested, use current inventory state table
     if (includeInventory) {
       const enrichedAssignments = await Promise.all(
         storeWithUsers.assignedUsers.map(async (assignment) => {
-          const currentInventory =
-            await db.query.inventoryAssignments.findFirst({
-              where: and(
-                eq(inventoryAssignments.assignmentId, assignment.assignmentId),
-                eq(inventoryAssignments.assignmentDate, today)
-              ),
+          // Use the new current inventory state table
+          const currentInventoryState = await db.query.storeAssignmentCurrentInventory.findFirst({
+            where: eq(storeAssignmentCurrentInventory.assignmentId, assignment.assignmentId)
+          });
+
+          let currentInventory = undefined;
+          if (currentInventoryState) {
+            currentInventory = await db.query.inventoryAssignments.findFirst({
+              where: eq(inventoryAssignments.inventoryId, currentInventoryState.currentInventoryId),
               with: {
                 assignedByUser: {
                   columns: {
@@ -180,6 +183,7 @@ export class PgStoreRepository implements StoreRepository {
                 },
               },
             });
+          }
 
           return {
             ...assignment,

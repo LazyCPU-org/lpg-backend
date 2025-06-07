@@ -59,3 +59,4 @@ coverage/
 # Keep environment examples
 !.env.example
 .rooignore
+.claude

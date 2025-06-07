@@ -3,6 +3,7 @@ import { Container } from "../config/di";
 import { buildAuthRouter } from "./authRoutes";
 import { buildInventoryAssignmentRouter } from "./inventoryAssignmentRoutes";
 import { buildInventoryStatusHistoryRouter } from "./inventoryStatusHistoryRoutes";
+import { buildInventoryTransactionRouter } from "./inventoryTransactionRoutes";
 import { buildStoreRouter } from "./storeRoutes";
 import { buildUserRouter } from "./userRoutes";
 
@@ -33,6 +34,9 @@ export const defineRoutes = function (app: Express, container: Container) {
   const inventoryStatusHistory = buildInventoryStatusHistoryRouter(
     container.inventoryStatusHistoryService
   );
+  const inventoryTransactions = buildInventoryTransactionRouter(
+    container.inventoryTransactionService
+  );
 
   // Mount routers
   app.use(`${v1BasePath}/auth`, authRouter);
@@ -42,4 +46,5 @@ export const defineRoutes = function (app: Express, container: Container) {
   // Inventory module routes
   app.use(`${v1BasePath}/inventory/assignments`, inventoryAssignments);
   app.use(`${v1BasePath}/inventory/status-history`, inventoryStatusHistory);
+  app.use(`${v1BasePath}/inventory/transactions`, inventoryTransactions);
 };

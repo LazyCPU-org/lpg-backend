@@ -1,8 +1,8 @@
 // src/services/inventoryStatusHistoryService.ts
 import { and, desc, eq, gte, lte } from "drizzle-orm";
-import { db } from "../db";
-import { inventoryStatusHistory } from "../db/schemas/audit/inventory-status-history";
-import { StatusType } from "../dtos/response/inventoryAssignmentInterface";
+import { db } from "../../db";
+import { inventoryStatusHistory } from "../../db/schemas/audit/inventory-status-history";
+import { StatusType } from "../../dtos/response/inventoryAssignmentInterface";
 
 export interface StatusHistoryEntry {
   historyId: number;

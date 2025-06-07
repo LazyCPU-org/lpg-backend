@@ -1,15 +1,15 @@
 import { eq } from "drizzle-orm";
-import { db } from "../db";
-import { inventoryStatusHistory } from "../db/schemas/audit/inventory-status-history";
-import { AssignmentStatusEnum } from "../db/schemas/inventory";
-import { storeAssignments } from "../db/schemas/locations";
+import { db } from "../../db";
+import { inventoryStatusHistory } from "../../db/schemas/audit/inventory-status-history";
+import { AssignmentStatusEnum } from "../../db/schemas/inventory";
+import { storeAssignments, storeAssignmentCurrentInventory } from "../../db/schemas/locations";
 import {
   InventoryAssignmentRelationOptions,
   InventoryAssignmentType,
   InventoryAssignmentWithDetailsAndRelations,
   InventoryAssignmentWithRelations,
   StatusType,
-} from "../dtos/response/inventoryAssignmentInterface";
+} from "../../dtos/response/inventoryAssignmentInterface";
 import {
   ConsolidationWorkflow,
   IConsolidationWorkflow,
@@ -18,8 +18,8 @@ import {
   IItemAssignmentRepository,
   ITankAssignmentRepository,
   TransactionTypeEnum,
-} from "../repositories/inventory";
-import { NotFoundError } from "../utils/custom-errors";
+} from "../../repositories/inventory";
+import { NotFoundError } from "../../utils/custom-errors";
 import { IInventoryDateService } from "./inventoryDateService";
 
 export interface IInventoryAssignmentService {
@@ -226,6 +226,13 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
       ),
     ]);
 
+    // Set this inventory as the current inventory for the store assignment
+    await this.setCurrentInventory(
+      assignmentId,
+      baseAssignment.inventoryId,
+      assignedBy
+    );
+
     return {
       ...baseAssignment,
       tanks: tankAssignments.map((ta) => ({
@@ -303,7 +310,7 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
         userId
       );
 
-      // Create status history record for consolidation
+      // Create status history record for validation and consolidation
       await this.createStatusHistoryRecord(
         inventoryAssignmentId,
         fromStatus,
@@ -355,6 +362,39 @@ export class InventoryAssignmentService implements IInventoryAssignmentService {
       userId,
       skipWeekends
     );
+  }
+
+  /**
+   * Sets the current inventory for a store assignment
+   */
+  private async setCurrentInventory(
+    assignmentId: number,
+    inventoryId: number,
+    setBy: number
+  ): Promise<void> {
+    // Check if current inventory state already exists
+    const existingState = await db.query.storeAssignmentCurrentInventory.findFirst({
+      where: eq(storeAssignmentCurrentInventory.assignmentId, assignmentId)
+    });
+
+    if (existingState) {
+      // Update existing current inventory state
+      await db
+        .update(storeAssignmentCurrentInventory)
+        .set({
+          currentInventoryId: inventoryId,
+          setAt: new Date(),
+          setBy: setBy
+        })
+        .where(eq(storeAssignmentCurrentInventory.assignmentId, assignmentId));
+    } else {
+      // Create new current inventory state
+      await db.insert(storeAssignmentCurrentInventory).values({
+        assignmentId,
+        currentInventoryId: inventoryId,
+        setBy: setBy
+      });
+    }
   }
 
   /**

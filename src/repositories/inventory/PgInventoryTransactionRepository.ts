@@ -1,4 +1,3 @@
-// src/repositories/inventory/PgTransactionService.ts - Updated to match existing schema
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db";
 import {
@@ -6,14 +5,65 @@ import {
   assignmentTanks,
   itemTransactions,
   tankTransactions,
-} from "../../db/schemas/inventory";
+  inventoryAssignments,
+  AssignmentStatusEnum,
+  storeAssignmentCurrentInventory,
+} from "../../db/schemas";
 import { InternalError, NotFoundError } from "../../utils/custom-errors";
 import { IInventoryTransactionRepository } from "./IInventoryTransactionRepository";
 import { TransactionType } from "./transactionTypes";
+import { IInventoryDateService } from "../../services/inventory/inventoryDateService";
+import { IInventoryAssignmentRepository } from "./IInventoryAssignmentRepository";
 
 export class PgInventoryTransactionRepository
   implements IInventoryTransactionRepository
 {
+  constructor(
+    private inventoryDateService: IInventoryDateService,
+    private inventoryAssignmentRepository: IInventoryAssignmentRepository
+  ) {}
+
+  /**
+   * Auto-routing logic: If the target inventory is consolidated, 
+   * find the current active inventory via store assignment's current inventory reference
+   */
+  private async resolveTargetInventoryId(
+    requestedInventoryId: number
+  ): Promise<number> {
+    // Get the requested inventory assignment with store assignment
+    const requestedInventory = await db.query.inventoryAssignments.findFirst({
+      where: eq(inventoryAssignments.inventoryId, requestedInventoryId),
+      with: {
+        storeAssignment: true
+      }
+    });
+
+    if (!requestedInventory) {
+      throw new NotFoundError("Asignación de inventario no encontrada");
+    }
+
+    // If inventory is not consolidated, use it as-is
+    if (requestedInventory.status !== AssignmentStatusEnum.CONSOLIDATED) {
+      return requestedInventoryId;
+    }
+
+    // If inventory is consolidated, use the current inventory state table
+    const currentInventoryState = await db.query.storeAssignmentCurrentInventory.findFirst({
+      where: eq(storeAssignmentCurrentInventory.assignmentId, requestedInventory.assignmentId)
+    });
+
+    if (!currentInventoryState) {
+      throw new NotFoundError(
+        `No hay inventario activo para esta asignación de tienda. ` +
+        `El inventario solicitado está consolidado y no se puede modificar.`
+      );
+    }
+
+    // Log the auto-routing for audit purposes
+    console.log(`Auto-routing transaction: Consolidated inventory ${requestedInventoryId} → Active inventory ${currentInventoryState.currentInventoryId}`);
+
+    return currentInventoryState.currentInventoryId;
+  }
   // Direct assignment-based methods (matches your schema exactly)
   async incrementTankQuantity(
     assignmentTankId: number,
@@ -205,9 +255,12 @@ export class PgInventoryTransactionRepository
     notes?: string,
     referenceId?: number
   ): Promise<void> {
+    // Auto-route if target inventory is consolidated
+    const targetInventoryId = await this.resolveTargetInventoryId(inventoryId);
+    
     const assignment = await db.query.assignmentTanks.findFirst({
       where: and(
-        eq(assignmentTanks.inventoryId, inventoryId),
+        eq(assignmentTanks.inventoryId, targetInventoryId),
         eq(assignmentTanks.tankTypeId, tankTypeId)
       ),
     });
@@ -239,9 +292,12 @@ export class PgInventoryTransactionRepository
     notes?: string,
     referenceId?: number
   ): Promise<void> {
+    // Auto-route if target inventory is consolidated
+    const targetInventoryId = await this.resolveTargetInventoryId(inventoryId);
+    
     const assignment = await db.query.assignmentTanks.findFirst({
       where: and(
-        eq(assignmentTanks.inventoryId, inventoryId),
+        eq(assignmentTanks.inventoryId, targetInventoryId),
         eq(assignmentTanks.tankTypeId, tankTypeId)
       ),
     });
@@ -271,9 +327,12 @@ export class PgInventoryTransactionRepository
     userId: number,
     notes?: string
   ): Promise<void> {
+    // Auto-route if target inventory is consolidated
+    const targetInventoryId = await this.resolveTargetInventoryId(inventoryId);
+    
     const assignment = await db.query.assignmentItems.findFirst({
       where: and(
-        eq(assignmentItems.inventoryId, inventoryId),
+        eq(assignmentItems.inventoryId, targetInventoryId),
         eq(assignmentItems.inventoryItemId, inventoryItemId)
       ),
     });
@@ -301,9 +360,12 @@ export class PgInventoryTransactionRepository
     userId: number,
     notes?: string
   ): Promise<void> {
+    // Auto-route if target inventory is consolidated
+    const targetInventoryId = await this.resolveTargetInventoryId(inventoryId);
+    
     const assignment = await db.query.assignmentItems.findFirst({
       where: and(
-        eq(assignmentItems.inventoryId, inventoryId),
+        eq(assignmentItems.inventoryId, targetInventoryId),
         eq(assignmentItems.inventoryItemId, inventoryItemId)
       ),
     });
