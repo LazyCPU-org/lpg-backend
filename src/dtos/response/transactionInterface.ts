@@ -1,5 +1,5 @@
 /**
- * Simplified Transaction Response Interfaces
+ * Transaction Response Interfaces
  * 
  * These interfaces provide clean, business-oriented responses
  * that hide implementation details from the API consumers

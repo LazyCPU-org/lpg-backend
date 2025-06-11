@@ -2,17 +2,17 @@ import { z } from "zod";
 import { TransactionTypeEnum, TransactionType } from "../../db/schemas/inventory/item-transactions";
 
 /**
- * Simplified Transaction DTOs - Business Logic Aware
+ * Transaction DTOs - Business Logic Aware
  * 
- * These DTOs use the new strategy pattern and only require:
+ * These DTOs use the strategy pattern and only require:
  * - Entity ID (tankTypeId or inventoryItemId)
  * - Transaction type
  * - Quantity (business logic handles the rest)
  * - Optional metadata
  */
 
-// Base simplified transaction schema
-const BaseSimplifiedTransactionSchema = z.object({
+// Base transaction schema
+const BaseTransactionSchema = z.object({
   transactionType: z.enum([
     TransactionTypeEnum.PURCHASE,
     TransactionTypeEnum.SALE,
@@ -30,7 +30,7 @@ const BaseSimplifiedTransactionSchema = z.object({
  * @openapi
  * components:
  *   schemas:
- *     SimplifiedTankTransaction:
+ *     TankTransaction:
  *       type: object
  *       properties:
  *         tankTypeId:
@@ -62,7 +62,7 @@ const BaseSimplifiedTransactionSchema = z.object({
  *         - transactionType
  *         - quantity
  */
-export const SimplifiedTankTransactionSchema = BaseSimplifiedTransactionSchema.extend({
+export const TankTransactionSchema = BaseTransactionSchema.extend({
   tankTypeId: z.number().positive("ID de tipo de tanque inválido"),
   tankType: z.enum(["full", "empty"]).optional(),
   targetStoreAssignmentId: z.number().positive().optional(),
@@ -91,7 +91,7 @@ export const SimplifiedTankTransactionSchema = BaseSimplifiedTransactionSchema.e
  * @openapi
  * components:
  *   schemas:
- *     SimplifiedItemTransaction:
+ *     ItemTransaction:
  *       type: object
  *       properties:
  *         inventoryItemId:
@@ -116,7 +116,7 @@ export const SimplifiedTankTransactionSchema = BaseSimplifiedTransactionSchema.e
  *         - transactionType
  *         - quantity
  */
-export const SimplifiedItemTransactionSchema = BaseSimplifiedTransactionSchema.extend({
+export const ItemTransactionSchema = BaseTransactionSchema.extend({
   inventoryItemId: z.number().positive("ID de artículo inválido"),
   targetStoreAssignmentId: z.number().positive().optional(),
 }).refine((data) => {
@@ -134,49 +134,49 @@ export const SimplifiedItemTransactionSchema = BaseSimplifiedTransactionSchema.e
  * @openapi
  * components:
  *   schemas:
- *     SimplifiedTankTransactionRequest:
+ *     TankTransactionRequest:
  *       type: object
  *       properties:
  *         inventoryId:
  *           type: integer
  *           description: ID of the inventory assignment
  *         transaction:
- *           $ref: '#/components/schemas/SimplifiedTankTransaction'
+ *           $ref: '#/components/schemas/TankTransaction'
  *       required:
  *         - inventoryId
  *         - transaction
  */
-export const SimplifiedTankTransactionRequestSchema = z.object({
+export const TankTransactionRequestSchema = z.object({
   inventoryId: z.number().positive("ID de inventario inválido"),
-  transaction: SimplifiedTankTransactionSchema,
+  transaction: TankTransactionSchema,
 });
 
 /**
  * @openapi
  * components:
  *   schemas:
- *     SimplifiedItemTransactionRequest:
+ *     ItemTransactionRequest:
  *       type: object
  *       properties:
  *         inventoryId:
  *           type: integer
  *           description: ID of the inventory assignment
  *         transaction:
- *           $ref: '#/components/schemas/SimplifiedItemTransaction'
+ *           $ref: '#/components/schemas/ItemTransaction'
  *       required:
  *         - inventoryId
  *         - transaction
  */
-export const SimplifiedItemTransactionRequestSchema = z.object({
+export const ItemTransactionRequestSchema = z.object({
   inventoryId: z.number().positive("ID de inventario inválido"),
-  transaction: SimplifiedItemTransactionSchema,
+  transaction: ItemTransactionSchema,
 });
 
 /**
  * @openapi
  * components:
  *   schemas:
- *     SimplifiedBatchTankTransactionsRequest:
+ *     BatchTankTransactionsRequest:
  *       type: object
  *       properties:
  *         inventoryId:
@@ -185,23 +185,23 @@ export const SimplifiedItemTransactionRequestSchema = z.object({
  *         transactions:
  *           type: array
  *           items:
- *             $ref: '#/components/schemas/SimplifiedTankTransaction'
+ *             $ref: '#/components/schemas/TankTransaction'
  *           minItems: 1
  *           description: List of tank transactions to process
  *       required:
  *         - inventoryId
  *         - transactions
  */
-export const SimplifiedBatchTankTransactionsRequestSchema = z.object({
+export const BatchTankTransactionsRequestSchema = z.object({
   inventoryId: z.number().positive("ID de inventario inválido"),
-  transactions: z.array(SimplifiedTankTransactionSchema).min(1, "Debe incluir al menos una transacción"),
+  transactions: z.array(TankTransactionSchema).min(1, "Debe incluir al menos una transacción"),
 });
 
 /**
  * @openapi
  * components:
  *   schemas:
- *     SimplifiedBatchItemTransactionsRequest:
+ *     BatchItemTransactionsRequest:
  *       type: object
  *       properties:
  *         inventoryId:
@@ -210,30 +210,30 @@ export const SimplifiedBatchTankTransactionsRequestSchema = z.object({
  *         transactions:
  *           type: array
  *           items:
- *             $ref: '#/components/schemas/SimplifiedItemTransaction'
+ *             $ref: '#/components/schemas/ItemTransaction'
  *           minItems: 1
  *           description: List of item transactions to process
  *       required:
  *         - inventoryId
  *         - transactions
  */
-export const SimplifiedBatchItemTransactionsRequestSchema = z.object({
+export const BatchItemTransactionsRequestSchema = z.object({
   inventoryId: z.number().positive("ID de inventario inválido"),
-  transactions: z.array(SimplifiedItemTransactionSchema).min(1, "Debe incluir al menos una transacción"),
+  transactions: z.array(ItemTransactionSchema).min(1, "Debe incluir al menos una transacción"),
 });
 
 // Export types
-export type SimplifiedTankTransaction = z.infer<typeof SimplifiedTankTransactionSchema>;
-export type SimplifiedItemTransaction = z.infer<typeof SimplifiedItemTransactionSchema>;
-export type SimplifiedTankTransactionRequest = z.infer<typeof SimplifiedTankTransactionRequestSchema>;
-export type SimplifiedItemTransactionRequest = z.infer<typeof SimplifiedItemTransactionRequestSchema>;
-export type SimplifiedBatchTankTransactionsRequest = z.infer<typeof SimplifiedBatchTankTransactionsRequestSchema>;
-export type SimplifiedBatchItemTransactionsRequest = z.infer<typeof SimplifiedBatchItemTransactionsRequestSchema>;
+export type TankTransaction = z.infer<typeof TankTransactionSchema>;
+export type ItemTransaction = z.infer<typeof ItemTransactionSchema>;
+export type TankTransactionRequest = z.infer<typeof TankTransactionRequestSchema>;
+export type ItemTransactionRequest = z.infer<typeof ItemTransactionRequestSchema>;
+export type BatchTankTransactionsRequest = z.infer<typeof BatchTankTransactionsRequestSchema>;
+export type BatchItemTransactionsRequest = z.infer<typeof BatchItemTransactionsRequestSchema>;
 
 // Helper to convert simplified DTO to strategy request
 export function convertTankTransactionToStrategyRequest(
   inventoryId: number,
-  transaction: SimplifiedTankTransaction,
+  transaction: TankTransaction,
   userId: number
 ) {
   return {
@@ -251,7 +251,7 @@ export function convertTankTransactionToStrategyRequest(
 
 export function convertItemTransactionToStrategyRequest(
   inventoryId: number,
-  transaction: SimplifiedItemTransaction,
+  transaction: ItemTransaction,
   userId: number
 ) {
   return {

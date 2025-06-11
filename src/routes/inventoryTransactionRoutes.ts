@@ -1,10 +1,10 @@
 import { Request, Response, Router } from "express";
 import {
-  SimplifiedBatchItemTransactionsRequestSchema,
-  SimplifiedBatchTankTransactionsRequestSchema,
-  SimplifiedItemTransactionRequestSchema,
-  SimplifiedTankTransactionRequestSchema,
-} from "../dtos/request/simplifiedTransactionDTO";
+  BatchItemTransactionsRequestSchema,
+  BatchTankTransactionsRequestSchema,
+  ItemTransactionRequestSchema,
+  TankTransactionRequestSchema,
+} from "../dtos/request/transactionDTO";
 import { asyncHandler } from "../middlewares/async-handler";
 import {
   AuthRequest,
@@ -23,9 +23,9 @@ export function buildInventoryTransactionRouter(
    * @openapi
    * /inventory/transactions/tanks:
    *   post:
-   *     summary: Create a tank transaction (Simplified API)
+   *     summary: Create a tank transaction
    *     description: Creates a business-level tank transaction (sale, purchase, return, etc.) with automatic validation
-   *     tags: [Simplified Inventory Transactions]
+   *     tags: [Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -33,7 +33,7 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/SimplifiedTankTransactionRequest'
+   *             $ref: '#/components/schemas/TankTransactionRequest'
    *     responses:
    *       201:
    *         description: Tank transaction created successfully
@@ -62,9 +62,7 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = SimplifiedTankTransactionRequestSchema.parse(
-        req.body
-      );
+      const validatedData = TankTransactionRequestSchema.parse(req.body);
       const userId = parseInt(req.user!.id);
 
       const result = await inventoryTransactionService.createTankTransaction(
@@ -83,9 +81,9 @@ export function buildInventoryTransactionRouter(
    * @openapi
    * /inventory/transactions/items:
    *   post:
-   *     summary: Create an item transaction (Simplified API)
+   *     summary: Create an item transaction
    *     description: Creates a business-level item transaction (sale, purchase, return, etc.) with automatic validation
-   *     tags: [Simplified Inventory Transactions]
+   *     tags: [Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -93,7 +91,7 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/SimplifiedItemTransactionRequest'
+   *             $ref: '#/components/schemas/ItemTransactionRequest'
    *     responses:
    *       201:
    *         description: Item transaction created successfully
@@ -122,9 +120,7 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = SimplifiedItemTransactionRequestSchema.parse(
-        req.body
-      );
+      const validatedData = ItemTransactionRequestSchema.parse(req.body);
       const userId = parseInt(req.user!.id);
 
       const result = await inventoryTransactionService.createItemTransaction(
@@ -143,9 +139,9 @@ export function buildInventoryTransactionRouter(
    * @openapi
    * /inventory/transactions/tanks/batch:
    *   post:
-   *     summary: Process multiple tank transactions (Simplified API)
+   *     summary: Process multiple tank transactions
    *     description: Processes multiple business-level tank transactions with individual validation
-   *     tags: [Simplified Inventory Transactions]
+   *     tags: [Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -153,7 +149,7 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/SimplifiedBatchTankTransactionsRequest'
+   *             $ref: '#/components/schemas/BatchTankTransactionsRequest'
    *     responses:
    *       201:
    *         description: Tank transactions processed (may include partial failures)
@@ -180,9 +176,7 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = SimplifiedBatchTankTransactionsRequestSchema.parse(
-        req.body
-      );
+      const validatedData = BatchTankTransactionsRequestSchema.parse(req.body);
       const userId = parseInt(req.user!.id);
 
       const result =
@@ -202,9 +196,9 @@ export function buildInventoryTransactionRouter(
    * @openapi
    * /inventory/transactions/items/batch:
    *   post:
-   *     summary: Process multiple item transactions (Simplified API)
+   *     summary: Process multiple item transactions
    *     description: Processes multiple business-level item transactions with individual validation
-   *     tags: [Simplified Inventory Transactions]
+   *     tags: [Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -212,7 +206,7 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/SimplifiedBatchItemTransactionsRequest'
+   *             $ref: '#/components/schemas/BatchItemTransactionsRequest'
    *     responses:
    *       201:
    *         description: Item transactions processed (may include partial failures)
@@ -239,9 +233,7 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.CREATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = SimplifiedBatchItemTransactionsRequestSchema.parse(
-        req.body
-      );
+      const validatedData = BatchItemTransactionsRequestSchema.parse(req.body);
       const userId = parseInt(req.user!.id);
 
       const result =
@@ -261,9 +253,9 @@ export function buildInventoryTransactionRouter(
    * @openapi
    * /inventory/transactions/tanks/validate:
    *   post:
-   *     summary: Validate tank transaction (Simplified API)
+   *     summary: Validate tank transaction
    *     description: Validates a tank transaction without executing it, returns calculated changes
-   *     tags: [Simplified Inventory Transactions]
+   *     tags: [Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -271,7 +263,7 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/SimplifiedTankTransactionRequest'
+   *             $ref: '#/components/schemas/TankTransactionRequest'
    *     responses:
    *       200:
    *         description: Transaction validation result
@@ -298,9 +290,7 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.READ),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = SimplifiedTankTransactionRequestSchema.parse(
-        req.body
-      );
+      const validatedData = TankTransactionRequestSchema.parse(req.body);
       const userId = parseInt(req.user!.id);
 
       const result = await inventoryTransactionService.validateTankTransaction(
@@ -319,9 +309,9 @@ export function buildInventoryTransactionRouter(
    * @openapi
    * /inventory/transactions/items/validate:
    *   post:
-   *     summary: Validate item transaction (Simplified API)
+   *     summary: Validate item transaction
    *     description: Validates an item transaction without executing it, returns calculated changes
-   *     tags: [Simplified Inventory Transactions]
+   *     tags: [Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -329,7 +319,7 @@ export function buildInventoryTransactionRouter(
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/SimplifiedItemTransactionRequest'
+   *             $ref: '#/components/schemas/ItemTransactionRequest'
    *     responses:
    *       200:
    *         description: Transaction validation result
@@ -356,9 +346,7 @@ export function buildInventoryTransactionRouter(
     isAuthenticated,
     requirePermission(ModuleEnum.INVENTORY, ActionEnum.READ),
     asyncHandler(async (req: AuthRequest, res: Response) => {
-      const validatedData = SimplifiedItemTransactionRequestSchema.parse(
-        req.body
-      );
+      const validatedData = ItemTransactionRequestSchema.parse(req.body);
       const userId = parseInt(req.user!.id);
 
       const result = await inventoryTransactionService.validateItemTransaction(
@@ -377,9 +365,9 @@ export function buildInventoryTransactionRouter(
    * @openapi
    * /inventory/transactions/types/{entityType}:
    *   get:
-   *     summary: Get supported transaction types (Simplified API)
+   *     summary: Get supported transaction types
    *     description: Returns all supported transaction types for tanks or items with documentation
-   *     tags: [Simplified Inventory Transactions]
+   *     tags: [Inventory Transactions]
    *     security:
    *       - bearerAuth: []
    *     parameters:

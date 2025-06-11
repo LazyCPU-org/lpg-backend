@@ -1,13 +1,13 @@
 import { TransactionProcessor } from "../../strategies/transactions";
 import { IInventoryTransactionRepository } from "../../repositories/inventory";
 import {
-  SimplifiedTankTransactionRequest,
-  SimplifiedItemTransactionRequest,
-  SimplifiedBatchTankTransactionsRequest,
-  SimplifiedBatchItemTransactionsRequest,
+  TankTransactionRequest,
+  ItemTransactionRequest,
+  BatchTankTransactionsRequest,
+  BatchItemTransactionsRequest,
   convertTankTransactionToStrategyRequest,
   convertItemTransactionToStrategyRequest,
-} from "../../dtos/request/simplifiedTransactionDTO";
+} from "../../dtos/request/transactionDTO";
 import {
   TankTransactionResponse,
   ItemTransactionResponse,
@@ -15,41 +15,41 @@ import {
   TransactionValidationResponse,
   SupportedTransactionsResponse,
   TransactionTypeInfo,
-} from "../../dtos/response/simplifiedTransactionInterface";
+} from "../../dtos/response/transactionInterface";
 import { TransactionTypeEnum, TransactionType } from "../../db/schemas/inventory/item-transactions";
 import { InternalError, NotFoundError } from "../../utils/custom-errors";
 
-export abstract class ISimplifiedInventoryTransactionService {
+export abstract class IInventoryTransactionService {
   // Single transaction methods
   abstract createTankTransaction(
-    request: SimplifiedTankTransactionRequest,
+    request: TankTransactionRequest,
     userId: number
   ): Promise<TankTransactionResponse>;
 
   abstract createItemTransaction(
-    request: SimplifiedItemTransactionRequest,
+    request: ItemTransactionRequest,
     userId: number
   ): Promise<ItemTransactionResponse>;
 
   // Batch transaction methods
   abstract processBatchTankTransactions(
-    request: SimplifiedBatchTankTransactionsRequest,
+    request: BatchTankTransactionsRequest,
     userId: number
   ): Promise<BatchTransactionResponse>;
 
   abstract processBatchItemTransactions(
-    request: SimplifiedBatchItemTransactionsRequest,
+    request: BatchItemTransactionsRequest,
     userId: number
   ): Promise<BatchTransactionResponse>;
 
   // Validation and info methods
   abstract validateTankTransaction(
-    request: SimplifiedTankTransactionRequest,
+    request: TankTransactionRequest,
     userId: number
   ): Promise<TransactionValidationResponse>;
 
   abstract validateItemTransaction(
-    request: SimplifiedItemTransactionRequest,
+    request: ItemTransactionRequest,
     userId: number
   ): Promise<TransactionValidationResponse>;
 
@@ -69,7 +69,7 @@ export abstract class ISimplifiedInventoryTransactionService {
   ): Promise<{ inventoryId: number; inventoryItemId: number; currentItems: number; }>;
 }
 
-export class SimplifiedInventoryTransactionService implements ISimplifiedInventoryTransactionService {
+export class InventoryTransactionService implements IInventoryTransactionService {
   private readonly transactionProcessor: TransactionProcessor;
 
   constructor(
@@ -79,7 +79,7 @@ export class SimplifiedInventoryTransactionService implements ISimplifiedInvento
   }
 
   async createTankTransaction(
-    request: SimplifiedTankTransactionRequest,
+    request: TankTransactionRequest,
     userId: number
   ): Promise<TankTransactionResponse> {
     try {
@@ -120,12 +120,12 @@ export class SimplifiedInventoryTransactionService implements ISimplifiedInvento
       if (error instanceof NotFoundError || error instanceof InternalError) {
         throw error;
       }
-      throw new InternalError(`Error procesando transacción simplificada de tanques: ${error}`);
+      throw new InternalError(`Error procesando transacción de tanques: ${error}`);
     }
   }
 
   async createItemTransaction(
-    request: SimplifiedItemTransactionRequest,
+    request: ItemTransactionRequest,
     userId: number
   ): Promise<ItemTransactionResponse> {
     try {
@@ -164,12 +164,12 @@ export class SimplifiedInventoryTransactionService implements ISimplifiedInvento
       if (error instanceof NotFoundError || error instanceof InternalError) {
         throw error;
       }
-      throw new InternalError(`Error procesando transacción simplificada de artículos: ${error}`);
+      throw new InternalError(`Error procesando transacción de artículos: ${error}`);
     }
   }
 
   async processBatchTankTransactions(
-    request: SimplifiedBatchTankTransactionsRequest,
+    request: BatchTankTransactionsRequest,
     userId: number
   ): Promise<BatchTransactionResponse> {
     try {
@@ -211,7 +211,7 @@ export class SimplifiedInventoryTransactionService implements ISimplifiedInvento
   }
 
   async processBatchItemTransactions(
-    request: SimplifiedBatchItemTransactionsRequest,
+    request: BatchItemTransactionsRequest,
     userId: number
   ): Promise<BatchTransactionResponse> {
     try {
@@ -253,7 +253,7 @@ export class SimplifiedInventoryTransactionService implements ISimplifiedInvento
   }
 
   async validateTankTransaction(
-    request: SimplifiedTankTransactionRequest,
+    request: TankTransactionRequest,
     userId: number
   ): Promise<TransactionValidationResponse> {
     try {
@@ -288,7 +288,7 @@ export class SimplifiedInventoryTransactionService implements ISimplifiedInvento
   }
 
   async validateItemTransaction(
-    request: SimplifiedItemTransactionRequest,
+    request: ItemTransactionRequest,
     userId: number
   ): Promise<TransactionValidationResponse> {
     try {

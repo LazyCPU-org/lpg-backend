@@ -12,10 +12,10 @@ import { z } from "zod";
 import { users } from "../user-management/users";
 import { assignmentItems } from "./inventory-assignments-items";
 
-import { TransactionTypeEnum, TransactionType } from "./transaction-types";
+import { type TransactionType, TransactionTypeEnum } from "./transaction-types";
 
 // Re-export for backward compatibility
-export { TransactionTypeEnum, TransactionType };
+export { TransactionType, TransactionTypeEnum };
 
 export const itemTransactionTypeEnum = pgEnum("item_transaction_type", [
   TransactionTypeEnum.PURCHASE,

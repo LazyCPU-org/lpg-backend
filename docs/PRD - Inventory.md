@@ -63,44 +63,28 @@ The system supports advanced features including:
 
 ### 2. Inventory Transactions ✅ **IMPLEMENTED**
 
-#### 2.1 Record Tank Transaction
-- **Endpoint**: `POST /v1/inventory/transactions/tanks`
-- **Purpose**: Record changes to tank inventory with real-time quantity updates
-- **Input**:
-  - Inventory ID
-  - Tank type ID
-  - Full tanks change (positive or negative)
-  - Empty tanks change (positive or negative)
-  - Transaction type (purchase, sale, return, transfer, assignment)
-  - Optional notes and reference ID
-- **Output**: Transaction result with updated current quantities
-- **Business Rules**:
-  - Automatically detects increment vs decrement based on sign
-  - Updates current inventory counts atomically
-  - Validates sufficient inventory for decrements
-  - Creates audit trail for all changes
+**Architecture**: Implements sophisticated **Strategy Pattern** with business-level API that abstracts complex inventory logic into simple transaction operations (sale, purchase, return, transfer, assignment).
 
-#### 2.2 Record Item Transaction
-- **Endpoint**: `POST /v1/inventory/transactions/items`
-- **Purpose**: Record changes to non-tank inventory items
-- **Input**: Similar to tank transaction (without empty/full distinction)
-- **Output**: Transaction result with updated current quantity
-- **Business Rules**: Similar validation and atomic updates
+#### 2.1 Business-Level Transaction API
+- **Tank Transactions**: `POST /v1/inventory/transactions/tanks`
+- **Item Transactions**: `POST /v1/inventory/transactions/items`
+- **Input**: Business transaction type + quantity (system handles all business logic)
+- **LPG Business Logic**: 
+  - **Sales**: Customer exchanges full tank for empty tank
+  - **Purchases**: Exchange empty tanks with supplier for full tanks
+  - **Returns/Transfers**: Specify tank type (full/empty) and destination
 
-#### 2.3 Batch Transaction Processing
-- **Endpoints**:
-  - `POST /v1/inventory/transactions/tanks/batch`
-  - `POST /v1/inventory/transactions/items/batch`
-- **Purpose**: Process multiple transactions atomically
-- **Input**: Array of transactions for single inventory
-- **Business Rules**: All transactions succeed or fail together
+#### 2.2 Advanced Features
+- **Batch Processing**: `POST /v1/inventory/transactions/{entity}/batch` - Atomic multi-transaction operations
+- **Validation**: `POST /v1/inventory/transactions/{entity}/validate` - Pre-flight validation without execution
+- **Type Discovery**: `GET /v1/inventory/transactions/types/{entityType}` - Self-documenting API with examples
+- **Real-time Quantities**: All operations return updated inventory counts
 
-#### 2.4 Get Current Quantities
-- **Endpoints**:
-  - `GET /v1/inventory/transactions/tanks/:inventoryId/:tankTypeId/quantities`
-  - `GET /v1/inventory/transactions/items/:inventoryId/:inventoryItemId/quantities`
-- **Purpose**: Retrieve real-time inventory quantities
-- **Output**: Current quantities with inventory and item context
+#### 2.3 Strategy Pattern Implementation
+- **TransactionProcessor**: Central orchestrator with validation and execution
+- **10 Strategy Classes**: Specialized logic for each transaction type × entity combination
+- **Business Rule Validation**: Automatic insufficient inventory detection, positive quantity enforcement
+- **Auto-Routing**: Smart routing to current inventory for consolidated assignments
 
 ### 3. Status History & Audit Trail
 

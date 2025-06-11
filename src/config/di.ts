@@ -122,7 +122,7 @@ export function createContainer(): Container {
   // Create inventory status history service
   const inventoryStatusHistoryService = new InventoryStatusHistoryService();
 
-  // Create inventory transaction service (simplified implementation)
+  // Create inventory transaction service
   const inventoryTransactionService = new InventoryTransactionService(
     inventoryTransactionRepository
   );

@@ -1,22 +1,24 @@
-import { TransactionStrategyFactory } from "../factory/TransactionStrategyFactory";
-import { TransactionRequest } from "../base/TransactionRequest";
-import { TransactionResult } from "../base/TransactionResult";
 import { IInventoryTransactionRepository } from "../../../repositories/inventory";
 import { InternalError } from "../../../utils/custom-errors";
+import { TransactionRequest } from "../base/TransactionRequest";
+import { TransactionResult } from "../base/TransactionResult";
+import { TransactionStrategyFactory } from "../factory/TransactionStrategyFactory";
 
 export class TransactionProcessor {
   private readonly strategyFactory: TransactionStrategyFactory;
 
-  constructor(
-    inventoryTransactionRepository: IInventoryTransactionRepository
-  ) {
-    this.strategyFactory = new TransactionStrategyFactory(inventoryTransactionRepository);
+  constructor(inventoryTransactionRepository: IInventoryTransactionRepository) {
+    this.strategyFactory = new TransactionStrategyFactory(
+      inventoryTransactionRepository
+    );
   }
 
   /**
    * Processes a single transaction using the appropriate strategy
    */
-  async processTransaction(request: TransactionRequest): Promise<TransactionResult> {
+  async processTransaction(
+    request: TransactionRequest
+  ): Promise<TransactionResult> {
     try {
       // Create the appropriate strategy for this transaction
       const strategy = this.strategyFactory.createFromRequest(request);
@@ -56,7 +58,11 @@ export class TransactionProcessor {
     }
 
     if (errors.length > 0) {
-      throw new InternalError(`Batch processing failed for ${errors.length} transactions: ${JSON.stringify(errors)}`);
+      throw new InternalError(
+        `Batch processing failed for ${
+          errors.length
+        } transactions: ${JSON.stringify(errors)}`
+      );
     }
 
     return results;

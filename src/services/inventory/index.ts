@@ -18,8 +18,8 @@ export {
   InventoryStatusHistoryService,
 } from "./inventoryStatusHistoryService";
 
-// Inventory Transaction Service (Simplified Implementation)
+// Inventory Transaction Service
 export {
-  ISimplifiedInventoryTransactionService as IInventoryTransactionService,
-  SimplifiedInventoryTransactionService as InventoryTransactionService,
+  IInventoryTransactionService,
+  InventoryTransactionService,
 } from "./inventoryTransactionService";
