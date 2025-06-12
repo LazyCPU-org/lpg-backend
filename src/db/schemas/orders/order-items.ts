@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import {
   pgTable,
   serial,
@@ -7,20 +7,37 @@ import {
   decimal,
   boolean,
   timestamp,
-  check,
+  pgEnum,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 import { orders } from "./orders";
 import { tankType } from "../inventory/tank-type";
 import { inventoryItem } from "../inventory/inventory-item";
-import { deliveryPersonnel } from "../user-management/delivery-personnel";
+import { users } from "../user-management/users";
 
 // Define item type enum values
 export const ItemTypeEnum = {
   TANK: "tank",
-  ACCESSORY: "accessory",
+  ITEM: "item", // Changed from ACCESSORY to ITEM to match inventory
 } as const;
+
+// Define delivery status enum values
+export const DeliveryStatusEnum = {
+  PENDING: "pending",
+  DELIVERED: "delivered",
+  CANCELLED: "cancelled",
+} as const;
+
+// Define enum values restriction in database
+export const itemTypeEnum = pgEnum("order_item_type_enum", [
+  ItemTypeEnum.TANK,
+  ItemTypeEnum.ITEM,
+]);
+
+export const deliveryStatusEnum = pgEnum("delivery_status_enum", [
+  DeliveryStatusEnum.PENDING,
+  DeliveryStatusEnum.DELIVERED,
+  DeliveryStatusEnum.CANCELLED,
+]);
 
 export const orderItems = pgTable(
   "order_items",
@@ -29,62 +46,42 @@ export const orderItems = pgTable(
     orderId: integer("order_id")
       .notNull()
       .references(() => orders.orderId),
-    itemType: varchar("item_type", { length: 10 }).notNull(),
+    itemType: itemTypeEnum().notNull(),
     tankTypeId: integer("tank_type_id").references(() => tankType.typeId),
-    accessoryId: integer("accessory_id").references(
+    inventoryItemId: integer("inventory_item_id").references(
       () => inventoryItem.inventoryItemId
     ),
     quantity: integer("quantity").notNull(),
     tankReturned: boolean("tank_returned").default(true),
     unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
-    deliveredBy: integer("delivered_by").references(
-      () => deliveryPersonnel.personId
-    ),
+    totalPrice: decimal("total_price", { precision: 10, scale: 2 }),
+    deliveryStatus: deliveryStatusEnum().default(DeliveryStatusEnum.PENDING),
+    deliveredBy: integer("delivered_by").references(() => users.userId),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
-  },
-  (table) => [
-    check(
-      "item_type_check",
-      sql`${table.itemType} IN ('${sql.raw(ItemTypeEnum.TANK)}', '${sql.raw(
-        ItemTypeEnum.ACCESSORY
-      )}')`
-    ),
-    check(
-      "item_type_tank_check",
-      sql`(${table.itemType} = '${sql.raw(ItemTypeEnum.TANK)}' AND ${
-        table.tankTypeId
-      } IS NOT NULL AND ${table.accessoryId} IS NULL) OR
-          (${table.itemType} = '${sql.raw(ItemTypeEnum.ACCESSORY)}' AND ${
-        table.accessoryId
-      } IS NOT NULL AND ${table.tankTypeId} IS NULL)`
-    ),
-  ]
+  }
 );
 
-// Create Zod schemas for validation
-export const insertOrderItemSchema = createInsertSchema(orderItems, {
-  itemType: z.enum([ItemTypeEnum.TANK, ItemTypeEnum.ACCESSORY]),
-  // Additional validation to ensure the right IDs are provided based on item type
-  tankTypeId: z
-    .number()
-    .optional()
-    .refine((val) => val === undefined || val !== null, {
-      message: "tankTypeId must be provided when itemType is 'tank'",
-    }),
-  accessoryId: z
-    .number()
-    .optional()
-    .refine((val) => val === undefined || val !== null, {
-      message: "accessoryId must be provided when itemType is 'accessory'",
-    }),
-});
+// Define relations
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.orderId],
+  }),
+  tankType: one(tankType, {
+    fields: [orderItems.tankTypeId],
+    references: [tankType.typeId],
+  }),
+  inventoryItem: one(inventoryItem, {
+    fields: [orderItems.inventoryItemId],
+    references: [inventoryItem.inventoryItemId],
+  }),
+  deliveredByUser: one(users, {
+    fields: [orderItems.deliveredBy],
+    references: [users.userId],
+  }),
+}));
 
-export const selectOrderItemSchema = createSelectSchema(orderItems, {
-  itemType: z.enum([ItemTypeEnum.TANK, ItemTypeEnum.ACCESSORY]),
-});
-
-export type OrderItem = z.infer<typeof selectOrderItemSchema>;
-export type NewOrderItem = z.infer<typeof insertOrderItemSchema>;
+// Note: Zod schemas moved to DTOs following inventory pattern
 
 export default orderItems;

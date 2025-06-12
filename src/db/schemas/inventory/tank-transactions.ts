@@ -7,8 +7,6 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 import { users } from "../user-management/users";
 import { assignmentTanks } from "./inventory-assignments-tanks";
 import { TransactionTypeEnum } from "./transaction-types";
@@ -43,7 +41,7 @@ export const tankTransactions = pgTable("tank_transactions", {
 // Define relations
 export const tankTransactionsRelations = relations(
   tankTransactions,
-  ({ one }) => ({
+  ({ one, many }) => ({
     assignmentTank: one(assignmentTanks, {
       fields: [tankTransactions.assignmentTankId],
       references: [assignmentTanks.inventoryAssignmentTankId],
@@ -52,41 +50,13 @@ export const tankTransactionsRelations = relations(
       fields: [tankTransactions.userId],
       references: [users.userId],
     }),
+    orderTransactionLinks: many(orderTransactionLinks),
   })
 );
 
-// Create Zod schemas for validation
-export const insertInventoryTransactionSchema = createInsertSchema(
-  tankTransactions,
-  {
-    transactionType: z.enum([
-      TransactionTypeEnum.PURCHASE,
-      TransactionTypeEnum.SALE,
-      TransactionTypeEnum.RETURN,
-      TransactionTypeEnum.TRANSFER,
-      TransactionTypeEnum.ASSIGNMENT,
-    ]),
-  }
-);
-
-export const selectInventoryTransactionSchema = createSelectSchema(
-  tankTransactions,
-  {
-    transactionType: z.enum([
-      TransactionTypeEnum.PURCHASE,
-      TransactionTypeEnum.SALE,
-      TransactionTypeEnum.RETURN,
-      TransactionTypeEnum.TRANSFER,
-      TransactionTypeEnum.ASSIGNMENT,
-    ]),
-  }
-);
-
-export type InventoryTransaction = z.infer<
-  typeof selectInventoryTransactionSchema
->;
-export type NewInventoryTransaction = z.infer<
-  typeof insertInventoryTransactionSchema
->;
+// Note: Zod schemas moved to DTOs following inventory pattern
 
 export default tankTransactions;
+
+// Import after relations to avoid circular dependency
+import { orderTransactionLinks } from "../orders";

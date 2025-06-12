@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   pgTable,
   serial,
@@ -74,4 +74,12 @@ export const selectCustomerSchema = createSelectSchema(customers, {
 export type Customer = z.infer<typeof selectCustomerSchema>;
 export type NewCustomer = z.infer<typeof insertCustomerSchema>;
 
+// Define relations
+export const customersRelations = relations(customers, ({ many }) => ({
+  orders: many(orders),
+}));
+
 export default customers;
+
+// Import after relations to avoid circular dependency
+import { orders } from "../orders";

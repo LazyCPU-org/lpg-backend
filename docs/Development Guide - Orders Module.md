@@ -301,33 +301,70 @@ POST   /v1/orders/validate          #
 - Filtering and sorting capabilities
 - Comprehensive validation messages
 
-## Testing Strategy
+## Testing Strategy - Streamlined TDD Approach
 
-### **Test Coverage Requirements**
+### **Testing Philosophy**
+
+**Pragmatic TDD**: Start with foundation tests, iterate based on real needs
+- **Framework**: Jest with TypeScript (following existing patterns)
+- **Pattern**: Repository pattern with interface mocking
+- **Database**: Mock-based testing with selective integration tests
+- **Coverage**: Focus on core business logic, avoid over-engineering
+
+### **Phase 1: Foundation Tests (Start Here)**
+
+**Goal**: 15-20 essential tests covering core business logic
+
+**Test Structure**:
+```
+src/services/orders/__tests__/
+├── __mocks__/
+│   ├── mockOrderRepository.ts      # Repository interface mocks
+│   └── orderTestData.ts            # Test data factory
+├── orderCalculations.test.ts       # Price/total calculations  
+├── orderValidation.test.ts         # Business rules validation
+└── orderWorkflow.test.ts           # Status transitions
+```
+
+**Core Test Areas**:
+- Order total calculations with different item types
+- Business rule validation (delivery address, payment methods)
+- Status transition rules and constraints
+- Inventory availability calculations
+
+### **Iterative Expansion (As Needed)**
+
+**Phase 2**: Repository tests (when implementing database layer)
+**Phase 3**: Service integration tests (when connecting components)
+**Phase 4**: End-to-end tests (for complete workflows)
+
+**Key Principle**: Write tests as you need them, not preemptively
+
+### **Test Data Strategy**
 
 Following inventory module patterns:
-- **Unit Tests**: All service methods and business logic
-- **Integration Tests**: Database operations and transactions
-- **Workflow Tests**: Complete order lifecycle scenarios
-- **Error Handling Tests**: Edge cases and failure scenarios
+- String literals for enums (avoid circular dependencies)
+- Mock repositories with interface-based testing
+- Test factories for creating consistent test data
+- Shared utilities across test files
 
-### **Key Test Scenarios**
+### **Essential Test Scenarios**
 
-**Happy Path:**
-- Complete order lifecycle (pending → fulfilled)
-- Multiple item types in single order
-- Concurrent order processing
+**Business Logic (Priority 1)**:
+- Order creation and validation
+- Payment method validation
+- Delivery address requirements
+- Item quantity and pricing calculations
 
-**Error Scenarios:**
-- Insufficient inventory handling
-- Failed delivery recovery
-- Order cancellation at various stages
-- Database transaction rollbacks
+**Workflow Logic (Priority 2)**:
+- Status transition rules (pending → confirmed → reserved)
+- Invalid transition prevention
+- Business rule enforcement at each stage
 
-**Edge Cases:**
-- Stale inventory during reservation
-- Concurrent order reservation conflicts
-- Partial delivery scenarios
+**Integration Logic (Priority 3)**:
+- Inventory availability checking
+- Reservation creation and restoration
+- Transaction linking for traceability
 
 ## Success Metrics
 

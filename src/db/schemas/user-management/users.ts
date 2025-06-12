@@ -43,6 +43,17 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   inventoryStatusChanges: many(inventoryStatusHistory, {
     relationName: "changedByUser",
   }),
+  // Relations for order management
+  createdOrders: many(orders, {
+    relationName: "createdOrders",
+  }),
+  deliveredOrders: many(orders, {
+    relationName: "deliveredOrders",
+  }),
+  orderDeliveries: many(orderDeliveries),
+  orderStatusChanges: many(orderStatusHistory, {
+    relationName: "changedByUser",
+  }),
 }));
 
 // Resolve circular dependency by importing after defining the relations
@@ -52,5 +63,6 @@ import { inventoryAssignments } from "../inventory/inventory-assignments";
 import { itemTransactions } from "../inventory/item-transactions";
 import { tankTransactions } from "../inventory/tank-transactions";
 import { storeAssignments } from "../locations";
+import { orders, orderDeliveries, orderStatusHistory } from "../orders";
 
 export default users;

@@ -7,8 +7,6 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 import { users } from "../user-management/users";
 import { assignmentItems } from "./inventory-assignments-items";
 
@@ -45,7 +43,7 @@ export const itemTransactions = pgTable("item_transactions", {
 // Define relations
 export const itemTransactionsRelations = relations(
   itemTransactions,
-  ({ one }) => ({
+  ({ one, many }) => ({
     assignmentItem: one(assignmentItems, {
       fields: [itemTransactions.assignmentItemId],
       references: [assignmentItems.inventoryAssignmentItemId],
@@ -54,39 +52,13 @@ export const itemTransactionsRelations = relations(
       fields: [itemTransactions.userId],
       references: [users.userId],
     }),
+    orderTransactionLinks: many(orderTransactionLinks),
   })
 );
 
-// Create Zod schemas for validation
-export const insertInventoryTransactionSchema = createInsertSchema(
-  itemTransactions,
-  {
-    transactionType: z.enum([
-      TransactionTypeEnum.PURCHASE,
-      TransactionTypeEnum.SALE,
-      TransactionTypeEnum.TRANSFER,
-      TransactionTypeEnum.ASSIGNMENT,
-    ]),
-  }
-);
-
-export const selectInventoryTransactionSchema = createSelectSchema(
-  itemTransactions,
-  {
-    transactionType: z.enum([
-      TransactionTypeEnum.PURCHASE,
-      TransactionTypeEnum.SALE,
-      TransactionTypeEnum.TRANSFER,
-      TransactionTypeEnum.ASSIGNMENT,
-    ]),
-  }
-);
-
-export type InventoryTransaction = z.infer<
-  typeof selectInventoryTransactionSchema
->;
-export type NewInventoryTransaction = z.infer<
-  typeof insertInventoryTransactionSchema
->;
+// Note: Zod schemas moved to DTOs following inventory pattern
 
 export default itemTransactions;
+
+// Import after relations to avoid circular dependency
+import { orderTransactionLinks } from "../orders";

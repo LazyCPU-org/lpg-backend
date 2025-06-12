@@ -30,6 +30,8 @@ export const inventoryItem = pgTable("inventory_item", {
 export const inventoryItemRelations = relations(inventoryItem, ({ many }) => ({
   assignmentItems: many(assignmentItems),
   storeCatalogItems: many(storeCatalogItems),
+  orderItems: many(orderItems),
+  reservations: many(inventoryReservations),
 }));
 
 export default inventoryItem;
@@ -37,3 +39,4 @@ export default inventoryItem;
 // Import after relations to avoid circular dependency
 import { storeCatalogItems } from "../locations";
 import { assignmentItems } from "./inventory-assignments-items";
+import { orderItems, inventoryReservations } from "../orders";

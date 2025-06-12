@@ -26,9 +26,11 @@ export const storesRelations = relations(stores, ({ many }) => ({
   assignedUsers: many(storeAssignments),
   tanksCatalog: many(storeCatalogTanks),
   itemsCatalog: many(storeCatalogItems),
+  orders: many(orders),
 }));
 
 // Resolve circular dependency by importing after defining the relations
 import { storeAssignments, storeCatalogItems, storeCatalogTanks } from ".";
+import { orders } from "../orders";
 
 export default stores;
