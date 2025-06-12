@@ -19,6 +19,7 @@ The system supports advanced features including:
 - **Smart date calculation** - Business day awareness with weekend handling
 - **Consolidation workflow** - Automated end-of-day processing
 - **Comprehensive audit trails** - Complete status change tracking
+- **Order integration** - Inventory transactions linked to customer orders for complete traceability
 
 ## Core API Requirements
 
@@ -159,12 +160,18 @@ The system supports advanced features including:
 ```typescript
 enum TransactionType {
   PURCHASE = "purchase",    // Stock resupply
-  SALE = "sale",           // Customer delivery/pickup
+  SALE = "sale",           // Customer delivery/pickup (linked to orders)
   RETURN = "return",       // Customer returns
   TRANSFER = "transfer",   // Inter-store transfers
   ASSIGNMENT = "assignment" // Initial assignments
 }
 ```
+
+### Order Integration ✅ **PLANNED**
+- **Order-Transaction Links**: Direct traceability from customer orders to inventory transactions
+- **Reservation System**: Inventory reservation before physical movement
+- **Transaction Context**: All SALE transactions can be linked to specific customer orders
+- **Atomic Operations**: Order fulfillment and inventory updates in single database transaction
 
 ### Business Operations ✅ **IMPLEMENTED**
 - **Delivery operations**: Customer deliveries with tank exchanges

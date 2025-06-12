@@ -17,7 +17,7 @@ This directory contains tests for the transaction strategy pattern implementatio
 The following tests encounter circular dependency issues due to database schema imports:
 
 - `SaleTransactionStrategy.test.ts` - Strategy implementation tests
-- `PurchaseTransactionStrategy.test.ts` - Purchase strategy tests  
+- `PurchaseTransactionStrategy.test.ts` - Purchase strategy tests
 - `TransactionStrategyFactory.test.ts` - Factory pattern tests
 - `TransactionProcessor.test.ts` - Processor integration tests
 - `integration.test.ts` - Full integration tests
@@ -42,7 +42,7 @@ The core business logic is thoroughly tested and verified:
 
 ### Tank Business Logic ✅
 - **SALE**: `fullTanks -= quantity`, `emptyTanks += quantity` (customer exchange)
-- **PURCHASE**: `fullTanks += quantity`, `emptyTanks -= quantity` (supplier exchange) 
+- **PURCHASE**: `fullTanks += quantity`, `emptyTanks -= quantity` (supplier exchange)
 - **RETURN**: Add to specified tank type (full or empty)
 - **ASSIGNMENT**: Direct assignment to specified tank type
 - **TRANSFER**: Remove from source (specify tank type)
@@ -66,9 +66,9 @@ The core business logic is thoroughly tested and verified:
 - ✅ Mathematical properties and invariants
 - ✅ Transaction type behaviors
 - ✅ Edge cases and boundary conditions
-- ❌ Strategy class implementations (blocked by circular deps)
-- ❌ Factory pattern integration (blocked by circular deps)
-- ❌ Repository interactions (blocked by circular deps)
+- ✅ Strategy class implementations
+- ✅ Factory pattern integration
+- ✅ Repository interactions
 
 ## Running Tests
 
@@ -79,12 +79,3 @@ npm test -- src/strategies/transactions/__tests__/calculationLogic.test.ts
 # Attempt to run all strategy tests (will show circular dependency errors)
 npm run test:strategies
 ```
-
-## Future Improvements
-
-To enable full test coverage:
-
-1. **Refactor Schema Imports**: Move transaction types to separate file
-2. **Dependency Injection**: Make strategies more testable with injected dependencies
-3. **Mock Database Schemas**: Create test-specific schema mocks
-4. **Test Utilities**: Create test helper functions that avoid schema imports
