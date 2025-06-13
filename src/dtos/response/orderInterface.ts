@@ -16,10 +16,15 @@ import {
   PaymentMethodEnum,
   PaymentStatusEnum,
 } from "../../db/schemas/orders/order-status-types";
-import { Customer } from "../../db/schemas/customers/customers";
-import { Store } from "../../db/schemas/locations/stores";
+import { customers } from "../../db/schemas/customers/customers";
+import { stores } from "../../db/schemas/locations/stores";
 import { TankType, InventoryItem } from "./inventoryInterface";
-import { User } from "../../db/schemas/user-management/users";
+import { users } from "../../db/schemas/user-management/users";
+
+// Type aliases for cleaner interface definitions
+type Customer = typeof customers.$inferSelect;
+type Store = typeof stores.$inferSelect;
+type User = typeof users.$inferSelect;
 
 /**
  * @openapi

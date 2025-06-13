@@ -18,7 +18,7 @@ export const orderTransactionLinks = pgTable("order_transaction_links", {
     () => tankTransactions.transactionId
   ),
   itemTransactionId: integer("item_transaction_id").references(
-    () => itemTransactions.transactionId
+    () => itemTransactions.itemTransactionId
   ),
   deliveryId: integer("delivery_id").references(() => orderDeliveries.deliveryId),
   createdAt: timestamp("created_at").defaultNow(),
@@ -38,7 +38,7 @@ export const orderTransactionLinksRelations = relations(
     }),
     itemTransaction: one(itemTransactions, {
       fields: [orderTransactionLinks.itemTransactionId],
-      references: [itemTransactions.transactionId],
+      references: [itemTransactions.itemTransactionId],
     }),
     delivery: one(orderDeliveries, {
       fields: [orderTransactionLinks.deliveryId],

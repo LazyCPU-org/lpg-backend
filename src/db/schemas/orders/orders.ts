@@ -1,19 +1,23 @@
 import { relations } from "drizzle-orm";
 import {
+  decimal,
+  integer,
   pgTable,
   serial,
-  integer,
-  varchar,
   text,
-  decimal,
   timestamp,
-  pgEnum,
   unique,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { customers } from "../customers/customers";
 import { stores } from "../locations/stores";
 import { users } from "../user-management/users";
-import { OrderStatusEnum, PaymentMethodEnum, PaymentStatusEnum, orderStatusEnum } from "./order-status-types";
+import {
+  OrderStatusEnum,
+  PaymentMethodEnum,
+  PaymentStatusEnum,
+  orderStatusEnum,
+} from "./order-status-types";
 
 export const orders = pgTable(
   "orders",
@@ -31,8 +35,12 @@ export const orders = pgTable(
     locationReference: text("location_reference"),
     status: orderStatusEnum().default(OrderStatusEnum.PENDING),
     priority: integer("priority").default(1),
-    paymentMethod: varchar("payment_method", { length: 20 }).notNull().$type<typeof PaymentMethodEnum[keyof typeof PaymentMethodEnum]>(),
-    paymentStatus: varchar("payment_status", { length: 20 }).notNull().$type<typeof PaymentStatusEnum[keyof typeof PaymentStatusEnum]>(),
+    paymentMethod: varchar("payment_method", { length: 20 })
+      .notNull()
+      .$type<(typeof PaymentMethodEnum)[keyof typeof PaymentMethodEnum]>(),
+    paymentStatus: varchar("payment_status", { length: 20 })
+      .notNull()
+      .$type<(typeof PaymentStatusEnum)[keyof typeof PaymentStatusEnum]>(),
     totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
     createdBy: integer("created_by")
       .notNull()
@@ -43,9 +51,7 @@ export const orders = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
-  (table) => [
-    unique().on(table.orderNumber),
-  ]
+  (table) => [unique().on(table.orderNumber)]
 );
 
 // Define relations
@@ -84,9 +90,9 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
 export default orders;
 
 // Import after relations to avoid circular dependency
-import { orderItems } from "./order-items";
 import { inventoryReservations } from "./inventory-reservations";
-import { orderTransactionLinks } from "./order-transaction-links";
-import { orderDeliveries } from "./order-deliveries";
-import { orderStatusHistory } from "./order-status-history";
 import { invoices } from "./invoices";
+import { orderDeliveries } from "./order-deliveries";
+import { orderItems } from "./order-items";
+import { orderStatusHistory } from "./order-status-history";
+import { orderTransactionLinks } from "./order-transaction-links";
