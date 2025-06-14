@@ -13,6 +13,11 @@ import {
   createMockOrderRequest,
   createMockOrder,
   createMockOrderWithItems,
+  createQuickOrderEntry,
+  createUXOrderScenarios,
+  createCommonTankOrderEntry,
+  createPeruvianPhoneScenarios,
+  createPeruvianAddressScenarios,
 } from './__mocks__/orderTestData';
 
 import {
@@ -103,27 +108,8 @@ describe('Order Validation Service', () => {
 
     // UX Design Pattern: Natural conversation flow - items captured first
     test('should accept order with "what they need" first approach', async () => {
-      const itemsFirstRequest = createMockOrderRequest({
-        items: [
-          {
-            itemType: OrderItemTypeEnum.TANK,
-            tankTypeId: 2, // 20kg tank (most common in UX)
-            quantity: 2,
-            unitPrice: '45.00',
-          },
-          {
-            itemType: OrderItemTypeEnum.ITEM,
-            inventoryItemId: 1, // Regulator
-            quantity: 1,
-            unitPrice: '15.00',
-          },
-        ],
-        customerName: 'Sofia Rodriguez',
-        customerPhone: '+51987555444',
-        deliveryAddress: 'Av. Arequipa 456, Miraflores',
-        paymentMethod: PaymentMethod.CASH, // Default in UX
-        priority: 1, // Default priority
-      });
+      const uxScenarios = createUXOrderScenarios();
+      const itemsFirstRequest = uxScenarios.itemsFirstEntry;
       
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
         valid: true,
@@ -133,6 +119,31 @@ describe('Order Validation Service', () => {
       const result = await orderService.validateOrderRequest(itemsFirstRequest);
 
       expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    // Test what frontend will actually send for each UX step
+    test('should accept all UX conversation flow scenarios', async () => {
+      const uxScenarios = createUXOrderScenarios();
+      const scenarios = [
+        { name: 'existing customer', request: uxScenarios.existingCustomerEntry },
+        { name: 'new customer', request: uxScenarios.newCustomerEntry },
+        { name: 'same address', request: uxScenarios.sameAddressEntry },
+        { name: 'cash payment', request: uxScenarios.cashPaymentEntry },
+        { name: 'yape payment', request: uxScenarios.yapePaymentEntry },
+        { name: 'plin payment', request: uxScenarios.plinPaymentEntry },
+        { name: 'transfer payment', request: uxScenarios.transferPaymentEntry },
+      ];
+
+      for (const scenario of scenarios) {
+        (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
+          valid: true,
+          errors: [],
+        });
+
+        const result = await orderService.validateOrderRequest(scenario.request);
+        expect(result.valid).toBe(true);
+      }
     });
 
     test('should reject order without customer name when no customer ID', async () => {
@@ -520,24 +531,124 @@ describe('Order Validation Service', () => {
       expect(result.valid).toBe(true);
     });
 
-    // UX Design Pattern: Support for digital payment methods
-    test('should accept Peruvian digital payment methods', async () => {
-      const digitalPaymentMethods = [PaymentMethod.YAPE, PaymentMethod.PLIN, PaymentMethod.TRANSFER];
+    // UX Design Pattern: Common tank orders from UI mockups
+    test('should accept common tank size orders from UX', async () => {
+      const tankSizes: ('10kg' | '20kg' | '45kg')[] = ['10kg', '20kg', '45kg'];
       
-      for (const method of digitalPaymentMethods) {
-        const digitalPaymentRequest = createMockOrderRequest({
-          paymentMethod: method,
-          paymentStatus: PaymentStatus.PENDING, // Should be pending until confirmed
-        });
+      for (const size of tankSizes) {
+        const tankOrderRequest = createCommonTankOrderEntry(size);
         
         (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
           valid: true,
           errors: [],
         });
 
-        const result = await orderService.validateOrderRequest(digitalPaymentRequest);
+        const result = await orderService.validateOrderRequest(tankOrderRequest);
+        expect(result.valid).toBe(true);
+        expect(tankOrderRequest.items[0].itemType).toBe(OrderItemTypeEnum.TANK);
+        expect(tankOrderRequest.paymentMethod).toBe(PaymentMethod.CASH); // UX default
+      }
+    });
+
+    // Test what happens when frontend sends minimal vs complete data
+    test('should handle minimal order data from frontend', async () => {
+      const minimalOrder = createQuickOrderEntry({
+        // Only essential fields that frontend must provide
+        customerName: 'Pedro Martinez',
+        customerPhone: '+51987654321',
+        deliveryAddress: 'Jr. Lima 123, San Isidro',
+        items: [{
+          itemType: OrderItemTypeEnum.TANK,
+          tankTypeId: 2,
+          quantity: 2,
+          unitPrice: '45.00',
+        }],
+        // Optional fields that might be undefined
+        locationReference: undefined,
+        notes: undefined,
+        customerId: undefined, // New customer
+      });
+      
+      (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
+        valid: true,
+        errors: [],
+      });
+
+      const result = await orderService.validateOrderRequest(minimalOrder);
+      expect(result.valid).toBe(true);
+    });
+
+    // Test Peruvian phone number validation
+    test('should validate Peruvian phone number formats', async () => {
+      const phoneScenarios = createPeruvianPhoneScenarios();
+      
+      // Valid phone numbers should pass
+      const validPhones = [phoneScenarios.validMobileNumber, phoneScenarios.validShortMobile];
+      
+      for (const phone of validPhones) {
+        const orderWithPhone = createQuickOrderEntry({ customerPhone: phone });
+        
+        (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
+          valid: true,
+          errors: [],
+        });
+
+        const result = await orderService.validateOrderRequest(orderWithPhone);
         expect(result.valid).toBe(true);
       }
+      
+      // Invalid phone numbers should fail
+      const invalidPhones = [phoneScenarios.invalidShortNumber, phoneScenarios.invalidFormat];
+      
+      for (const phone of invalidPhones) {
+        const orderWithInvalidPhone = createQuickOrderEntry({ customerPhone: phone });
+        
+        (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
+          valid: false,
+          errors: ['Invalid phone number format'],
+        });
+
+        const result = await orderService.validateOrderRequest(orderWithInvalidPhone);
+        expect(result.valid).toBe(false);
+      }
+    });
+
+    // Test Peruvian address validation 
+    test('should validate Peruvian address formats', async () => {
+      const addressScenarios = createPeruvianAddressScenarios();
+      
+      // Valid address formats
+      const validAddresses = [
+        addressScenarios.limaAddress,
+        addressScenarios.avenidaAddress,
+        addressScenarios.calleAddress,
+        addressScenarios.addressWithReference,
+      ];
+      
+      for (const address of validAddresses) {
+        const orderWithAddress = createQuickOrderEntry({ deliveryAddress: address });
+        
+        (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
+          valid: true,
+          errors: [],
+        });
+
+        const result = await orderService.validateOrderRequest(orderWithAddress);
+        expect(result.valid).toBe(true);
+      }
+      
+      // Short address should still be valid (error tolerance)
+      const shortAddressOrder = createQuickOrderEntry({ 
+        deliveryAddress: addressScenarios.shortAddress 
+      });
+      
+      (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
+        valid: true,
+        errors: [],
+      });
+
+      const result = await orderService.validateOrderRequest(shortAddressOrder);
+      expect(result.valid).toBe(true);
     });
   });
 
@@ -657,6 +768,135 @@ describe('Order Validation Service', () => {
       expect(result).toEqual(expectedOrder);
       expect(result.status).toBe(OrderStatus.PENDING);
       expect(result.orderNumber).toMatch(/^ORD-\d{4}-\d{3}$/);
+    });
+
+    // Test how backend handles UX quick entry creation
+    test('should create order from UX quick entry with smart defaults', async () => {
+      const quickRequest = createQuickOrderEntry();
+      const expectedOrder = createMockOrderWithItems({
+        customerName: 'Pedro Martinez',
+        customerPhone: '+51987654321',
+        deliveryAddress: 'Jr. Lima 123, San Isidro',
+        status: OrderStatus.PENDING, // Auto-set by backend
+        paymentMethod: PaymentMethod.CASH, // From UX default
+        paymentStatus: PaymentStatus.PENDING, // Smart default for cash
+        priority: 1, // UX default
+        orderNumber: 'ORD-2024-001', // Generated by backend
+        totalAmount: '90.00', // Calculated by backend (2 * 45.00)
+      });
+      
+      (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
+
+      const result = await orderService.createOrder(quickRequest);
+
+      // Verify backend applies smart defaults
+      expect(result.status).toBe(OrderStatus.PENDING);
+      expect(result.paymentMethod).toBe(PaymentMethod.CASH);
+      expect(result.paymentStatus).toBe(PaymentStatus.PENDING);
+      expect(result.priority).toBe(1);
+      expect(result.orderNumber).toMatch(/^ORD-\d{4}-\d{3}$/);
+      expect(result.totalAmount).toBe('90.00');
+    });
+
+    // Test creation with existing customer ID (frontend provides ID)
+    test('should create order for existing customer using ID', async () => {
+      const uxScenarios = createUXOrderScenarios();
+      const existingCustomerRequest = uxScenarios.existingCustomerEntry;
+      
+      const expectedOrder = createMockOrderWithItems({
+        customerId: 123, // Provided by frontend
+        customerName: 'Pedro Martinez', // Could be auto-filled by frontend or backend
+        customerPhone: '+51987654321',
+      });
+      
+      (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
+
+      const result = await orderService.createOrder(existingCustomerRequest);
+
+      expect(result.customerId).toBe(123);
+      expect(result.customerName).toBe('Pedro Martinez');
+    });
+
+    // Test creation with new customer (no ID, name/phone required)
+    test('should create order for new customer without ID', async () => {
+      const uxScenarios = createUXOrderScenarios();
+      const newCustomerRequest = uxScenarios.newCustomerEntry;
+      
+      const expectedOrder = createMockOrderWithItems({
+        customerId: null, // New customer
+        customerName: 'Sofia Rodriguez',
+        customerPhone: '+51987555444',
+      });
+      
+      (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
+
+      const result = await orderService.createOrder(newCustomerRequest);
+
+      expect(result.customerId).toBeNull();
+      expect(result.customerName).toBe('Sofia Rodriguez');
+      expect(result.customerPhone).toBe('+51987555444');
+    });
+
+    // Test creation with different payment methods affects payment status
+    test('should handle different payment methods with correct defaults', async () => {
+      const uxScenarios = createUXOrderScenarios();
+      const paymentScenarios = [
+        { 
+          request: uxScenarios.cashPaymentEntry, 
+          expectedStatus: PaymentStatus.PENDING, // Cash paid on delivery
+          method: PaymentMethod.CASH 
+        },
+        { 
+          request: uxScenarios.yapePaymentEntry, 
+          expectedStatus: PaymentStatus.PENDING, // Digital needs confirmation
+          method: PaymentMethod.YAPE 
+        },
+        { 
+          request: uxScenarios.plinPaymentEntry, 
+          expectedStatus: PaymentStatus.PENDING,
+          method: PaymentMethod.PLIN 
+        },
+        { 
+          request: uxScenarios.transferPaymentEntry, 
+          expectedStatus: PaymentStatus.PENDING,
+          method: PaymentMethod.TRANSFER 
+        },
+      ];
+      
+      for (const scenario of paymentScenarios) {
+        const expectedOrder = createMockOrderWithItems({
+          paymentMethod: scenario.method,
+          paymentStatus: scenario.expectedStatus,
+        });
+        
+        (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
+
+        const result = await orderService.createOrder(scenario.request);
+
+        expect(result.paymentMethod).toBe(scenario.method);
+        expect(result.paymentStatus).toBe(scenario.expectedStatus);
+      }
+    });
+
+    // Test that backend handles optional fields correctly
+    test('should handle optional fields from frontend gracefully', async () => {
+      const minimalRequest = createQuickOrderEntry({
+        locationReference: undefined, // Optional
+        notes: undefined, // Optional
+      });
+      
+      const expectedOrder = createMockOrderWithItems({
+        locationReference: null, // Backend converts undefined to null
+        notes: null, // Backend converts undefined to null
+      });
+      
+      (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
+
+      const result = await orderService.createOrder(minimalRequest);
+
+      // Backend should handle undefined optional fields
+      expect(result.locationReference).toBeNull();
+      expect(result.notes).toBeNull();
     });
 
     test('should set correct initial status', async () => {

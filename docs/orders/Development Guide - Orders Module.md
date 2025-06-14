@@ -31,6 +31,148 @@ Customer Request → Order Creation → Inventory Reservation → Delivery Execu
 - Invoice generation is optional (few customers require invoices)
 - Complete rollback capability for any operation failures
 
+## 🗺️ **Orders Module Implementation Plan**
+
+## **Implementation Order (Bottom-Up Architecture)**
+
+### **Phase 1: Database Foundation** 📊
+```
+src/db/schemas/orders/
+├── orders.ts ✅ (already exists)
+├── order-items.ts  
+├── order-status-history.ts
+├── inventory-reservations.ts
+└── order-transaction-links.ts ✅ (already exists)
+```
+
+### **Phase 2: Repository Layer** 🗃️
+```
+src/repositories/orders/
+├── IOrderRepository.ts
+├── PgOrderRepository.ts
+├── IOrderWorkflowRepository.ts  
+├── PgOrderWorkflowRepository.ts
+├── IInventoryReservationRepository.ts
+├── PgInventoryReservationRepository.ts
+└── index.ts (barrel exports)
+```
+
+### **Phase 3: Service Layer** ⚙️
+```
+src/services/orders/
+├── IOrderService.ts
+├── OrderService.ts
+├── IOrderWorkflowService.ts
+├── OrderWorkflowService.ts  
+├── IInventoryReservationService.ts
+├── InventoryReservationService.ts
+└── index.ts (barrel exports)
+```
+
+### **Phase 4: Routes Layer** 🛣️
+```
+src/routes/
+├── orderRoutes.ts
+└── index.ts (register routes)
+```
+
+---
+
+## **Detailed Implementation Sequence**
+
+### **🏗️ Step 1: Complete Database Schemas**
+**Where**: `src/db/schemas/orders/`
+- Complete missing order item schema  
+- Add order status history schema
+- Add inventory reservations schema
+- Update schema index exports
+
+### **🗃️ Step 2: Repository Interfaces**
+**Where**: `src/repositories/orders/IOrderRepository.ts`
+```typescript
+interface IOrderRepository {
+  createOrder(order: NewOrderType): Promise<OrderWithDetails>;
+  getOrderById(orderId: number): Promise<OrderWithDetails | null>;
+  updateOrderStatus(orderId: number, status: string): Promise<void>;
+  // ... other CRUD operations
+}
+```
+
+### **🗃️ Step 3: Repository Implementations**
+**Where**: `src/repositories/orders/PgOrderRepository.ts`
+- Implement PostgreSQL-specific database operations
+- Use Drizzle ORM with proper relations
+- Handle database transactions for atomic operations
+
+### **⚙️ Step 4: Service Interfaces**
+**Where**: `src/services/orders/IOrderService.ts`  
+```typescript
+interface IOrderService {
+  createOrder(request: CreateOrderRequest): Promise<OrderWithDetails>;
+  validateOrderRequest(request: CreateOrderRequest): Promise<ValidationResult>;
+  calculateOrderTotal(items: OrderItemRequest[]): string;
+  // ... business logic methods
+}
+```
+
+### **⚙️ Step 5: Service Implementations**
+**Where**: `src/services/orders/OrderService.ts`
+- Implement business logic validation (from your tests)
+- Handle UX design patterns (smart defaults, phone validation)
+- Calculate order totals, generate order numbers
+- Integrate with inventory reservation service
+
+### **🛣️ Step 6: Route Handlers**
+**Where**: `src/routes/orderRoutes.ts`
+```typescript
+router.post('/orders', 
+  isAuthenticated,
+  requirePermission(ModuleEnum.ORDERS, ActionEnum.CREATE),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const orderData = CreateOrderRequestSchema.parse(req.body);
+    const result = await orderService.createOrder(orderData);
+    res.status(201).json({ success: true, data: result });
+  })
+);
+```
+
+### **🔌 Step 7: Dependency Injection**
+**Where**: Main app setup
+- Wire up repositories → services → routes
+- Follow your existing inventory pattern
+
+---
+
+## **🎯 Where It Starts and Ends**
+
+### **STARTS**: 
+`src/db/schemas/orders/` → Database schema completion
+
+### **FLOWS THROUGH**:
+1. **Repository Layer**: Data access abstractions
+2. **Service Layer**: Business logic from your tests  
+3. **Route Layer**: HTTP API endpoints
+
+### **ENDS**:
+```bash
+POST /api/v1/orders          # Create order (UX quick entry)
+GET  /api/v1/orders          # List orders  
+POST /api/v1/orders/:id/confirm    # Workflow transitions
+POST /api/v1/orders/check-availability  # Inventory checks
+```
+
+---
+
+## **🚀 Implementation Benefits**
+
+✅ **Test-Driven**: Your tests define exact business behavior  
+✅ **UX-Aligned**: Handles phone conversation flow seamlessly  
+✅ **Repository Pattern**: Clean separation of concerns  
+✅ **Inventory Integration**: Leverages existing transaction service  
+✅ **Type Safety**: Full TypeScript with proper DTOs  
+
+**Next Action**: Complete the missing database schemas in `src/db/schemas/orders/` to establish the foundation.
+
 ## Development Phases
 
 ### **Phase 1: Core Order Foundation** 

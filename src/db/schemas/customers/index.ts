@@ -1,8 +1,15 @@
-import customers, { customersRelations } from './customers';
-import customerDebts from './customer-debts';
+import customers, { 
+  customersRelations, 
+  CustomerTypeEnum,
+  customerTypeEnum 
+} from './customers';
+import customerDebts, { customerDebtsRelations } from './customer-debts';
 
 export {
   customers,
   customersRelations,
-  customerDebts
+  customerDebts,
+  customerDebtsRelations,
+  CustomerTypeEnum,
+  customerTypeEnum,
 };
