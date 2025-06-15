@@ -17,6 +17,8 @@ import {
   PaymentMethodEnum,
   PaymentStatusEnum,
   orderStatusEnum,
+  paymentMethodEnum,
+  paymentStatusEnum,
 } from "./order-status-types";
 
 export const orders = pgTable(
@@ -35,12 +37,8 @@ export const orders = pgTable(
     locationReference: text("location_reference"),
     status: orderStatusEnum().default(OrderStatusEnum.PENDING),
     priority: integer("priority").default(1),
-    paymentMethod: varchar("payment_method", { length: 20 })
-      .notNull()
-      .$type<(typeof PaymentMethodEnum)[keyof typeof PaymentMethodEnum]>(),
-    paymentStatus: varchar("payment_status", { length: 20 })
-      .notNull()
-      .$type<(typeof PaymentStatusEnum)[keyof typeof PaymentStatusEnum]>(),
+    paymentMethod: paymentMethodEnum().notNull().default(PaymentMethodEnum.CASH),
+    paymentStatus: paymentStatusEnum().notNull().default(PaymentStatusEnum.PENDING),
     totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
     createdBy: integer("created_by")
       .notNull()

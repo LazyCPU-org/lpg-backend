@@ -1,7 +1,6 @@
 import {
   inventoryReservations,
   inventoryReservationsRelations,
-  ReservationItemTypeEnum,
   reservationItemTypeEnum,
   ReservationStatusEnum,
   reservationStatusEnum,
@@ -27,12 +26,9 @@ import {
 } from "./order-status-history";
 import {
   OrderStatusEnum,
+  orderStatusEnum,
   PaymentMethodEnum,
   PaymentStatusEnum,
-  orderStatusEnum,
-  type OrderStatus,
-  type PaymentMethod,
-  type PaymentStatus,
 } from "./order-status-types";
 import {
   orderTransactionLinks,
@@ -44,9 +40,6 @@ export {
   // Delivery status types
   DeliveryStatusEnum,
   deliveryStatusEnum,
-  // Order status types
-  OrderStatusEnum,
-  orderStatusEnum,
   // Inventory reservations
   inventoryReservations,
   inventoryReservationsRelations,
@@ -65,6 +58,9 @@ export {
   // Core orders
   orders,
   ordersRelations,
+  // Order status types
+  OrderStatusEnum,
+  orderStatusEnum,
   // Status history
   orderStatusHistory,
   orderStatusHistoryRelations,
@@ -73,11 +69,7 @@ export {
   orderTransactionLinksRelations,
   PaymentMethodEnum,
   PaymentStatusEnum,
-  ReservationItemTypeEnum,
   reservationItemTypeEnum,
   ReservationStatusEnum,
   reservationStatusEnum,
-  type OrderStatus,
-  type PaymentMethod,
-  type PaymentStatus,
 };

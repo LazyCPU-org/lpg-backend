@@ -1,23 +1,23 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
+  check,
+  integer,
+  pgEnum,
   pgTable,
   serial,
-  varchar,
   text,
-  integer,
-  boolean,
   timestamp,
-  check,
-  pgEnum,
   unique,
+  varchar,
 } from "drizzle-orm/pg-core";
 
 // Define customer type enum values
-export const CustomerTypeEnum = {
-  REGULAR: "regular",
-  WHOLESALE: "wholesale", 
-  RECURRENT: "recurrent",
-} as const;
+export enum CustomerTypeEnum {
+  REGULAR = "regular",
+  WHOLESALE = "wholesale",
+  RECURRENT = "recurrent",
+}
 
 // Define enum values restriction in database (following orders pattern)
 export const customerTypeEnum = pgEnum("customer_type_enum", [

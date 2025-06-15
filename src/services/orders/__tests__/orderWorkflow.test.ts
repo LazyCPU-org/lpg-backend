@@ -1,21 +1,21 @@
 /**
  * Order Workflow Tests
- * 
+ *
  * Tests the core order status transitions and business workflow logic.
  * Focuses on state machine behavior and transition validation.
  */
 
 import {
-  OrderStatus,
   createMockOrder,
   createMockOrderTransition,
   createOrderWorkflowScenario,
-} from './__mocks__/orderTestData';
+} from "./__mocks__/orderTestData";
 
+import { OrderStatusEnum } from "../../../db/schemas";
 import {
   createMockOrderRepository,
   createMockOrderWorkflowRepository,
-} from './__mocks__/mockOrderRepository';
+} from "./__mocks__/mockOrderRepository";
 
 // Mock service interface (to be implemented)
 interface IOrderWorkflowService {
@@ -28,7 +28,7 @@ interface IOrderWorkflowService {
   validateTransition(fromStatus: string, toStatus: string): boolean;
 }
 
-describe('Order Workflow Service', () => {
+describe("Order Workflow Service", () => {
   let mockOrderRepository: jest.Mocked<any>;
   let mockWorkflowRepository: jest.Mocked<any>;
   let orderWorkflowService: IOrderWorkflowService;
@@ -37,7 +37,7 @@ describe('Order Workflow Service', () => {
     jest.clearAllMocks();
     mockOrderRepository = createMockOrderRepository();
     mockWorkflowRepository = createMockOrderWorkflowRepository();
-    
+
     // Mock implementation will be injected when service is created
     orderWorkflowService = {
       confirmOrder: jest.fn(),
@@ -50,224 +50,341 @@ describe('Order Workflow Service', () => {
     };
   });
 
-  describe('Status Transition Validation', () => {
+  describe("Status Transition Validation", () => {
     const validTransitions = [
       // From PENDING
-      { from: OrderStatus.PENDING, to: OrderStatus.CONFIRMED, valid: true },
-      { from: OrderStatus.PENDING, to: OrderStatus.CANCELLED, valid: true },
-      { from: OrderStatus.PENDING, to: OrderStatus.RESERVED, valid: false },
-      
+      {
+        from: OrderStatusEnum.PENDING,
+        to: OrderStatusEnum.CONFIRMED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.PENDING,
+        to: OrderStatusEnum.CANCELLED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.PENDING,
+        to: OrderStatusEnum.RESERVED,
+        valid: false,
+      },
+
       // From CONFIRMED
-      { from: OrderStatus.CONFIRMED, to: OrderStatus.RESERVED, valid: true },
-      { from: OrderStatus.CONFIRMED, to: OrderStatus.CANCELLED, valid: true },
-      { from: OrderStatus.CONFIRMED, to: OrderStatus.PENDING, valid: false },
-      
+      {
+        from: OrderStatusEnum.CONFIRMED,
+        to: OrderStatusEnum.RESERVED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.CONFIRMED,
+        to: OrderStatusEnum.CANCELLED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.CONFIRMED,
+        to: OrderStatusEnum.PENDING,
+        valid: false,
+      },
+
       // From RESERVED
-      { from: OrderStatus.RESERVED, to: OrderStatus.IN_TRANSIT, valid: true },
-      { from: OrderStatus.RESERVED, to: OrderStatus.CANCELLED, valid: true },
-      { from: OrderStatus.RESERVED, to: OrderStatus.CONFIRMED, valid: false },
-      
+      {
+        from: OrderStatusEnum.RESERVED,
+        to: OrderStatusEnum.IN_TRANSIT,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.RESERVED,
+        to: OrderStatusEnum.CANCELLED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.RESERVED,
+        to: OrderStatusEnum.CONFIRMED,
+        valid: false,
+      },
+
       // From IN_TRANSIT
-      { from: OrderStatus.IN_TRANSIT, to: OrderStatus.DELIVERED, valid: true },
-      { from: OrderStatus.IN_TRANSIT, to: OrderStatus.FAILED, valid: true },
-      { from: OrderStatus.IN_TRANSIT, to: OrderStatus.CANCELLED, valid: true },
-      { from: OrderStatus.IN_TRANSIT, to: OrderStatus.RESERVED, valid: false },
-      
+      {
+        from: OrderStatusEnum.IN_TRANSIT,
+        to: OrderStatusEnum.DELIVERED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.IN_TRANSIT,
+        to: OrderStatusEnum.FAILED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.IN_TRANSIT,
+        to: OrderStatusEnum.CANCELLED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.IN_TRANSIT,
+        to: OrderStatusEnum.RESERVED,
+        valid: false,
+      },
+
       // From DELIVERED
-      { from: OrderStatus.DELIVERED, to: OrderStatus.FULFILLED, valid: true },
-      { from: OrderStatus.DELIVERED, to: OrderStatus.FAILED, valid: true },
-      { from: OrderStatus.DELIVERED, to: OrderStatus.IN_TRANSIT, valid: false },
-      
+      {
+        from: OrderStatusEnum.DELIVERED,
+        to: OrderStatusEnum.FULFILLED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.DELIVERED,
+        to: OrderStatusEnum.FAILED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.DELIVERED,
+        to: OrderStatusEnum.IN_TRANSIT,
+        valid: false,
+      },
+
       // From FAILED
-      { from: OrderStatus.FAILED, to: OrderStatus.RESERVED, valid: true },
-      { from: OrderStatus.FAILED, to: OrderStatus.IN_TRANSIT, valid: true },
-      { from: OrderStatus.FAILED, to: OrderStatus.CANCELLED, valid: true },
-      { from: OrderStatus.FAILED, to: OrderStatus.DELIVERED, valid: false },
-      
+      {
+        from: OrderStatusEnum.FAILED,
+        to: OrderStatusEnum.RESERVED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.FAILED,
+        to: OrderStatusEnum.IN_TRANSIT,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.FAILED,
+        to: OrderStatusEnum.CANCELLED,
+        valid: true,
+      },
+      {
+        from: OrderStatusEnum.FAILED,
+        to: OrderStatusEnum.DELIVERED,
+        valid: false,
+      },
+
       // Terminal states
-      { from: OrderStatus.FULFILLED, to: OrderStatus.CANCELLED, valid: false },
-      { from: OrderStatus.CANCELLED, to: OrderStatus.PENDING, valid: false },
+      {
+        from: OrderStatusEnum.FULFILLED,
+        to: OrderStatusEnum.CANCELLED,
+        valid: false,
+      },
+      {
+        from: OrderStatusEnum.CANCELLED,
+        to: OrderStatusEnum.PENDING,
+        valid: false,
+      },
     ];
 
     test.each(validTransitions)(
-      'should validate transition from $from to $to as $valid',
+      "should validate transition from $from to $to as $valid",
       ({ from, to, valid }) => {
         // Mock the validation logic
-        (orderWorkflowService.validateTransition as jest.Mock).mockReturnValue(valid);
-        
+        (orderWorkflowService.validateTransition as jest.Mock).mockReturnValue(
+          valid
+        );
+
         const result = orderWorkflowService.validateTransition(from, to);
         expect(result).toBe(valid);
       }
     );
   });
 
-  describe('Order Confirmation Workflow', () => {
-    test('should confirm pending order successfully', async () => {
+  describe("Order Confirmation Workflow", () => {
+    test("should confirm pending order successfully", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
-          fromStatus: OrderStatus.PENDING,
-          toStatus: OrderStatus.CONFIRMED,
+          fromStatus: OrderStatusEnum.PENDING,
+          toStatus: OrderStatusEnum.CONFIRMED,
           changedBy: 1,
-          reason: 'Order confirmed by operator',
+          reason: "Order confirmed by operator",
           notes: null,
-          createdAt: new Date('2024-01-01T10:30:00Z'),
+          createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
       mockOrderRepository.getOrderById.mockResolvedValue(scenario.initialOrder);
-      mockOrderRepository.updateOrderStatusWithTransaction.mockResolvedValue(scenario.confirmedOrder);
-      (orderWorkflowService.confirmOrder as jest.Mock).mockResolvedValue(mockTransition);
+      mockOrderRepository.updateOrderStatusWithTransaction.mockResolvedValue(
+        scenario.confirmedOrder
+      );
+      (orderWorkflowService.confirmOrder as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
 
       const result = await orderWorkflowService.confirmOrder(1, 1);
 
       expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatus.PENDING);
-      expect(result.statusChange.toStatus).toBe(OrderStatus.CONFIRMED);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.PENDING);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.CONFIRMED);
     });
 
-    test('should reject confirmation of non-pending order', async () => {
+    test("should reject confirmation of non-pending order", async () => {
       const scenario = createOrderWorkflowScenario();
-      
-      mockOrderRepository.getOrderById.mockResolvedValue(scenario.confirmedOrder);
+
+      mockOrderRepository.getOrderById.mockResolvedValue(
+        scenario.confirmedOrder
+      );
       (orderWorkflowService.confirmOrder as jest.Mock).mockRejectedValue(
-        new Error('Order cannot be confirmed from status: confirmed')
+        new Error("Order cannot be confirmed from status: confirmed")
       );
 
-      await expect(orderWorkflowService.confirmOrder(1, 1))
-        .rejects.toThrow('Order cannot be confirmed from status: confirmed');
+      await expect(orderWorkflowService.confirmOrder(1, 1)).rejects.toThrow(
+        "Order cannot be confirmed from status: confirmed"
+      );
     });
   });
 
-  describe('Inventory Reservation Workflow', () => {
-    test('should reserve inventory for confirmed order', async () => {
+  describe("Inventory Reservation Workflow", () => {
+    test("should reserve inventory for confirmed order", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
-          fromStatus: OrderStatus.CONFIRMED,
-          toStatus: OrderStatus.RESERVED,
+          fromStatus: OrderStatusEnum.CONFIRMED,
+          toStatus: OrderStatusEnum.RESERVED,
           changedBy: 1,
-          reason: 'Inventory reserved',
+          reason: "Inventory reserved",
           notes: null,
-          createdAt: new Date('2024-01-01T10:30:00Z'),
+          createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
-      mockOrderRepository.getOrderById.mockResolvedValue(scenario.confirmedOrder);
-      (orderWorkflowService.reserveInventory as jest.Mock).mockResolvedValue(mockTransition);
+      mockOrderRepository.getOrderById.mockResolvedValue(
+        scenario.confirmedOrder
+      );
+      (orderWorkflowService.reserveInventory as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
 
       const result = await orderWorkflowService.reserveInventory(1);
 
       expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatus.CONFIRMED);
-      expect(result.statusChange.toStatus).toBe(OrderStatus.RESERVED);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.CONFIRMED);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.RESERVED);
     });
 
-    test('should reject reservation for non-confirmed order', async () => {
+    test("should reject reservation for non-confirmed order", async () => {
       const scenario = createOrderWorkflowScenario();
-      
+
       mockOrderRepository.getOrderById.mockResolvedValue(scenario.initialOrder);
       (orderWorkflowService.reserveInventory as jest.Mock).mockRejectedValue(
-        new Error('Order must be confirmed before inventory can be reserved')
+        new Error("Order must be confirmed before inventory can be reserved")
       );
 
-      await expect(orderWorkflowService.reserveInventory(1))
-        .rejects.toThrow('Order must be confirmed before inventory can be reserved');
+      await expect(orderWorkflowService.reserveInventory(1)).rejects.toThrow(
+        "Order must be confirmed before inventory can be reserved"
+      );
     });
   });
 
-  describe('Delivery Workflow', () => {
-    test('should start delivery for reserved order', async () => {
+  describe("Delivery Workflow", () => {
+    test("should start delivery for reserved order", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
-          fromStatus: OrderStatus.RESERVED,
-          toStatus: OrderStatus.IN_TRANSIT,
+          fromStatus: OrderStatusEnum.RESERVED,
+          toStatus: OrderStatusEnum.IN_TRANSIT,
           changedBy: 2,
-          reason: 'Delivery started',
+          reason: "Delivery started",
           notes: null,
-          createdAt: new Date('2024-01-01T10:30:00Z'),
+          createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
-      mockOrderRepository.getOrderById.mockResolvedValue(scenario.reservedOrder);
-      (orderWorkflowService.startDelivery as jest.Mock).mockResolvedValue(mockTransition);
+      mockOrderRepository.getOrderById.mockResolvedValue(
+        scenario.reservedOrder
+      );
+      (orderWorkflowService.startDelivery as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
 
       const result = await orderWorkflowService.startDelivery(1, 2);
 
       expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatus.RESERVED);
-      expect(result.statusChange.toStatus).toBe(OrderStatus.IN_TRANSIT);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.RESERVED);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.IN_TRANSIT);
     });
 
-    test('should complete delivery for in-transit order', async () => {
+    test("should complete delivery for in-transit order", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
-          fromStatus: OrderStatus.IN_TRANSIT,
-          toStatus: OrderStatus.DELIVERED,
+          fromStatus: OrderStatusEnum.IN_TRANSIT,
+          toStatus: OrderStatusEnum.DELIVERED,
           changedBy: 2,
-          reason: 'Delivery completed',
+          reason: "Delivery completed",
           notes: null,
-          createdAt: new Date('2024-01-01T10:30:00Z'),
+          createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
-      mockOrderRepository.getOrderById.mockResolvedValue(scenario.inTransitOrder);
-      (orderWorkflowService.completeDelivery as jest.Mock).mockResolvedValue(mockTransition);
+      mockOrderRepository.getOrderById.mockResolvedValue(
+        scenario.inTransitOrder
+      );
+      (orderWorkflowService.completeDelivery as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
 
       const result = await orderWorkflowService.completeDelivery(1, 2);
 
       expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatus.IN_TRANSIT);
-      expect(result.statusChange.toStatus).toBe(OrderStatus.DELIVERED);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.IN_TRANSIT);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.DELIVERED);
     });
 
-    test('should handle failed delivery', async () => {
+    test("should handle failed delivery", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
-          fromStatus: OrderStatus.IN_TRANSIT,
-          toStatus: OrderStatus.FAILED,
+          fromStatus: OrderStatusEnum.IN_TRANSIT,
+          toStatus: OrderStatusEnum.FAILED,
           changedBy: 2,
-          reason: 'Customer not available',
+          reason: "Customer not available",
           notes: null,
-          createdAt: new Date('2024-01-01T10:30:00Z'),
+          createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
-      mockOrderRepository.getOrderById.mockResolvedValue(scenario.inTransitOrder);
-      (orderWorkflowService.failDelivery as jest.Mock).mockResolvedValue(mockTransition);
+      mockOrderRepository.getOrderById.mockResolvedValue(
+        scenario.inTransitOrder
+      );
+      (orderWorkflowService.failDelivery as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
 
-      const result = await orderWorkflowService.failDelivery(1, 'Customer not available');
+      const result = await orderWorkflowService.failDelivery(
+        1,
+        "Customer not available"
+      );
 
       expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatus.IN_TRANSIT);
-      expect(result.statusChange.toStatus).toBe(OrderStatus.FAILED);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.IN_TRANSIT);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.FAILED);
     });
   });
 
-  describe('Order Cancellation Workflow', () => {
+  describe("Order Cancellation Workflow", () => {
     const cancellableStatuses = [
-      OrderStatus.PENDING,
-      OrderStatus.CONFIRMED,
-      OrderStatus.RESERVED,
-      OrderStatus.IN_TRANSIT,
-      OrderStatus.FAILED,
+      OrderStatusEnum.PENDING,
+      OrderStatusEnum.CONFIRMED,
+      OrderStatusEnum.RESERVED,
+      OrderStatusEnum.IN_TRANSIT,
+      OrderStatusEnum.FAILED,
     ];
 
     test.each(cancellableStatuses)(
-      'should cancel order from %s status',
+      "should cancel order from %s status",
       async (status) => {
         const order = createMockOrder({ status });
         const mockTransition = createMockOrderTransition({
@@ -275,121 +392,138 @@ describe('Order Workflow Service', () => {
             historyId: 1,
             orderId: 1,
             fromStatus: status,
-            toStatus: OrderStatus.CANCELLED,
+            toStatus: OrderStatusEnum.CANCELLED,
             changedBy: 1,
-            reason: 'Customer cancelled',
+            reason: "Customer cancelled",
             notes: null,
-            createdAt: new Date('2024-01-01T10:30:00Z'),
+            createdAt: new Date("2024-01-01T10:30:00Z"),
           },
         });
 
         mockOrderRepository.getOrderById.mockResolvedValue(order);
-        (orderWorkflowService.cancelOrder as jest.Mock).mockResolvedValue(mockTransition);
+        (orderWorkflowService.cancelOrder as jest.Mock).mockResolvedValue(
+          mockTransition
+        );
 
-        const result = await orderWorkflowService.cancelOrder(1, 'Customer cancelled', 1);
+        const result = await orderWorkflowService.cancelOrder(
+          1,
+          "Customer cancelled",
+          1
+        );
 
         expect(result).toEqual(mockTransition);
-        expect(result.statusChange.toStatus).toBe(OrderStatus.CANCELLED);
+        expect(result.statusChange.toStatus).toBe(OrderStatusEnum.CANCELLED);
       }
     );
 
     const nonCancellableStatuses = [
-      OrderStatus.DELIVERED,
-      OrderStatus.FULFILLED,
-      OrderStatus.CANCELLED,
+      OrderStatusEnum.DELIVERED,
+      OrderStatusEnum.FULFILLED,
+      OrderStatusEnum.CANCELLED,
     ];
 
     test.each(nonCancellableStatuses)(
-      'should reject cancellation from %s status',
+      "should reject cancellation from %s status",
       async (status) => {
         const order = createMockOrder({ status });
-        
+
         mockOrderRepository.getOrderById.mockResolvedValue(order);
         (orderWorkflowService.cancelOrder as jest.Mock).mockRejectedValue(
           new Error(`Order cannot be cancelled from status: ${status}`)
         );
 
-        await expect(orderWorkflowService.cancelOrder(1, 'Cannot cancel', 1))
-          .rejects.toThrow(`Order cannot be cancelled from status: ${status}`);
+        await expect(
+          orderWorkflowService.cancelOrder(1, "Cannot cancel", 1)
+        ).rejects.toThrow(`Order cannot be cancelled from status: ${status}`);
       }
     );
   });
 
-  describe('Failed Order Recovery', () => {
-    test('should allow retry from failed status', async () => {
+  describe("Failed Order Recovery", () => {
+    test("should allow retry from failed status", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
-          fromStatus: OrderStatus.FAILED,
-          toStatus: OrderStatus.IN_TRANSIT,
+          fromStatus: OrderStatusEnum.FAILED,
+          toStatus: OrderStatusEnum.IN_TRANSIT,
           changedBy: 2,
-          reason: 'Retry delivery',
+          reason: "Retry delivery",
           notes: null,
-          createdAt: new Date('2024-01-01T10:30:00Z'),
+          createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
       mockOrderRepository.getOrderById.mockResolvedValue(scenario.failedOrder);
-      (orderWorkflowService.startDelivery as jest.Mock).mockResolvedValue(mockTransition);
+      (orderWorkflowService.startDelivery as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
 
       const result = await orderWorkflowService.startDelivery(1, 2);
 
       expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatus.FAILED);
-      expect(result.statusChange.toStatus).toBe(OrderStatus.IN_TRANSIT);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.FAILED);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.IN_TRANSIT);
     });
 
-    test('should allow reservation restoration from failed status', async () => {
+    test("should allow reservation restoration from failed status", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
-          fromStatus: OrderStatus.FAILED,
-          toStatus: OrderStatus.RESERVED,
+          fromStatus: OrderStatusEnum.FAILED,
+          toStatus: OrderStatusEnum.RESERVED,
           changedBy: 1,
-          reason: 'Restore reservations',
+          reason: "Restore reservations",
           notes: null,
-          createdAt: new Date('2024-01-01T10:30:00Z'),
+          createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
       mockOrderRepository.getOrderById.mockResolvedValue(scenario.failedOrder);
-      (orderWorkflowService.reserveInventory as jest.Mock).mockResolvedValue(mockTransition);
+      (orderWorkflowService.reserveInventory as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
 
       const result = await orderWorkflowService.reserveInventory(1);
 
       expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatus.FAILED);
-      expect(result.statusChange.toStatus).toBe(OrderStatus.RESERVED);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.FAILED);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.RESERVED);
     });
   });
 
-  describe('Audit Trail Creation', () => {
-    test('should create status history for all transitions', async () => {
+  describe("Audit Trail Creation", () => {
+    test("should create status history for all transitions", async () => {
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
-          fromStatus: OrderStatus.PENDING,
-          toStatus: OrderStatus.CONFIRMED,
+          fromStatus: OrderStatusEnum.PENDING,
+          toStatus: OrderStatusEnum.CONFIRMED,
           changedBy: 1,
-          reason: 'Order confirmed by operator',
+          reason: "Order confirmed by operator",
           notes: null,
-          createdAt: new Date('2024-01-01T10:30:00Z'),
+          createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
       mockOrderRepository.getOrderById.mockResolvedValue(createMockOrder());
-      mockWorkflowRepository.createStatusHistoryWithTransaction.mockResolvedValue(undefined);
-      (orderWorkflowService.confirmOrder as jest.Mock).mockResolvedValue(mockTransition);
+      mockWorkflowRepository.createStatusHistoryWithTransaction.mockResolvedValue(
+        undefined
+      );
+      (orderWorkflowService.confirmOrder as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
 
       await orderWorkflowService.confirmOrder(1, 1);
 
       // In real implementation, this would be called internally
-      expect(mockWorkflowRepository.createStatusHistoryWithTransaction).not.toHaveBeenCalled();
+      expect(
+        mockWorkflowRepository.createStatusHistoryWithTransaction
+      ).not.toHaveBeenCalled();
       // But we expect the service to handle audit trail creation
     });
   });

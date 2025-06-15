@@ -12,13 +12,13 @@ import { orders } from "./orders";
 import { users } from "../user-management/users";
 
 // Define delivery status enum values
-export const DeliveryStatusEnum = {
-  SCHEDULED: "scheduled",
-  IN_TRANSIT: "in_transit",
-  DELIVERED: "delivered",
-  FAILED: "failed",
-  CANCELLED: "cancelled",
-} as const;
+export enum DeliveryStatusEnum {
+  SCHEDULED = "scheduled",
+  IN_TRANSIT = "in_transit",
+  DELIVERED = "delivered",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
+}
 
 // Define enum values restriction in database
 export const deliveryStatusEnum = pgEnum("order_delivery_status_enum", [

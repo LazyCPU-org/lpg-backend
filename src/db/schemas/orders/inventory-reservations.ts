@@ -1,35 +1,30 @@
 import { relations, sql } from "drizzle-orm";
 import {
-  pgTable,
-  serial,
+  check,
   integer,
   pgEnum,
+  pgTable,
+  serial,
   timestamp,
-  check,
 } from "drizzle-orm/pg-core";
-import { orders } from "./orders";
-import { storeAssignments } from "../locations/store-assignments";
-import { tankType } from "../inventory/tank-type";
 import { inventoryItem } from "../inventory/inventory-item";
-
-// Define reservation item type enum values
-export const ReservationItemTypeEnum = {
-  TANK: "tank",
-  ITEM: "item",
-} as const;
+import { tankType } from "../inventory/tank-type";
+import { storeAssignments } from "../locations/store-assignments";
+import { ItemTypeEnum } from "./order-items";
+import { orders } from "./orders";
 
 // Define reservation status enum values
-export const ReservationStatusEnum = {
-  ACTIVE: "active",
-  FULFILLED: "fulfilled",
-  CANCELLED: "cancelled",
-  EXPIRED: "expired",
-} as const;
+export enum ReservationStatusEnum {
+  ACTIVE = "active",
+  FULFILLED = "fulfilled",
+  CANCELLED = "cancelled",
+  EXPIRED = "expired",
+}
 
 // Define enum values restriction in database
 export const reservationItemTypeEnum = pgEnum("reservation_item_type_enum", [
-  ReservationItemTypeEnum.TANK,
-  ReservationItemTypeEnum.ITEM,
+  ItemTypeEnum.TANK,
+  ItemTypeEnum.ITEM,
 ]);
 
 export const reservationStatusEnum = pgEnum("reservation_status_enum", [
@@ -61,9 +56,7 @@ export const inventoryReservations = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
-  (table) => [
-    check("reserved_quantity_positive", sql`reserved_quantity > 0`),
-  ]
+  (table) => [check("reserved_quantity_positive", sql`reserved_quantity > 0`)]
 );
 
 // Define relations
