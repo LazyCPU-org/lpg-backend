@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node dist/server.js",
-    "build": "tsc",
+    "build": "tsc --module CommonJS --moduleResolution node --outDir dist && echo '{\"type\":\"commonjs\"}' > dist/package.json",
     "typecheck": "tsc --noEmit",
     "dev": "cross-env ENV=local tsx --watch server.ts",
     "dev:qa": "cross-env ENV=qa tsx server.ts",

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "module": "ESNext",
+    "module": "CommonJS",
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -13,6 +13,15 @@
     "rootDir": "./",
     "resolveJsonModule": true,
     "allowJs": true,
+    "declaration": true,
+    "declarationMap": true,
     "noEmit": false
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/db/seed.ts"
+  ]
 }

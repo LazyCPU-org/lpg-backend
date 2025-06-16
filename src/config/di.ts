@@ -25,6 +25,15 @@ import {
   PgTankAssignmentRepository,
 } from "../repositories/inventory";
 
+// Order repository imports
+import {
+  IOrderRepository,
+  IOrderWorkflowRepository,
+  PgInventoryReservationRepository,
+  PgOrderRepository,
+  PgOrderWorkflowRepository,
+} from "../repositories/orders";
+
 import { AuthService, IAuthService } from "../services/authService";
 import { DateService, IDateService } from "../services/dateService";
 import {
@@ -37,6 +46,17 @@ import {
   InventoryStatusHistoryService,
   InventoryTransactionService,
 } from "../services/inventory";
+
+// Order service imports
+import { PgCustomerRepository } from "../repositories";
+import {
+  IInventoryReservationService,
+  InventoryReservationService,
+  IOrderService,
+  IOrderWorkflowService,
+  OrderService,
+  OrderWorkflowService,
+} from "../services/orders";
 import { IStoreService, StoreService } from "../services/storeService";
 import { IUserService, UserService } from "../services/userService";
 import { PermissionManager } from "../utils/permission-actions";
@@ -71,6 +91,16 @@ export interface Container {
 
   // Inventory transaction module
   inventoryTransactionService: IInventoryTransactionService;
+
+  // Orders module - repositories
+  orderRepository: IOrderRepository;
+  orderWorkflowRepository: IOrderWorkflowRepository;
+  inventoryReservationRepository: PgInventoryReservationRepository;
+
+  // Orders module - services
+  orderService: IOrderService;
+  orderWorkflowService: IOrderWorkflowService;
+  inventoryReservationService: IInventoryReservationService;
 }
 
 export function createContainer(): Container {
@@ -127,6 +157,29 @@ export function createContainer(): Container {
     inventoryTransactionRepository
   );
 
+  // Create orders module dependencies (placeholder until services are fully implemented)
+  const inventoryReservationRepository = new PgInventoryReservationRepository();
+  const orderRepository = new PgOrderRepository();
+  const orderWorkflowRepository = new PgOrderWorkflowRepository();
+  const customerRepository = new PgCustomerRepository();
+
+  // Create inventory reservation service
+  const inventoryReservationService = new InventoryReservationService(
+    inventoryReservationRepository,
+    inventoryTransactionRepository
+  );
+
+  const orderService = new OrderService(
+    orderRepository,
+    customerRepository,
+    inventoryReservationService
+  );
+  const orderWorkflowService = new OrderWorkflowService(
+    orderRepository,
+    orderWorkflowRepository,
+    inventoryReservationService
+  );
+
   // Return container with all dependencies
   return {
     // Utils
@@ -158,5 +211,15 @@ export function createContainer(): Container {
 
     // Inventory transaction module
     inventoryTransactionService,
+
+    // Orders module - repositories
+    orderRepository,
+    orderWorkflowRepository,
+    inventoryReservationRepository,
+
+    // Orders module - services
+    orderService,
+    orderWorkflowService,
+    inventoryReservationService,
   };
 }

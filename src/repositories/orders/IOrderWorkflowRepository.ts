@@ -12,7 +12,7 @@ type DbTransaction = Parameters<
 >[0];
 
 // Workflow metrics interface
-export interface WorkflowMetrics {
+export type WorkflowMetrics = {
   totalOrders: number;
   ordersByStatus: Record<string, number>;
   averageProcessingTime: number; // Hours from pending to fulfilled
@@ -21,14 +21,14 @@ export interface WorkflowMetrics {
   deliverySuccessRate: number; // Percentage of delivered vs failed
   cancellationRate: number; // Percentage of cancelled orders
   topReasons: Array<{ reason: string; count: number }>; // Most common transition reasons
-}
+};
 
 // Status transition validation result
-export interface StatusTransitionResult {
+export type StatusTransitionResult = {
   valid: boolean;
   error?: string;
   allowedTransitions?: OrderStatusEnum[];
-}
+};
 
 export abstract class IOrderWorkflowRepository {
   // Status Management

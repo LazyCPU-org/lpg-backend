@@ -7,8 +7,8 @@ export { PgOrderRepository } from "./PgOrderRepository";
 // Order Workflow Repository
 export {
   IOrderWorkflowRepository,
-  StatusTransitionResult,
-  WorkflowMetrics,
+  type StatusTransitionResult,
+  type WorkflowMetrics,
 } from "./IOrderWorkflowRepository";
 export { PgOrderWorkflowRepository } from "./PgOrderWorkflowRepository";
 

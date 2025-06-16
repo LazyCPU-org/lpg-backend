@@ -257,6 +257,9 @@ export const GetOrdersRequestSchema = z.object({
   }).optional(),
   orderNumber: z.string().optional(),
   include: z.string().optional(),
+  page: z.number().positive().default(1).optional(),
+  limit: z.number().positive().default(10).optional(),
+  offset: z.number().min(0).default(0).optional(),
 });
 
 /**
@@ -317,9 +320,76 @@ export const CheckAvailabilityRequestSchema = z.object({
   ).min(1, "Debe incluir al menos un artículo"),
 });
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     UpdateOrderRequest:
+ *       type: object
+ *       properties:
+ *         customerName:
+ *           type: string
+ *           description: Updated customer name
+ *         customerPhone:
+ *           type: string
+ *           description: Updated customer phone
+ *         deliveryAddress:
+ *           type: string
+ *           description: Updated delivery address
+ *         locationReference:
+ *           type: string
+ *           description: Updated location reference
+ *         paymentMethod:
+ *           type: string
+ *           enum: [cash, yape, plin, transfer]
+ *           description: Updated payment method
+ *         paymentStatus:
+ *           type: string
+ *           enum: [pending, paid, debt]
+ *           description: Updated payment status
+ *         priority:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 5
+ *           description: Updated order priority
+ *         notes:
+ *           type: string
+ *           description: Updated order notes
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/OrderItemRequest'
+ *           description: Updated list of items
+ */
+export const UpdateOrderRequestSchema = z.object({
+  customerName: z.string().min(1, "Nombre del cliente es requerido").optional(),
+  customerPhone: z.string().min(1, "Teléfono del cliente es requerido").optional(),
+  deliveryAddress: z.string().min(1, "Dirección de entrega es requerida").optional(),
+  locationReference: z.string().optional(),
+  paymentMethod: z.enum([
+    PaymentMethodEnum.CASH,
+    PaymentMethodEnum.YAPE,
+    PaymentMethodEnum.PLIN,
+    PaymentMethodEnum.TRANSFER,
+  ], {
+    errorMap: () => ({ message: "Método de pago inválido" }),
+  }).optional(),
+  paymentStatus: z.enum([
+    PaymentStatusEnum.PENDING,
+    PaymentStatusEnum.PAID,
+    PaymentStatusEnum.DEBT,
+  ], {
+    errorMap: () => ({ message: "Estado de pago inválido" }),
+  }).optional(),
+  priority: z.number().min(1).max(5).optional(),
+  notes: z.string().optional(),
+  items: z.array(OrderItemRequestSchema).min(1, "Debe incluir al menos un artículo").optional(),
+});
+
 // Export types
 export type OrderItemRequest = z.infer<typeof OrderItemRequestSchema>;
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
+export type UpdateOrderRequest = z.infer<typeof UpdateOrderRequestSchema>;
 export type UpdateOrderStatusRequest = z.infer<typeof UpdateOrderStatusRequestSchema>;
 export type GetOrdersRequest = z.infer<typeof GetOrdersRequestSchema>;
 export type CheckAvailabilityRequest = z.infer<typeof CheckAvailabilityRequestSchema>;

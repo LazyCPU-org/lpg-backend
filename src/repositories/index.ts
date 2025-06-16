@@ -10,6 +10,6 @@ export * from "./inventory";
 export * from "./orders";
 
 // Individual Repositories (Legacy pattern - consider moving to domains)
-export { AuthRepository, PgAuthRepository } from "./authRepository";
+export { PgAuthRepository, type AuthRepository } from "./authRepository";
 // export { default as storeRepository } from "./storeRepository";
 // export { default as userRepository } from "./userRepository";

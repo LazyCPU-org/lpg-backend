@@ -1,29 +1,28 @@
-import { SafeUser } from "../dtos/response/userInterface";
-import crypto from "node:crypto";
 import bcrypt from "bcrypt";
-import { Auth, PreRegistration } from "../dtos/response/authInterface";
+import { and, eq, isNull } from "drizzle-orm";
+import crypto from "node:crypto";
+import { UserRoleEnum } from "../config/roles";
 import { db } from "../db";
 import {
-  superadmins,
-  users,
-  preRegistration,
-  userProfiles,
   admins,
-  operators,
   deliveryPersonnel,
+  operators,
+  preRegistration,
+  superadmins,
+  userProfiles,
+  users,
 } from "../db/schemas/user-management";
-import { and, eq, isNull } from "drizzle-orm";
 import { RegisterRequest, RegisterUserRequest } from "../dtos/request/authDTO";
-import { SudoAdmin, User } from "../dtos/response/userInterface";
-import { UserRoleEnum } from "../config/roles";
-import { UserStatus } from "../utils/status";
+import { Auth, PreRegistration } from "../dtos/response/authInterface";
+import { SafeUser, SudoAdmin, User } from "../dtos/response/userInterface";
 import {
   BadRequestError,
   ExpirationError,
   NotFoundError,
 } from "../utils/custom-errors";
+import { UserStatus } from "../utils/status";
 
-export interface AuthRepository {
+export type AuthRepository = {
   /* Register methods */
 
   // Creates a registration token, needed for first step of Register process
@@ -76,7 +75,7 @@ export interface AuthRepository {
 
   /* Authorization methods */
   updateUserPermissions(userId: number, permissions: string[]): Promise<void>;
-}
+};
 
 export class PgAuthRepository implements AuthRepository {
   async findUserByRole(

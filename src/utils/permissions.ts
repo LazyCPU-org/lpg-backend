@@ -8,6 +8,7 @@ export enum ModuleEnum {
   FINANCES = "finances",
   INVENTORY = "inventory",
   TRANSACTIONS = "transactions",
+  ORDERS = "orders",
   SETTINGS = "settings",
   SUPERADMINS = "superadmins",
   REPORTS = "reports",
@@ -22,6 +23,7 @@ export enum ActionEnum {
   UPDATE = "update",
   DELETE = "delete",
   MANAGE = "manage", // Special action that includes all CRUD operations
+  ADMIN = "admin", // Administrative actions (admin-only operations)
   EXPORT = "export", // For reports export
   APPROVE = "approve", // For approving transactions, etc.
   SELFMANAGE = "selfmanage", // Action specific to manage data about oneself
@@ -47,6 +49,8 @@ export const PermissionSets = {
     createPermission(ModuleEnum.STORES, ActionEnum.MANAGE),
     createPermission(ModuleEnum.INVENTORY, ActionEnum.MANAGE),
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.MANAGE),
+    createPermission(ModuleEnum.ORDERS, ActionEnum.MANAGE),
+    createPermission(ModuleEnum.ORDERS, ActionEnum.ADMIN),
     createPermission(ModuleEnum.REPORTS, ActionEnum.READ),
     createPermission(ModuleEnum.REPORTS, ActionEnum.EXPORT),
     createPermission(ModuleEnum.DASHBOARD, ActionEnum.READ),
@@ -60,6 +64,10 @@ export const PermissionSets = {
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.CREATE),
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.READ),
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.UPDATE),
+    createPermission(ModuleEnum.ORDERS, ActionEnum.CREATE),
+    createPermission(ModuleEnum.ORDERS, ActionEnum.READ),
+    createPermission(ModuleEnum.ORDERS, ActionEnum.UPDATE),
+    createPermission(ModuleEnum.ORDERS, ActionEnum.DELETE),
     createPermission(ModuleEnum.DASHBOARD, ActionEnum.READ),
   ],
 
@@ -68,6 +76,8 @@ export const PermissionSets = {
     createPermission(ModuleEnum.STORES, ActionEnum.READ),
     createPermission(ModuleEnum.INVENTORY, ActionEnum.SELFMANAGE),
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.SELFMANAGE),
+    createPermission(ModuleEnum.ORDERS, ActionEnum.READ),
+    createPermission(ModuleEnum.ORDERS, ActionEnum.UPDATE), // For delivery status updates
     createPermission(ModuleEnum.SETTINGS, ActionEnum.SELFMANAGE),
   ],
 

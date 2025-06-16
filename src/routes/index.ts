@@ -6,6 +6,7 @@ import { buildInventoryStatusHistoryRouter } from "./inventoryStatusHistoryRoute
 import { buildInventoryTransactionRouter } from "./inventoryTransactionRoutes";
 import { buildStoreRouter } from "./storeRoutes";
 import { buildUserRouter } from "./userRoutes";
+import { buildOrderRoutes } from "./orders";
 
 // Middleware to inject container into request
 const injectContainer = (container: Container) => {
@@ -38,6 +39,13 @@ export const defineRoutes = function (app: Express, container: Container) {
     container.inventoryTransactionService
   );
 
+  // Orders module router
+  const orderRouter = buildOrderRoutes({
+    orderService: container.orderService,
+    orderWorkflowService: container.orderWorkflowService,
+    inventoryReservationService: container.inventoryReservationService,
+  });
+
   // Mount routers
   app.use(`${v1BasePath}/auth`, authRouter);
   app.use(`${v1BasePath}/users`, userRouter);
@@ -47,4 +55,7 @@ export const defineRoutes = function (app: Express, container: Container) {
   app.use(`${v1BasePath}/inventory/assignments`, inventoryAssignments);
   app.use(`${v1BasePath}/inventory/status-history`, inventoryStatusHistory);
   app.use(`${v1BasePath}/inventory/transactions`, inventoryTransactions);
+
+  // Orders module routes
+  app.use(`${v1BasePath}/orders`, orderRouter);
 };

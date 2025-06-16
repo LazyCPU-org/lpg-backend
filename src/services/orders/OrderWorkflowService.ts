@@ -11,9 +11,6 @@ import { BadRequestError, NotFoundError } from "../../utils/custom-errors";
 import { IInventoryReservationService } from "../inventory/reservations/IInventoryReservationService";
 import { IOrderWorkflowService } from "./IOrderWorkflowService";
 
-// Transaction type for consistency
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
 export class OrderWorkflowService implements IOrderWorkflowService {
   constructor(
     private orderRepository: IOrderRepository,
@@ -21,7 +18,12 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     private reservationService: IInventoryReservationService
   ) {}
 
-  async confirmOrder(
+  async confirmOrder(orderId: number, userId: number): Promise<any> {
+    const detailed = await this.confirmOrderDetailed(orderId, userId);
+    return detailed;
+  }
+
+  async confirmOrderDetailed(
     orderId: number,
     userId: number,
     notes?: string
@@ -71,7 +73,12 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     });
   }
 
-  async reserveInventory(
+  async reserveInventory(orderId: number): Promise<any> {
+    const detailed = await this.reserveInventoryDetailed(orderId, 1); // Default user ID
+    return detailed;
+  }
+
+  async reserveInventoryDetailed(
     orderId: number,
     userId: number
   ): Promise<{
@@ -137,7 +144,12 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     });
   }
 
-  async startDelivery(
+  async startDelivery(orderId: number, deliveryUserId: number): Promise<any> {
+    const detailed = await this.startDeliveryDetailed(orderId, deliveryUserId);
+    return detailed;
+  }
+
+  async startDeliveryDetailed(
     orderId: number,
     deliveryUserId: number,
     specialInstructions?: string
@@ -186,7 +198,12 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     });
   }
 
-  async completeDelivery(
+  async completeDelivery(orderId: number, deliveryUserId: number): Promise<any> {
+    const detailed = await this.completeDeliveryDetailed(orderId, deliveryUserId);
+    return detailed;
+  }
+
+  async completeDeliveryDetailed(
     orderId: number,
     deliveryUserId: number,
     customerSignature?: string,
@@ -250,7 +267,12 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     });
   }
 
-  async failDelivery(
+  async failDelivery(orderId: number, reason: string): Promise<any> {
+    const detailed = await this.failDeliveryDetailed(orderId, reason, 1, false); // Default values
+    return detailed;
+  }
+
+  async failDeliveryDetailed(
     orderId: number,
     reason: string,
     userId: number,
@@ -300,7 +322,12 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     });
   }
 
-  async cancelOrder(
+  async cancelOrder(orderId: number, reason: string, userId: number): Promise<any> {
+    const detailed = await this.cancelOrderDetailed(orderId, reason, userId);
+    return detailed;
+  }
+
+  async cancelOrderDetailed(
     orderId: number,
     reason: string,
     userId: number
@@ -357,7 +384,21 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     });
   }
 
-  async validateTransition(
+  validateTransition(fromStatus: string, toStatus: string): boolean {
+    // Simple validation logic
+    const validTransitions: Record<string, string[]> = {
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["reserved", "cancelled"],
+      reserved: ["in_transit", "cancelled"],
+      in_transit: ["delivered", "failed", "cancelled"],
+      delivered: ["fulfilled"],
+      failed: ["in_transit", "cancelled"],
+    };
+
+    return validTransitions[fromStatus]?.includes(toStatus) || false;
+  }
+
+  async validateTransitionDetailed(
     orderId: number,
     toStatus: OrderStatusEnum,
     userId: number

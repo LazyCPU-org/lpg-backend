@@ -138,7 +138,69 @@ export class OrderService implements IOrderService {
     await this.orderRepository.delete(orderId);
   }
 
-  async calculateOrderTotal(
+  async validateOrderRequest(
+    request: CreateOrderRequest
+  ): Promise<{ valid: boolean; errors: string[] }> {
+    const errors: string[] = [];
+
+    // Customer validation
+    if (!request.customerId && !request.customerName) {
+      errors.push("Customer name is required when customer ID is not provided");
+    }
+
+    // Store validation  
+    const storeAvailable = await this.validateStoreAvailability(request.storeId);
+    if (!storeAvailable) {
+      errors.push("Store is not available for orders");
+    }
+
+    // Item validation
+    if (!request.items || request.items.length === 0) {
+      errors.push("Order must contain at least one item");
+    }
+
+    return { valid: errors.length === 0, errors };
+  }
+
+  async validateStoreAvailability(storeId: number): Promise<boolean> {
+    // Simple implementation - could be enhanced with business rules
+    return storeId > 0;
+  }
+
+  calculateOrderTotal(
+    items: Array<{
+      itemType: "tank" | "item";
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      quantity: number;
+      unitPrice: string;
+    }>
+  ): string {
+    let subtotal = 0;
+
+    for (const item of items) {
+      const unitPrice = parseFloat(item.unitPrice);
+      const lineTotal = unitPrice * item.quantity;
+      subtotal += lineTotal;
+    }
+
+    const total = subtotal;
+
+    return total.toFixed(2);
+  }
+
+  generateOrderNumber(): string {
+    // Simple order number generation
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
+    const randomSuffix = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+
+    return `ORD-${dateStr}-${randomSuffix}`;
+  }
+
+  async calculateOrderTotalDetailed(
     items: Array<{
       itemType: "tank" | "item";
       tankTypeId?: number;
@@ -169,8 +231,7 @@ export class OrderService implements IOrderService {
     };
   }
 
-  async generateOrderNumber(storeId: number): Promise<string> {
-    // Simple order number generation
+  async generateOrderNumberForStore(storeId: number): Promise<string> {
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
     const randomSuffix = Math.floor(Math.random() * 1000)
