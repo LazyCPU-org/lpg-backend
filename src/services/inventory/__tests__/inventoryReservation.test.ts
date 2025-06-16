@@ -9,54 +9,33 @@ import {
   createMockAvailabilityRequest,
   createMockAvailabilityResult,
   createMockReservation,
-} from "./__mocks__/orderTestData";
+} from "./__mocks__/inventoryTestData";
 
 import { ReservationStatusEnum } from "../../../db/schemas/orders/inventory-reservations";
 
 import {
   createMockReservationRepository,
   IReservationRepository,
-} from "./__mocks__/mockOrderRepository";
+} from "./__mocks__/mockInventoryRepository";
 
 import {
-  AvailabilityResult,
   FulfillmentResult,
-  InventoryReservationType,
   ReservationResult,
   RestoreResult,
 } from "../../../dtos/response/orderInterface";
 
 import { ItemTypeEnum } from "../../../db/schemas";
-import { CheckAvailabilityRequest } from "../../../dtos/request/orderDTO";
-
-// Mock service interface (to be implemented)
-interface IReservationService {
-  checkAvailability(
-    request: CheckAvailabilityRequest
-  ): Promise<AvailabilityResult>;
-  createReservationsForOrder(orderId: number): Promise<ReservationResult>;
-  fulfillReservations(
-    orderId: number,
-    userId: number
-  ): Promise<FulfillmentResult>;
-  restoreReservations(orderId: number, reason: string): Promise<RestoreResult>;
-  getActiveReservations(orderId: number): Promise<InventoryReservationType[]>;
-  calculateAvailableQuantity(
-    storeId: number,
-    itemType: string,
-    itemId: number
-  ): Promise<number>;
-}
+import { IInventoryReservationService } from "../reservations/IInventoryReservationService";
 
 describe("Inventory Reservation Service", () => {
   let mockReservationRepository: jest.Mocked<IReservationRepository>;
-  let reservationService: IReservationService;
+  let reservationService: IInventoryReservationService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockReservationRepository = createMockReservationRepository();
 
-    // Mock implementation will be injected when service is created
+    // Mock implementation matching actual interface
     reservationService = {
       checkAvailability: jest.fn(),
       createReservationsForOrder: jest.fn(),
@@ -64,7 +43,15 @@ describe("Inventory Reservation Service", () => {
       restoreReservations: jest.fn(),
       getActiveReservations: jest.fn(),
       calculateAvailableQuantity: jest.fn(),
-    };
+      // Legacy/additional methods from actual interface
+      createReservation: jest.fn(),
+      modifyReservation: jest.fn(),
+      cancelReservation: jest.fn(),
+      checkAvailabilityLegacy: jest.fn(),
+      fulfillReservation: jest.fn(),
+      restoreReservation: jest.fn(),
+      getReservationMetrics: jest.fn(),
+    } as jest.Mocked<IInventoryReservationService>;
   });
 
   describe("Availability Checking", () => {

@@ -1,5 +1,5 @@
 import type { OrderStatusEnum } from "../../db/schemas/orders/order-status-types";
-import type { CreateOrderRequest } from "../../dtos/request/orderDTO";
+import type { CreateOrderRequest, OrderItemRequest } from "../../dtos/request/orderDTO";
 import type { OrderWithDetails } from "../../dtos/response/orderInterface";
 
 /**
@@ -36,8 +36,20 @@ export abstract class IOrderService {
     userId: number
   ): Promise<void>;
 
-  // Order Calculations
-  abstract calculateOrderTotal(
+  // Test-aligned validation methods (primary interface)
+  abstract validateOrderRequest(
+    request: CreateOrderRequest
+  ): Promise<{ valid: boolean; errors: string[] }>;
+
+  abstract validateStoreAvailability(storeId: number): Promise<boolean>;
+
+  // Order Calculations (test-aligned methods)  
+  abstract calculateOrderTotal(items: OrderItemRequest[]): string;
+
+  abstract generateOrderNumber(): string;
+
+  // Legacy calculation methods (for backward compatibility)
+  abstract calculateOrderTotalDetailed(
     items: Array<{
       itemType: "tank" | "item";
       tankTypeId?: number;
@@ -51,7 +63,7 @@ export abstract class IOrderService {
     total: string;
   }>;
 
-  abstract generateOrderNumber(storeId: number): Promise<string>;
+  abstract generateOrderNumberForStore(storeId: number): Promise<string>;
 
   // Order Retrieval
   abstract findOrders(

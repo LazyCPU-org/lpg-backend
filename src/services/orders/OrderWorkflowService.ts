@@ -8,7 +8,7 @@ import { IOrderRepository } from "../../repositories/orders/IOrderRepository";
 import { IOrderWorkflowRepository } from "../../repositories/orders/IOrderWorkflowRepository";
 import { TimelineItem } from "../../repositories/orders/orderTypes";
 import { BadRequestError, NotFoundError } from "../../utils/custom-errors";
-import { IInventoryReservationService } from "./IInventoryReservationService";
+import { IInventoryReservationService } from "../inventory/reservations/IInventoryReservationService";
 import { IOrderWorkflowService } from "./IOrderWorkflowService";
 
 // Transaction type for consistency

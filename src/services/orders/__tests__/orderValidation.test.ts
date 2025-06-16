@@ -35,17 +35,7 @@ import {
   CreateOrderRequest,
   OrderItemRequest,
 } from "../../../dtos/request/orderDTO";
-
-// Mock service interface (to be implemented)
-interface IOrderService {
-  createOrder(request: CreateOrderRequest): Promise<OrderWithDetails>;
-  validateOrderRequest(
-    request: CreateOrderRequest
-  ): Promise<{ valid: boolean; errors: string[] }>;
-  calculateOrderTotal(items: OrderItemRequest[]): string;
-  generateOrderNumber(): string;
-  validateStoreAvailability(storeId: number): Promise<boolean>;
-}
+import { IOrderService } from "../IOrderService";
 
 describe("Order Validation Service", () => {
   let mockOrderRepository: jest.Mocked<IOrderRepository>;
@@ -55,14 +45,28 @@ describe("Order Validation Service", () => {
     jest.clearAllMocks();
     mockOrderRepository = createMockOrderRepository();
 
-    // Mock implementation will be injected when service is created
+    // Mock implementation matching actual interface
     orderService = {
       createOrder: jest.fn(),
       validateOrderRequest: jest.fn(),
       calculateOrderTotal: jest.fn(),
       generateOrderNumber: jest.fn(),
       validateStoreAvailability: jest.fn(),
-    };
+      // Additional methods from actual interface
+      getOrder: jest.fn(),
+      updateOrder: jest.fn(),
+      deleteOrder: jest.fn(),
+      calculateOrderTotalDetailed: jest.fn(),
+      generateOrderNumberForStore: jest.fn(),
+      findOrders: jest.fn(),
+      findOrdersByCustomer: jest.fn(),
+      searchOrders: jest.fn(),
+      createQuickOrder: jest.fn(),
+      getCustomerOrderHistory: jest.fn(),
+      getOrderMetrics: jest.fn(),
+      canModifyOrder: jest.fn(),
+      canCancelOrder: jest.fn(),
+    } as jest.Mocked<IOrderService>;
   });
 
   describe("Order Request Validation", () => {

@@ -17,16 +17,7 @@ import {
   createMockOrderWorkflowRepository,
 } from "./__mocks__/mockOrderRepository";
 
-// Mock service interface (to be implemented)
-interface IOrderWorkflowService {
-  confirmOrder(orderId: number, userId: number): Promise<any>;
-  reserveInventory(orderId: number): Promise<any>;
-  startDelivery(orderId: number, deliveryUserId: number): Promise<any>;
-  completeDelivery(orderId: number, deliveryUserId: number): Promise<any>;
-  failDelivery(orderId: number, reason: string): Promise<any>;
-  cancelOrder(orderId: number, reason: string, userId: number): Promise<any>;
-  validateTransition(fromStatus: string, toStatus: string): boolean;
-}
+import { IOrderWorkflowService } from "../IOrderWorkflowService";
 
 describe("Order Workflow Service", () => {
   let mockOrderRepository: jest.Mocked<any>;
@@ -38,7 +29,7 @@ describe("Order Workflow Service", () => {
     mockOrderRepository = createMockOrderRepository();
     mockWorkflowRepository = createMockOrderWorkflowRepository();
 
-    // Mock implementation will be injected when service is created
+    // Mock implementation matching actual interface
     orderWorkflowService = {
       confirmOrder: jest.fn(),
       reserveInventory: jest.fn(),
@@ -47,7 +38,20 @@ describe("Order Workflow Service", () => {
       failDelivery: jest.fn(),
       cancelOrder: jest.fn(),
       validateTransition: jest.fn(),
-    };
+      // Additional methods from actual interface
+      confirmOrderDetailed: jest.fn(),
+      reserveInventoryDetailed: jest.fn(),
+      startDeliveryDetailed: jest.fn(),
+      completeDeliveryDetailed: jest.fn(),
+      failDeliveryDetailed: jest.fn(),
+      cancelOrderDetailed: jest.fn(),
+      validateTransitionDetailed: jest.fn(),
+      canUserPerformTransition: jest.fn(),
+      getAvailableTransitions: jest.fn(),
+      getOrderWorkflowHistory: jest.fn(),
+      bulkTransition: jest.fn(),
+      getWorkflowMetrics: jest.fn(),
+    } as jest.Mocked<IOrderWorkflowService>;
   });
 
   describe("Status Transition Validation", () => {

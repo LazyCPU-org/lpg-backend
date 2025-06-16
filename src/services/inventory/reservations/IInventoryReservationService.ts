@@ -1,4 +1,11 @@
-import type { InventoryReservationType } from "../../dtos/response/orderInterface";
+import type { CheckAvailabilityRequest } from "../../../dtos/request/orderDTO";
+import type {
+  AvailabilityResult,
+  FulfillmentResult,
+  InventoryReservationType,
+  ReservationResult,
+  RestoreResult,
+} from "../../../dtos/response/orderInterface";
 
 /**
  * Inventory Reservation Service Interface
@@ -7,6 +14,35 @@ import type { InventoryReservationType } from "../../dtos/response/orderInterfac
  * following simple parameter patterns from inventory services.
  */
 export abstract class IInventoryReservationService {
+  // Test-aligned methods (primary interface)
+  abstract checkAvailability(
+    request: CheckAvailabilityRequest
+  ): Promise<AvailabilityResult>;
+
+  abstract createReservationsForOrder(
+    orderId: number
+  ): Promise<ReservationResult>;
+
+  abstract fulfillReservations(
+    orderId: number,
+    userId: number
+  ): Promise<FulfillmentResult>;
+
+  abstract restoreReservations(
+    orderId: number,
+    reason: string
+  ): Promise<RestoreResult>;
+
+  abstract getActiveReservations(
+    orderId: number
+  ): Promise<InventoryReservationType[]>;
+
+  abstract calculateAvailableQuantity(
+    storeId: number,
+    itemType: string,
+    itemId: number
+  ): Promise<number>;
+
   // Core Reservation Management
   abstract createReservation(
     orderId: number,
@@ -53,8 +89,8 @@ export abstract class IInventoryReservationService {
     errors: string[];
   }>;
 
-  // Availability Checking
-  abstract checkAvailability(
+  // Legacy availability checking (kept for backward compatibility)
+  abstract checkAvailabilityLegacy(
     storeId: number,
     items: Array<{
       itemType: "tank" | "item";

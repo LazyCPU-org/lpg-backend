@@ -1,22 +1,25 @@
-import { ItemTypeEnum, ReservationStatusEnum } from "../../db/schemas/orders";
+import {
+  ItemTypeEnum,
+  ReservationStatusEnum,
+} from "../../../db/schemas/orders";
 import type {
   InventoryReservationType,
   InventoryReservationWithDetails,
-} from "../../dtos/response/orderInterface";
+} from "../../../dtos/response/orderInterface";
 
 // Transaction type for dependency injection (following inventory pattern)
 type DbTransaction = Parameters<
-  Parameters<typeof import("../../db").db.transaction>[0]
+  Parameters<typeof import("../../../db").db.transaction>[0]
 >[0];
 
-// Availability check interfaces
-export interface AvailabilityCheckItem {
+// Availability check types
+export type AvailabilityCheckItem = {
   itemType: "tank" | "item";
   itemId: number; // tankTypeId or inventoryItemId
   requiredQuantity: number;
-}
+};
 
-export interface AvailabilityResult {
+export type AvailabilityResult = {
   available: boolean;
   items: Array<{
     itemType: "tank" | "item";
@@ -28,18 +31,18 @@ export interface AvailabilityResult {
     sufficient: boolean;
   }>;
   message?: string; // Descriptive message for UX
-}
+};
 
 // Order item request for reservation
-export interface OrderItemRequest {
+export type OrderItemRequest = {
   itemType: "tank" | "item";
   itemId: number; // tankTypeId or inventoryItemId
   quantity: number;
   unitPrice?: string; // Optional for cost calculation
-}
+};
 
-// Reservation metrics interface
-export interface ReservationMetrics {
+// Reservation metrics type
+export type ReservationMetrics = {
   totalActiveReservations: number;
   totalReservedValue: string; // Monetary value of reserved inventory
   reservationsByStatus: Record<string, number>;
@@ -52,10 +55,10 @@ export interface ReservationMetrics {
     totalReserved: number;
     totalValue: string;
   }>;
-}
+};
 
 // Reservation summary for orders
-export interface OrderReservationSummary {
+export type OrderReservationSummary = {
   orderId: number;
   totalReservations: number;
   reservationStatus: "complete" | "partial" | "failed";
@@ -68,7 +71,7 @@ export interface OrderReservationSummary {
   }>;
   totalValue: string;
   expiresAt?: Date;
-}
+};
 
 export abstract class IInventoryReservationRepository {
   // Core Reservation Operations

@@ -12,7 +12,7 @@ import type {
 import { ICustomerRepository } from "../../repositories/customers/ICustomerRepository";
 import { IOrderRepository } from "../../repositories/orders/IOrderRepository";
 import { BadRequestError, NotFoundError } from "../../utils/custom-errors";
-import { IInventoryReservationService } from "./IInventoryReservationService";
+import { IInventoryReservationService } from "../inventory/reservations/IInventoryReservationService";
 import { IOrderService } from "./IOrderService";
 
 // Transaction type for consistency

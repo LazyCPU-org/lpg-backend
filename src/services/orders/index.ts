@@ -9,5 +9,5 @@ export { IOrderWorkflowService } from "./IOrderWorkflowService";
 export { OrderWorkflowService } from "./OrderWorkflowService";
 
 // Inventory Reservation Service
-export { IInventoryReservationService } from "./IInventoryReservationService";
-export { InventoryReservationService } from "./InventoryReservationService";
+export { IInventoryReservationService } from "../inventory/reservations/IInventoryReservationService";
+export { InventoryReservationService } from "../inventory/reservations/InventoryReservationService";

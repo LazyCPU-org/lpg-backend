@@ -231,7 +231,7 @@ export const UpdateOrderStatusRequestSchema = z.object({
  *           description: Filter by order number (optional)
  *         include:
  *           type: string
- *           description: Include relations (comma-separated: items,reservations,transactions,deliveries,customer,invoice)
+ *           description: Include relations (comma-separated - items,reservations,transactions,deliveries,customer,invoice)
  */
 export const GetOrdersRequestSchema = z.object({
   storeId: z.number().positive("ID de tienda inválido").optional(),

@@ -18,13 +18,13 @@ Tests the core order status transitions and workflow business logic.
 **Key Areas:**
 - Status transition validation (PENDING → CONFIRMED → RESERVED → etc.)
 - Order confirmation workflow
-- Inventory reservation workflow  
+- Order processing workflow  
 - Delivery workflow (start/complete/fail)
 - Order cancellation workflow
 - Failed order recovery
 - Audit trail creation
 
-**Coverage:** 114 test scenarios covering all valid and invalid transitions
+**Coverage:** Comprehensive test scenarios covering all valid and invalid transitions
 
 #### `orderValidation.test.ts`
 Tests order creation validation and business rule enforcement.
@@ -40,20 +40,6 @@ Tests order creation validation and business rule enforcement.
 
 **Coverage:** Comprehensive validation scenarios for all order fields
 
-#### `inventoryReservation.test.ts`
-Tests the inventory reservation system and integration with current inventory.
-
-**Key Areas:**
-- Availability checking (current - reserved = available)
-- Reservation creation (atomic, all-or-none)
-- Reservation fulfillment (conversion to transactions)
-- Reservation restoration (cancellation/failure recovery)
-- Available quantity calculations
-- Active reservations management
-- Integration with current inventory system
-- Error handling and edge cases
-
-**Coverage:** Complete reservation lifecycle from creation to fulfillment/restoration
 
 ## Design Principles
 
@@ -74,7 +60,7 @@ Tests the inventory reservation system and integration with current inventory.
 #### 1. **Foundation Tests (Priority 1)**
 Core business logic that must work correctly:
 - Order status transitions
-- Reservation creation/fulfillment
+- Order workflow management
 - Validation rules
 - Total calculations
 
@@ -138,8 +124,8 @@ const availabilityRequest = createMockAvailabilityRequest();
 ### ✅ Phase 1: Foundation Tests (Complete)
 - Order workflow tests
 - Validation tests  
-- Reservation tests
 - Mock infrastructure
+- Repository abstractions
 
 ### 🔄 Phase 2: Service Implementation (Next)
 - Create actual service classes

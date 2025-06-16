@@ -22,6 +22,18 @@ export {
   IConsolidationWorkflow,
 } from "./consolidationWorkflow";
 
+// Export reservation repository classes
+export { IInventoryReservationRepository, PgInventoryReservationRepository } from "./reservations";
+
+// Export reservation types - these are type-only exports
+export type {
+  AvailabilityCheckItem,
+  AvailabilityResult,
+  OrderItemRequest,
+  OrderReservationSummary,
+  ReservationMetrics,
+} from "./reservations";
+
 // Future inventory repositories can be added here:
 // export { ITankTypeRepository } from './ITankTypeRepository';
 // export { PgTankTypeRepository } from './PgTankTypeRepository';
