@@ -23,7 +23,7 @@ main (protected) ← develop ← feature branches
 3. **Release**: Merge `develop` into `main` when ready for production
 4. **Hotfixes**: Create directly from `main`, merge to both `main` and `develop`
 
-## Setting Up Branch Protection
+## Setting Up Branch Protection with GitHub Rulesets
 
 ### Step 1: Create and Setup Develop Branch
 
@@ -37,50 +37,107 @@ git checkout -b develop
 git push -u origin develop
 ```
 
-### Step 2: Configure Branch Protection Rules
+### Step 2: Configure Repository Rulesets
 
-#### For `main` Branch:
+GitHub now uses "Rulesets" instead of legacy branch protection rules. Here's how to set them up:
 
-1. **Go to Repository Settings** → **Branches** → **Add rule**
+#### Creating Main Branch Ruleset:
 
-2. **Branch name pattern**: `main`
+1. **Go to Repository Settings** → **Rules** → **Rulesets** → **New ruleset**
 
-3. **Protection Settings**:
-   - ✅ **Require a pull request before merging**
-     - ✅ Require approvals: `1` (minimum)
-     - ✅ Dismiss stale reviews when new commits are pushed
-     - ✅ Require review from code owners (if you have CODEOWNERS file)
+2. **Ruleset Configuration**:
+   - **Ruleset name**: `Main Branch Protection`
+   - **Enforcement status**: `Active`
+   - **Bypass list**: Leave empty (applies to everyone including admins)
+
+3. **Target Branches**:
+   - **Add target** → **Include by pattern**
+   - **Branch pattern**: `main`
+
+4. **Rules Configuration**:
    
-   - ✅ **Require status checks to pass before merging**
-     - ✅ Require branches to be up to date before merging
-     - ✅ Required status checks:
+   **Branch Rules:**
+   - ✅ **Restrict deletions** (prevents accidental branch deletion)
+   - ✅ **Restrict force pushes** (prevents rewriting history)
+   - ✅ **Require linear history** (optional, keeps clean history)
+   - ✅ **Require signed commits** (recommended for security)
+
+   **Pull Request Rules:**
+   - ✅ **Require a pull request before merging**
+     - **Required approving reviews**: `1`
+     - ✅ **Dismiss stale pull request approvals when new commits are pushed**
+     - ✅ **Require review from code owners** (if you have CODEOWNERS file)
+     - ✅ **Require approval of the most recent reviewable push**
+   
+   - ✅ **Require status checks to pass**
+     - ✅ **Require branches to be up to date before merging**
+     - **Required status checks** (add these):
        - `TypeScript Type Check`
-       - `Build Application`
-       - `Quality Gate` (for releases)
+       - `Build Application` 
+       - `Quality Gate`
    
    - ✅ **Require conversation resolution before merging**
-   - ✅ **Require signed commits** (recommended)
-   - ✅ **Require linear history** (optional, keeps history clean)
-   - ✅ **Include administrators** (applies rules to admins too)
-   - ✅ **Restrict pushes that create files or directories**
+   - ✅ **Block force pushes** (additional protection)
 
-#### For `develop` Branch:
+#### Creating Develop Branch Ruleset:
 
-1. **Go to Repository Settings** → **Branches** → **Add rule**
+1. **Go to Repository Settings** → **Rules** → **Rulesets** → **New ruleset**
 
-2. **Branch name pattern**: `develop`
+2. **Ruleset Configuration**:
+   - **Ruleset name**: `Develop Branch Protection`
+   - **Enforcement status**: `Active`
+   - **Bypass list**: Leave empty or add admin users if needed
 
-3. **Protection Settings** (less restrictive):
-   - ✅ **Require a pull request before merging**
-     - ✅ Require approvals: `1`
-     - ✅ Dismiss stale reviews when new commits are pushed
+3. **Target Branches**:
+   - **Add target** → **Include by pattern**
+   - **Branch pattern**: `develop`
+
+4. **Rules Configuration** (less restrictive than main):
    
-   - ✅ **Require status checks to pass before merging**
-     - ✅ Required status checks:
+   **Branch Rules:**
+   - ✅ **Restrict deletions**
+   - ✅ **Restrict force pushes**
+
+   **Pull Request Rules:**
+   - ✅ **Require a pull request before merging**
+     - **Required approving reviews**: `1`
+     - ✅ **Dismiss stale pull request approvals when new commits are pushed**
+   
+   - ✅ **Require status checks to pass**
+     - ✅ **Require branches to be up to date before merging**
+     - **Required status checks**:
        - `TypeScript Type Check`
        - `Build Application`
    
    - ✅ **Require conversation resolution before merging**
+
+#### Alternative: Single Comprehensive Ruleset
+
+You can also create one ruleset that covers both branches:
+
+1. **Ruleset name**: `Branch Protection Rules`
+2. **Target Branches**: 
+   - **Add target** → **Include by pattern** → `main`
+   - **Add target** → **Include by pattern** → `develop`
+3. **Apply the same rules as above** (GitHub will enforce them on both branches)
+
+#### Finding Required Status Check Names:
+
+To get the exact names for required status checks:
+
+1. **Go to your repository** → **Actions** tab
+2. **Click on a recent workflow run** 
+3. **Look at the job names** in the left sidebar:
+   - These are the exact names to use in "Required status checks"
+   - For example: `TypeScript Type Check`, `Build Application`, `Run Tests (Optional)`
+
+4. **Alternative method**: 
+   - Create the ruleset first without status checks
+   - Make a test PR to trigger CI
+   - Go back to **Rules** → **Rulesets** → **Edit your ruleset**
+   - The status check names will now appear in a dropdown
+
+**Important**: Status check names are case-sensitive and must match exactly.
 
 ### Step 3: Organization Settings (for LazyCPU-org)
 
