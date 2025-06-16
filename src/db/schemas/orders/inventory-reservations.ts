@@ -10,7 +10,7 @@ import {
 import { inventoryItem } from "../inventory/inventory-item";
 import { tankType } from "../inventory/tank-type";
 import { storeAssignments } from "../locations/store-assignments";
-import { ItemTypeEnum } from "./order-items";
+import { ItemTypeEnum } from "./order-types";
 import { orders } from "./orders";
 
 // Define reservation status enum values

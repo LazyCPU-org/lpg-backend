@@ -37,8 +37,12 @@ export const orders = pgTable(
     locationReference: text("location_reference"),
     status: orderStatusEnum().default(OrderStatusEnum.PENDING),
     priority: integer("priority").default(1),
-    paymentMethod: paymentMethodEnum().notNull().default(PaymentMethodEnum.CASH),
-    paymentStatus: paymentStatusEnum().notNull().default(PaymentStatusEnum.PENDING),
+    paymentMethod: paymentMethodEnum()
+      .notNull()
+      .default(PaymentMethodEnum.CASH),
+    paymentStatus: paymentStatusEnum()
+      .notNull()
+      .default(PaymentStatusEnum.PENDING),
     totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
     createdBy: integer("created_by")
       .notNull()
@@ -82,8 +86,6 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     references: [invoices.orderId],
   }),
 }));
-
-// Note: Zod schemas moved to DTOs following inventory pattern
 
 export default orders;
 

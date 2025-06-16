@@ -13,19 +13,7 @@ import { orders } from "./orders";
 import { tankType } from "../inventory/tank-type";
 import { inventoryItem } from "../inventory/inventory-item";
 import { users } from "../user-management/users";
-
-// Define item type enum values
-export enum ItemTypeEnum {
-  TANK = "tank",
-  ITEM = "item", // Changed from ACCESSORY to ITEM to match inventory
-}
-
-// Define delivery status enum values
-export enum DeliveryStatusEnum {
-  PENDING = "pending",
-  DELIVERED = "delivered",
-  CANCELLED = "cancelled",
-}
+import { ItemTypeEnum, DeliveryStatusEnum } from "./order-types";
 
 // Define enum values restriction in database
 export const itemTypeEnum = pgEnum("order_item_type_enum", [

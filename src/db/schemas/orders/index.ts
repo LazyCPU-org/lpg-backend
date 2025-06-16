@@ -13,13 +13,15 @@ import {
   deliveryStatusEnum as orderDeliveryStatusEnum,
 } from "./order-deliveries";
 import {
-  DeliveryStatusEnum,
-  deliveryStatusEnum,
-  ItemTypeEnum,
-  itemTypeEnum,
   orderItems,
   orderItemsRelations,
+  deliveryStatusEnum,
+  itemTypeEnum,
 } from "./order-items";
+import {
+  DeliveryStatusEnum,
+  ItemTypeEnum,
+} from "./order-types";
 import {
   orderStatusHistory,
   orderStatusHistoryRelations,
@@ -28,7 +30,9 @@ import {
   OrderStatusEnum,
   orderStatusEnum,
   PaymentMethodEnum,
+  paymentMethodEnum,
   PaymentStatusEnum,
+  paymentStatusEnum,
 } from "./order-status-types";
 import {
   orderTransactionLinks,
@@ -61,14 +65,16 @@ export {
   // Order status types
   OrderStatusEnum,
   orderStatusEnum,
+  PaymentMethodEnum,
+  paymentMethodEnum,
+  PaymentStatusEnum,
+  paymentStatusEnum,
   // Status history
   orderStatusHistory,
   orderStatusHistoryRelations,
   // Transaction links
   orderTransactionLinks,
   orderTransactionLinksRelations,
-  PaymentMethodEnum,
-  PaymentStatusEnum,
   reservationItemTypeEnum,
   ReservationStatusEnum,
   reservationStatusEnum,

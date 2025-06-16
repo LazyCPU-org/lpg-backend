@@ -22,7 +22,7 @@ import {
   PaymentStatusEnum,
 } from "../../../db/schemas/orders/order-status-types";
 
-import { ItemTypeEnum } from "../../../db/schemas/orders/order-items";
+import { ItemTypeEnum } from "../../../db/schemas/orders/order-types";
 
 import {
   createMockOrderRepository,

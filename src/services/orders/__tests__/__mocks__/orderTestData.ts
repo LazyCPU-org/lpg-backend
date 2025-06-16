@@ -29,7 +29,7 @@ import {
 import {
   DeliveryStatusEnum,
   ItemTypeEnum,
-} from "../../../../db/schemas/orders/order-items";
+} from "../../../../db/schemas/orders/order-types";
 
 import { ReservationStatusEnum } from "../../../../db/schemas/orders/inventory-reservations";
 
