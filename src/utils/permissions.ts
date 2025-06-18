@@ -4,6 +4,7 @@ import { BadRequestError } from "./custom-errors";
 // Define modules
 export enum ModuleEnum {
   USERS = "users",
+  PRODUCTS = "products",
   STORES = "stores",
   FINANCES = "finances",
   INVENTORY = "inventory",
