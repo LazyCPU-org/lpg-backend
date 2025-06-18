@@ -1,11 +1,10 @@
-import { Auth } from "../../dtos/response/authInterface";
-import { AuthRepository } from "../../repositories/authRepository";
-import { UserRoleEnum } from "../../config/roles";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { LoginStrategy } from "./loginStrategy";
+import { UserRoleEnum } from "../../config/roles";
+import { Auth } from "../../dtos/response/authInterface";
 import { SafeUser } from "../../dtos/response/userInterface";
+import { AuthRepository } from "../../repositories/authRepository";
 import { InternalError } from "../../utils/custom-errors";
+import { LoginStrategy } from "./loginStrategy";
 
 export class OperatorLoginStrategy implements LoginStrategy {
   private authRepository: AuthRepository;
@@ -23,6 +22,7 @@ export class OperatorLoginStrategy implements LoginStrategy {
 
     // Operator-specific validation
     const payload = {
+      id: user.userId,
       email: user.email,
       role: UserRoleEnum.OPERATOR,
       permissions: user.permissions,

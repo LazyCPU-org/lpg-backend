@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { ModuleEnum, ActionEnum, createPermission } from "../utils/permissions";
+import { ActionEnum, createPermission, ModuleEnum } from "../utils/permissions";
 
 // Define the extended Request type
 export interface AuthRequest extends Request {

@@ -175,7 +175,6 @@ export function buildOrderCrudRoutes(dependencies: OrderRoutesDependencies) {
       );
 
       res.json({
-        success: true,
         data: result,
         pagination: {
           total: result.length,
