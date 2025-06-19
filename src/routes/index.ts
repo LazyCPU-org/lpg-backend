@@ -8,6 +8,7 @@ import { buildStoreRouter } from "./storeRoutes";
 import { buildUserRouter } from "./userRoutes";
 import { buildOrderRoutes } from "./orders";
 import { buildProductRouter } from "./productRoutes";
+import { buildCustomerRouter } from "./customerRoutes";
 
 // Middleware to inject container into request
 const injectContainer = (container: Container) => {
@@ -50,6 +51,9 @@ export const defineRoutes = function (app: Express, container: Container) {
   // Products module router
   const productRouter = buildProductRouter(container.productService);
 
+  // Customers module router
+  const customerRouter = buildCustomerRouter(container.customerService);
+
   // Mount routers
   app.use(`${v1BasePath}/auth`, authRouter);
   app.use(`${v1BasePath}/users`, userRouter);
@@ -65,4 +69,7 @@ export const defineRoutes = function (app: Express, container: Container) {
 
   // Products module routes
   app.use(`${v1BasePath}/products`, productRouter);
+
+  // Customers module routes
+  app.use(`${v1BasePath}/customers`, customerRouter);
 };
