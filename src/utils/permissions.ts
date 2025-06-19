@@ -4,11 +4,13 @@ import { BadRequestError } from "./custom-errors";
 // Define modules
 export enum ModuleEnum {
   USERS = "users",
+  PRODUCTS = "products",
   STORES = "stores",
   FINANCES = "finances",
   INVENTORY = "inventory",
   TRANSACTIONS = "transactions",
   ORDERS = "orders",
+  CUSTOMERS = "customers",
   SETTINGS = "settings",
   SUPERADMINS = "superadmins",
   REPORTS = "reports",
@@ -51,6 +53,7 @@ export const PermissionSets = {
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.MANAGE),
     createPermission(ModuleEnum.ORDERS, ActionEnum.MANAGE),
     createPermission(ModuleEnum.ORDERS, ActionEnum.ADMIN),
+    createPermission(ModuleEnum.CUSTOMERS, ActionEnum.MANAGE),
     createPermission(ModuleEnum.REPORTS, ActionEnum.READ),
     createPermission(ModuleEnum.REPORTS, ActionEnum.EXPORT),
     createPermission(ModuleEnum.DASHBOARD, ActionEnum.READ),
@@ -68,6 +71,10 @@ export const PermissionSets = {
     createPermission(ModuleEnum.ORDERS, ActionEnum.READ),
     createPermission(ModuleEnum.ORDERS, ActionEnum.UPDATE),
     createPermission(ModuleEnum.ORDERS, ActionEnum.DELETE),
+    createPermission(ModuleEnum.CUSTOMERS, ActionEnum.CREATE),
+    createPermission(ModuleEnum.CUSTOMERS, ActionEnum.READ),
+    createPermission(ModuleEnum.CUSTOMERS, ActionEnum.UPDATE),
+    createPermission(ModuleEnum.CUSTOMERS, ActionEnum.DELETE),
     createPermission(ModuleEnum.DASHBOARD, ActionEnum.READ),
   ],
 
@@ -78,6 +85,7 @@ export const PermissionSets = {
     createPermission(ModuleEnum.TRANSACTIONS, ActionEnum.SELFMANAGE),
     createPermission(ModuleEnum.ORDERS, ActionEnum.READ),
     createPermission(ModuleEnum.ORDERS, ActionEnum.UPDATE), // For delivery status updates
+    createPermission(ModuleEnum.CUSTOMERS, ActionEnum.READ), // Read-only access to customer information
     createPermission(ModuleEnum.SETTINGS, ActionEnum.SELFMANAGE),
   ],
 

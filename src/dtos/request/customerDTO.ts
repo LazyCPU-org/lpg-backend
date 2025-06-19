@@ -132,3 +132,86 @@ export const QuickCustomerCreationSchema = z.object({
 });
 
 export type QuickCustomerCreation = z.infer<typeof QuickCustomerCreationSchema>;
+
+// Quick Customer Creation Request (for PRD specification)
+export const QuickCustomerCreationRequestSchema = z.object({
+  firstName: z
+    .string()
+    .min(1, "Nombre es requerido")
+    .max(50, "Nombre debe tener máximo 50 caracteres"),
+  lastName: z
+    .string()
+    .min(1, "Apellido es requerido")
+    .max(50, "Apellido debe tener máximo 50 caracteres"),
+  phoneNumber: z
+    .string()
+    .regex(/^\+51[0-9]{9}$/, "Formato de teléfono peruano inválido (+51xxxxxxxxx)"),
+  address: z
+    .string()
+    .min(1, "Dirección es requerida"),
+  alternativePhone: z
+    .string()
+    .regex(/^\+51[0-9]{9}$/, "Formato de teléfono peruano inválido")
+    .optional(),
+  locationReference: z
+    .string()
+    .optional(),
+});
+
+export type QuickCustomerCreationRequest = z.infer<typeof QuickCustomerCreationRequestSchema>;
+
+// Customer Update Request (for PRD specification)
+export const CustomerUpdateRequestSchema = z.object({
+  address: z
+    .string()
+    .min(1, "Dirección es requerida")
+    .optional(),
+  alternativePhone: z
+    .string()
+    .regex(/^\+51[0-9]{9}$/, "Formato de teléfono peruano inválido")
+    .optional(),
+  locationReference: z
+    .string()
+    .optional(),
+});
+
+export type CustomerUpdateRequest = z.infer<typeof CustomerUpdateRequestSchema>;
+
+// Customer List Request (for PRD specification)
+export const CustomerListRequestSchema = z.object({
+  search: z
+    .string()
+    .min(2, "Término de búsqueda debe tener al menos 2 caracteres")
+    .optional(),
+  include_inactive: z
+    .boolean()
+    .optional(),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .optional(),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .optional(),
+});
+
+export type CustomerListRequest = z.infer<typeof CustomerListRequestSchema>;
+
+// Customer Search Request (for PRD specification)
+export const CustomerSearchRequestSchemaV2 = z.object({
+  q: z
+    .string()
+    .min(2, "Término de búsqueda debe tener al menos 2 caracteres"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .optional(),
+});
+
+export type CustomerSearchRequestV2 = z.infer<typeof CustomerSearchRequestSchemaV2>;

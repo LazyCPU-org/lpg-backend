@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   decimal,
   pgTable,
   serial,
@@ -22,6 +23,8 @@ export const inventoryItem = pgTable("inventory_item", {
   }).notNull(),
   sell_price: decimal("sell_price", { precision: 10, scale: 2 }).notNull(),
   scale: varchar("scale", { length: 10 }).notNull(),
+  is_active: boolean("is_active").default(true).notNull(),
+  deleted_at: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
