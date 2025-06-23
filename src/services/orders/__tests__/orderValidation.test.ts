@@ -12,7 +12,7 @@ import {
   createMockOrderWithItems,
   createPeruvianAddressScenarios,
   createPeruvianPhoneScenarios,
-  createQuickOrderEntry,
+  createConversationOrderEntry,
   createUXOrderScenarios,
 } from "./__mocks__/orderTestData";
 
@@ -61,7 +61,6 @@ describe("Order Validation Service", () => {
       findOrders: jest.fn(),
       findOrdersByCustomer: jest.fn(),
       searchOrders: jest.fn(),
-      createQuickOrder: jest.fn(),
       getCustomerOrderHistory: jest.fn(),
       getOrderMetrics: jest.fn(),
       canModifyOrder: jest.fn(),
@@ -247,21 +246,6 @@ describe("Order Validation Service", () => {
       expect(result.errors).toContain("Order must contain at least one item");
     });
 
-    test("should reject order with invalid store ID", async () => {
-      const invalidRequest = createMockOrderRequest({
-        storeId: 0,
-      });
-
-      (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
-        valid: false,
-        errors: ["Valid store ID is required"],
-      });
-
-      const result = await orderService.validateOrderRequest(invalidRequest);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain("Valid store ID is required");
-    });
 
     test("should validate payment method", async () => {
       const invalidRequest = createMockOrderRequest({
@@ -461,22 +445,6 @@ describe("Order Validation Service", () => {
   });
 
   describe("Business Rules Validation", () => {
-    test("should reject orders for inactive stores", async () => {
-      const request = createMockOrderRequest({ storeId: 999 });
-
-      (orderService.validateStoreAvailability as jest.Mock).mockResolvedValue(
-        false
-      );
-      (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
-        valid: false,
-        errors: ["Store is not available for orders"],
-      });
-
-      const result = await orderService.validateOrderRequest(request);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain("Store is not available for orders");
-    });
 
     test("should validate maximum order amount", async () => {
       const expensiveRequest = createMockOrderRequest({
@@ -588,7 +556,7 @@ describe("Order Validation Service", () => {
 
     // Test what happens when frontend sends minimal vs complete data
     test("should handle minimal order data from frontend", async () => {
-      const minimalOrder = createQuickOrderEntry({
+      const minimalOrder = createConversationOrderEntry({
         // Only essential fields that frontend must provide
         customerName: "Pedro Martinez",
         customerPhone: "+51987654321",
@@ -627,7 +595,7 @@ describe("Order Validation Service", () => {
       ];
 
       for (const phone of validPhones) {
-        const orderWithPhone = createQuickOrderEntry({ customerPhone: phone });
+        const orderWithPhone = createConversationOrderEntry({ customerPhone: phone });
 
         (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
           valid: true,
@@ -645,7 +613,7 @@ describe("Order Validation Service", () => {
       ];
 
       for (const phone of invalidPhones) {
-        const orderWithInvalidPhone = createQuickOrderEntry({
+        const orderWithInvalidPhone = createConversationOrderEntry({
           customerPhone: phone,
         });
 
@@ -674,7 +642,7 @@ describe("Order Validation Service", () => {
       ];
 
       for (const address of validAddresses) {
-        const orderWithAddress = createQuickOrderEntry({
+        const orderWithAddress = createConversationOrderEntry({
           deliveryAddress: address,
         });
 
@@ -690,7 +658,7 @@ describe("Order Validation Service", () => {
       }
 
       // Short address should still be valid (error tolerance)
-      const shortAddressOrder = createQuickOrderEntry({
+      const shortAddressOrder = createConversationOrderEntry({
         deliveryAddress: addressScenarios.shortAddress,
       });
 
@@ -830,7 +798,7 @@ describe("Order Validation Service", () => {
 
     // Test how backend handles UX quick entry creation
     test("should create order from UX quick entry with smart defaults", async () => {
-      const quickRequest = createQuickOrderEntry();
+      const quickRequest = createConversationOrderEntry();
       const expectedOrder = createMockOrderWithItems({
         customerName: "Pedro Martinez",
         customerPhone: "+51987654321",
@@ -940,7 +908,7 @@ describe("Order Validation Service", () => {
 
     // Test that backend handles optional fields correctly
     test("should handle optional fields from frontend gracefully", async () => {
-      const minimalRequest = createQuickOrderEntry({
+      const minimalRequest = createConversationOrderEntry({
         locationReference: undefined, // Optional
         notes: undefined, // Optional
       });

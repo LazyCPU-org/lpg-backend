@@ -118,9 +118,15 @@ export class OrderWorkflowService implements IOrderWorkflowService {
           quantity: item.quantity,
         }));
 
+        // Get store from assignment
+        const storeId = order.assignation?.storeId;
+        if (!storeId) {
+          throw new BadRequestError("Order must be assigned to a store before reserving inventory");
+        }
+
         await this.reservationService.createReservation(
           orderId,
-          order.storeId,
+          storeId,
           items,
           userId
         );

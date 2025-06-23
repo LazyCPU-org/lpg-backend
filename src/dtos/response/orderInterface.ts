@@ -354,9 +354,8 @@ export interface AvailabilityResult {
 // Comprehensive order interface with all relations
 export interface OrderWithDetails extends OrderType {
   customer?: Customer;
-  store?: Store;
+  assignation?: any; // Store assignment with store and user info
   createdByUser?: User;
-  deliveredByUser?: User;
   orderItems?: OrderItemWithDetails[];
   reservations?: InventoryReservationWithDetails[];
   transactionLinks?: OrderTransactionLinkType[];
@@ -372,7 +371,7 @@ export interface OrderRelationOptions {
   transactions?: boolean;
   deliveries?: boolean;
   customer?: boolean;
-  store?: boolean;
+  assignation?: boolean; // Changed from 'store' to 'assignation' for store assignment
   invoice?: boolean;
 }
 

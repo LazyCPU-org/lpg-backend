@@ -76,12 +76,9 @@ export const OrderItemRequestSchema = z
  *     CreateOrderRequest:
  *       type: object
  *       properties:
- *         storeId:
- *           type: integer
- *           description: ID of the store where the order will be fulfilled
  *         customerId:
  *           type: integer
- *           description: ID of the customer (optional for quick orders)
+ *           description: ID of the customer (optional for new customers)
  *         customerName:
  *           type: string
  *           description: Customer name (required if customerId not provided)
@@ -116,7 +113,6 @@ export const OrderItemRequestSchema = z
  *             $ref: '#/components/schemas/OrderItemRequest'
  *           description: List of items to order
  *       required:
- *         - storeId
  *         - deliveryAddress
  *         - paymentMethod
  *         - paymentStatus
@@ -124,7 +120,6 @@ export const OrderItemRequestSchema = z
  */
 export const CreateOrderRequestSchema = z
   .object({
-    storeId: z.number().positive("ID de tienda inválido"),
     customerId: z.number().positive("ID de cliente inválido").optional(),
     customerName: z
       .string()
@@ -444,6 +439,31 @@ export const UpdateOrderRequestSchema = z.object({
     .optional(),
 });
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     AssignStoreToOrderRequest:
+ *       type: object
+ *       properties:
+ *         storeAssignmentId:
+ *           type: integer
+ *           description: ID of the store assignment to assign to this order
+ *         reason:
+ *           type: string
+ *           description: Reason for the assignment (optional)
+ *         notes:
+ *           type: string
+ *           description: Additional notes about the assignment
+ *       required:
+ *         - storeAssignmentId
+ */
+export const AssignStoreToOrderRequestSchema = z.object({
+  storeAssignmentId: z.number().positive("ID de asignación de tienda inválido"),
+  reason: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 // Export types
 export type OrderItemRequest = z.infer<typeof OrderItemRequestSchema>;
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
@@ -454,4 +474,7 @@ export type UpdateOrderStatusRequest = z.infer<
 export type GetOrdersRequest = z.infer<typeof GetOrdersRequestSchema>;
 export type CheckAvailabilityRequest = z.infer<
   typeof CheckAvailabilityRequestSchema
+>;
+export type AssignStoreToOrderRequest = z.infer<
+  typeof AssignStoreToOrderRequestSchema
 >;

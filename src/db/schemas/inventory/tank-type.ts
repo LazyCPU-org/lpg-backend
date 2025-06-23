@@ -25,6 +25,7 @@ export const tankType = pgTable("tank_type", {
   sell_price: decimal("sell_price", { precision: 10, scale: 2 }).notNull(),
   scale: varchar("scale", { length: 10 }).notNull().default("unidad"),
   is_active: boolean("is_active").default(true).notNull(),
+  is_popular: boolean("is_popular").default(false).notNull(),
   deleted_at: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -42,5 +43,5 @@ export default tankType;
 
 // Import after relations to avoid circular dependency
 import { storeCatalogTanks } from "../locations";
+import { inventoryReservations, orderItems } from "../orders";
 import { assignmentTanks } from "./inventory-assignments-tanks";
-import { orderItems, inventoryReservations } from "../orders";

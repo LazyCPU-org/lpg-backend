@@ -30,7 +30,7 @@ import {
 export const createMockOrderRequest = (
   overrides: Partial<CreateOrderRequest> = {}
 ): CreateOrderRequest => ({
-  storeId: 1,
+  // No storeId required - will be assigned later via store assignment
   customerName: "John Doe",
   customerPhone: "+1234567890",
   deliveryAddress: "123 Main St, City, State",
@@ -56,11 +56,11 @@ export const createMockOrderRequest = (
   ...overrides,
 });
 
-// UX Design Pattern: Quick order entry for phone conversations
-export const createQuickOrderEntry = (
+// UX Design Pattern: Natural conversation flow order entry
+export const createConversationOrderEntry = (
   overrides: Partial<CreateOrderRequest> = {}
 ): CreateOrderRequest => ({
-  storeId: 1,
+  // No storeId - follows UX where store is assigned after order creation
   customerName: "Pedro Martinez",
   customerPhone: "+51987654321",
   deliveryAddress: "Jr. Lima 123, San Isidro",
@@ -88,7 +88,7 @@ export const createMockOrder = (
   customerId: null,
   customerName: "John Doe",
   customerPhone: "+1234567890",
-  storeId: 1,
+  assignedTo: null, // Store assignment - null for PENDING orders
   orderDate: new Date("2024-01-01T10:00:00Z"),
   deliveryAddress: "123 Main St, City, State",
   locationReference: "Near the big tree",
@@ -98,12 +98,22 @@ export const createMockOrder = (
   paymentStatus: PaymentStatusEnum.PENDING,
   totalAmount: "65.00",
   createdBy: 1,
-  deliveredBy: null,
   deliveryDate: null,
   notes: "Ring doorbell twice",
   createdAt: new Date("2024-01-01T10:00:00Z"),
   updatedAt: new Date("2024-01-01T10:00:00Z"),
   ...overrides,
+});
+
+// Factory for orders with store assignment (CONFIRMED or later status)
+export const createMockOrderWithAssignment = (
+  overrides: Partial<OrderType> = {}
+): OrderType => ({
+  ...createMockOrder({
+    assignedTo: 1, // Assigned to store assignment ID 1
+    status: OrderStatusEnum.CONFIRMED,
+    ...overrides,
+  }),
 });
 
 export const createMockOrderItem = (
@@ -188,25 +198,50 @@ export const createMockCurrentInventory = (overrides: any = {}) => ({
   ...overrides,
 });
 
-// Test scenario builders
+// Test scenario builders - reflects new workflow with store assignment
 export const createOrderWorkflowScenario = () => ({
-  initialOrder: createMockOrder({ status: OrderStatusEnum.PENDING }),
-  confirmedOrder: createMockOrder({ status: OrderStatusEnum.CONFIRMED }),
-  reservedOrder: createMockOrder({ status: OrderStatusEnum.RESERVED }),
-  inTransitOrder: createMockOrder({ status: OrderStatusEnum.IN_TRANSIT }),
-  deliveredOrder: createMockOrder({ status: OrderStatusEnum.DELIVERED }),
-  fulfilledOrder: createMockOrder({ status: OrderStatusEnum.FULFILLED }),
-  cancelledOrder: createMockOrder({ status: OrderStatusEnum.CANCELLED }),
-  failedOrder: createMockOrder({ status: OrderStatusEnum.FAILED }),
+  // PENDING: No store assignment yet
+  initialOrder: createMockOrder({ 
+    status: OrderStatusEnum.PENDING,
+    assignedTo: null 
+  }),
+  // CONFIRMED: Store assignment made
+  confirmedOrder: createMockOrderWithAssignment({ 
+    status: OrderStatusEnum.CONFIRMED 
+  }),
+  // RESERVED: Delivery user confirmed inventory
+  reservedOrder: createMockOrderWithAssignment({ 
+    status: OrderStatusEnum.RESERVED 
+  }),
+  // IN_TRANSIT: Delivery started
+  inTransitOrder: createMockOrderWithAssignment({ 
+    status: OrderStatusEnum.IN_TRANSIT 
+  }),
+  // DELIVERED: Delivery completed
+  deliveredOrder: createMockOrderWithAssignment({ 
+    status: OrderStatusEnum.DELIVERED 
+  }),
+  // FULFILLED: Invoice generated
+  fulfilledOrder: createMockOrderWithAssignment({ 
+    status: OrderStatusEnum.FULFILLED 
+  }),
+  // CANCELLED: Order cancelled (can happen at any stage)
+  cancelledOrder: createMockOrder({ 
+    status: OrderStatusEnum.CANCELLED 
+  }),
+  // FAILED: Delivery failed
+  failedOrder: createMockOrderWithAssignment({ 
+    status: OrderStatusEnum.FAILED 
+  }),
 });
 
 // UX Design Pattern: Natural conversation flow scenarios
 export const createUXOrderScenarios = () => ({
   // Step 1: Items first ("I need 2 tanks of 20kg")
-  itemsFirstEntry: createQuickOrderEntry(),
+  itemsFirstEntry: createConversationOrderEntry(),
 
   // Step 2: Customer identification ("What's your name?")
-  existingCustomerEntry: createQuickOrderEntry({ customerId: 123 }),
+  existingCustomerEntry: createConversationOrderEntry({ customerId: 123 }),
   newCustomerEntry: createMockOrderRequest({
     customerId: undefined,
     customerName: "Sofia Rodriguez",
@@ -215,21 +250,21 @@ export const createUXOrderScenarios = () => ({
   }),
 
   // Step 3: Address confirmation ("Same address as usual?")
-  sameAddressEntry: createQuickOrderEntry({
+  sameAddressEntry: createConversationOrderEntry({
     locationReference: "Same as last time",
   }),
 
   // Step 4: Payment method ("How will you pay?")
-  cashPaymentEntry: createQuickOrderEntry({
+  cashPaymentEntry: createConversationOrderEntry({
     paymentMethod: PaymentMethodEnum.CASH,
   }),
-  yapePaymentEntry: createQuickOrderEntry({
+  yapePaymentEntry: createConversationOrderEntry({
     paymentMethod: PaymentMethodEnum.YAPE,
   }),
-  plinPaymentEntry: createQuickOrderEntry({
+  plinPaymentEntry: createConversationOrderEntry({
     paymentMethod: PaymentMethodEnum.PLIN,
   }),
-  transferPaymentEntry: createQuickOrderEntry({
+  transferPaymentEntry: createConversationOrderEntry({
     paymentMethod: PaymentMethodEnum.TRANSFER,
   }),
 });
@@ -247,7 +282,7 @@ export const createCommonTankOrderEntry = (
 
   const config = tankConfigs[tankSize];
 
-  return createQuickOrderEntry({
+  return createConversationOrderEntry({
     items: [
       {
         itemType: ItemTypeEnum.TANK,

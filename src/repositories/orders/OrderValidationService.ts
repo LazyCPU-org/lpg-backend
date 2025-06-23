@@ -11,7 +11,6 @@ import { IOrderValidationService } from "./IOrderValidationService";
 
 export class OrderValidationService implements IOrderValidationService {
   async validateOrderData(
-    storeId: number,
     customerName: string,
     customerPhone: string,
     deliveryAddress: string,
@@ -22,13 +21,7 @@ export class OrderValidationService implements IOrderValidationService {
   ): Promise<{ valid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
-    // Validate store exists
-    const store = await db.query.stores.findFirst({
-      where: eq(stores.storeId, storeId),
-    });
-    if (!store) {
-      errors.push("Store not found");
-    }
+    // Note: Store validation removed since orders start as PENDING without store assignment
 
     // Validate creating user exists
     const user = await db.query.users.findFirst({

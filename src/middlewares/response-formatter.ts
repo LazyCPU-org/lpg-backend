@@ -26,6 +26,14 @@ export const responseFormatter = (
         (Object.keys(body).length === 1 ||
           (Object.keys(body).length === 2 && body.stack)));
 
+    // Check if the response already has pagination structure
+    const hasPaginationStructure = 
+      body && 
+      typeof body === 'object' && 
+      body.hasOwnProperty('data') && 
+      body.hasOwnProperty('pagination') &&
+      Object.keys(body).length === 2;
+
     // Format the response according to the standard structure
     let formattedBody;
 
@@ -33,6 +41,13 @@ export const responseFormatter = (
       formattedBody = {
         data: null,
         error: body && body.error ? body.error : body,
+      };
+    } else if (hasPaginationStructure) {
+      // For paginated responses, add error field but keep existing structure
+      formattedBody = {
+        data: body.data,
+        pagination: body.pagination,
+        error: null,
       };
     } else {
       formattedBody = {

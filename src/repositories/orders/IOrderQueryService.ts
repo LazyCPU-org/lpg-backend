@@ -17,14 +17,14 @@ export abstract class IOrderQueryService {
   abstract findByOrderNumber(orderNumber: string): Promise<OrderType | null>;
 
   // Business query operations
-  abstract findByStoreAndStatus(
-    storeId: number,
+  abstract findByStoreAssignmentAndStatus(
+    storeAssignmentId: number,
     status: OrderStatusEnum
   ): Promise<OrderType[]>;
 
   abstract findByCustomer(customerId: number): Promise<OrderType[]>;
 
-  abstract findPendingOrdersByStore(storeId: number): Promise<OrderType[]>;
+  abstract findPendingOrdersUnassigned(): Promise<OrderType[]>;
 
   abstract findOrdersByDateRange(
     startDate: Date,
