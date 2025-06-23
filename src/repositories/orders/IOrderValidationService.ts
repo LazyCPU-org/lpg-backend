@@ -5,7 +5,6 @@ import {
 
 export abstract class IOrderValidationService {
   abstract validateOrderData(
-    storeId: number,
     customerName: string,
     customerPhone: string,
     deliveryAddress: string,

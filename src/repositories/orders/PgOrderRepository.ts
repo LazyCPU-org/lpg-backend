@@ -41,7 +41,6 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     this.orderValidationService = new OrderValidationService();
   }
   async create(
-    storeId: number,
     customerName: string,
     customerPhone: string,
     deliveryAddress: string,
@@ -56,9 +55,8 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     // Generate order number
     const orderNumber = await OrderUtils.generateOrderNumber();
 
-    // Validate input data
+    // Validate input data (no storeId needed for PENDING orders)
     const validation = await this.orderValidationService.validateOrderData(
-      storeId,
       customerName,
       customerPhone,
       deliveryAddress,
@@ -76,7 +74,7 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
 
     const orderData: NewOrderType = {
       orderNumber,
-      storeId,
+      assignedTo: null, // No store assignment initially
       customerName,
       customerPhone,
       deliveryAddress,
@@ -100,7 +98,7 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     // Return order with details
     return this.orderQueryService.findByIdWithRelations(results[0].orderId, {
       customer: true,
-      store: true,
+      assignation: true, // Changed from 'store' to 'assignation'
       items: true,
     });
   }
@@ -178,7 +176,6 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
 
   async updateDeliveryInfo(
     orderId: number,
-    deliveredBy: number,
     deliveryDate: Date
   ): Promise<OrderType> {
     const current = await db.query.orders.findFirst({
@@ -192,7 +189,6 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     const results = await db
       .update(orders)
       .set({
-        deliveredBy,
         deliveryDate,
         updatedAt: new Date(),
       })
@@ -246,7 +242,8 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     storeId: number,
     status: OrderStatusEnum
   ): Promise<OrderType[]> {
-    return this.orderQueryService.findByStoreAndStatus(storeId, status);
+    // TODO: Update to use store assignment filtering
+    throw new Error("findByStoreAndStatus needs to be updated for store assignment workflow");
   }
 
   async findByCustomer(customerId: number): Promise<OrderType[]> {
@@ -254,7 +251,8 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
   }
 
   async findPendingOrdersByStore(storeId: number): Promise<OrderType[]> {
-    return this.orderQueryService.findPendingOrdersByStore(storeId);
+    // TODO: Update to use store assignment filtering  
+    throw new Error("findPendingOrdersByStore needs to be updated for store assignment workflow");
   }
 
   async findOrdersByDateRange(
@@ -286,7 +284,6 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
 
   async createWithTransaction(
     trx: DbTransaction,
-    storeId: number,
     customerName: string,
     customerPhone: string,
     deliveryAddress: string,
@@ -301,9 +298,8 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     // Generate order number
     const orderNumber = await OrderUtils.generateOrderNumber();
 
-    // Validate input data
+    // Validate input data (no storeId needed for PENDING orders)
     const validation = await this.orderValidationService.validateOrderData(
-      storeId,
       customerName,
       customerPhone,
       deliveryAddress,
@@ -321,7 +317,7 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
 
     const orderData: NewOrderType = {
       orderNumber,
-      storeId,
+      assignedTo: null, // No store assignment initially
       customerName,
       customerPhone,
       deliveryAddress,
@@ -347,7 +343,7 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
       where: eq(orders.orderId, results[0].orderId),
       with: {
         customer: true,
-        store: true,
+        assignation: true, // Changed from 'store' to 'assignation'
         createdByUser: true,
       },
     });
@@ -418,7 +414,6 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
   }
 
   async validateOrderData(
-    storeId: number,
     customerName: string,
     customerPhone: string,
     deliveryAddress: string,
@@ -428,7 +423,6 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     customerId?: number
   ): Promise<{ valid: boolean; errors: string[] }> {
     return this.orderValidationService.validateOrderData(
-      storeId,
       customerName,
       customerPhone,
       deliveryAddress,

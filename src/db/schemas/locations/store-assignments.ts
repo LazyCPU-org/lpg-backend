@@ -23,7 +23,7 @@ export const storeAssignments = pgTable("store_assignments", {
 // Define relations for the storeAssignments table
 export const storeAssignmentsRelations = relations(
   storeAssignments,
-  ({ one }) => ({
+  ({ one, many }) => ({
     // Define the one-to-many relationship with the user
     user: one(users, {
       relationName: "user",
@@ -42,6 +42,10 @@ export const storeAssignmentsRelations = relations(
       fields: [storeAssignments.assignmentId],
       references: [storeAssignmentCurrentInventory.assignmentId],
     }),
+    // Define the one-to-many relationship with assigned orders
+    assignedOrders: many(orders, {
+      relationName: "assignedOrders",
+    }),
   })
 );
 
@@ -49,3 +53,4 @@ export default storeAssignments;
 
 // Import after relations to avoid circular dependency
 import { storeAssignmentCurrentInventory } from "./store-assignment-current-inventory";
+import { orders } from "../orders/orders";

@@ -56,10 +56,9 @@ export class OrderService implements IOrderService {
         }
       }
 
-      // Create the order
+      // Create the order (starts as PENDING without store assignment)
       const order = await this.orderRepository.createWithTransaction(
         trx,
-        orderData.storeId,
         orderData.customerName ?? "",
         orderData.customerPhone ?? "",
         orderData.deliveryAddress,
@@ -148,11 +147,8 @@ export class OrderService implements IOrderService {
       errors.push("Customer name is required when customer ID is not provided");
     }
 
-    // Store validation  
-    const storeAvailable = await this.validateStoreAvailability(request.storeId);
-    if (!storeAvailable) {
-      errors.push("Store is not available for orders");
-    }
+    // Note: Store validation removed since orders start without store assignment
+    // Store assignment happens in a later workflow step
 
     // Item validation
     if (!request.items || request.items.length === 0) {
@@ -279,89 +275,6 @@ export class OrderService implements IOrderService {
     return await this.orderRepository.search(query, storeId, status as string);
   }
 
-  async createQuickOrder(
-    phoneNumber: string,
-    customerName: string,
-    storeId: number,
-    items: Array<{
-      itemType: "tank" | "item";
-      itemId: number;
-      quantity: number;
-    }>,
-    userId: number
-  ): Promise<{
-    order: OrderWithDetails;
-    customerCreated: boolean;
-    warnings: string[];
-  }> {
-    return await db.transaction(async (trx) => {
-      let customerCreated = false;
-      const warnings: string[] = [];
-
-      // Find or create customer
-      let customerId: number;
-      let customer = await this.customerRepository.findByPhone(phoneNumber);
-      if (!customer) {
-        // Parse customer name into first and last name
-        const nameParts = customerName.trim().split(" ");
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.slice(1).join(" ") || "";
-
-        const newCustomer = await this.customerRepository.create(
-          firstName,
-          lastName,
-          phoneNumber,
-          "Address pending", // address
-          undefined, // alternativePhone
-          undefined, // locationReference
-          "regular", // customerType
-          undefined // rating
-        );
-        customerId = newCustomer.customerId;
-        customerCreated = true;
-      } else {
-        customerId = customer.customerId;
-      }
-
-      // Create order
-      const order = await this.orderRepository.createWithTransaction(
-        trx,
-        storeId,
-        customerName,
-        phoneNumber,
-        "Address pending",
-        PaymentMethodEnum.CASH, // default payment method
-        PaymentStatusEnum.PENDING, // default payment status
-        userId,
-        customerId,
-        undefined, // locationReference
-        undefined, // priority
-        "Quick order created"
-      );
-
-      // Try to create reservations
-      try {
-        await this.reservationService.createReservation(
-          order.orderId,
-          storeId,
-          items,
-          userId
-        );
-      } catch (error) {
-        warnings.push(
-          `Could not reserve inventory: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        );
-      }
-
-      return {
-        order,
-        customerCreated,
-        warnings,
-      };
-    });
-  }
 
   async getCustomerOrderHistory(
     phoneNumber: string,

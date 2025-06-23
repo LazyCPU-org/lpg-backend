@@ -24,6 +24,7 @@ export const inventoryItem = pgTable("inventory_item", {
   sell_price: decimal("sell_price", { precision: 10, scale: 2 }).notNull(),
   scale: varchar("scale", { length: 10 }).notNull(),
   is_active: boolean("is_active").default(true).notNull(),
+  is_popular: boolean("is_popular").default(false).notNull(),
   deleted_at: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -41,5 +42,5 @@ export default inventoryItem;
 
 // Import after relations to avoid circular dependency
 import { storeCatalogItems } from "../locations";
+import { inventoryReservations, orderItems } from "../orders";
 import { assignmentItems } from "./inventory-assignments-items";
-import { orderItems, inventoryReservations } from "../orders";

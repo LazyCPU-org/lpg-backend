@@ -11,7 +11,7 @@ import { OrderRoutesDependencies } from "./index";
 
 /**
  * Order Utility Routes - Helper endpoints and analytics
- * Handles: Search, Quick entry, Availability checks, Analytics, Bulk operations
+ * Handles: Search, Availability checks, Analytics, Bulk operations
  */
 export function buildOrderUtilityRoutes(dependencies: OrderRoutesDependencies) {
   const { orderService, orderWorkflowService, inventoryReservationService } =
@@ -103,85 +103,6 @@ export function buildOrderUtilityRoutes(dependencies: OrderRoutesDependencies) {
     })
   );
 
-  /**
-   * @openapi
-   * /orders/quick:
-   *   post:
-   *     tags: [Orders, UX]
-   *     summary: Quick order creation
-   *     description: Simplified order creation for fast phone-based entry
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               storeId:
-   *                 type: integer
-   *                 description: Store ID
-   *               customerPhone:
-   *                 type: string
-   *                 description: Customer phone number
-   *               customerName:
-   *                 type: string
-   *                 description: Customer name
-   *               items:
-   *                 type: array
-   *                 items:
-   *                   type: object
-   *                   properties:
-   *                     type:
-   *                       type: string
-   *                       enum: [tank, item]
-   *                     name:
-   *                       type: string
-   *                     quantity:
-   *                       type: integer
-   *               deliveryAddress:
-   *                 type: string
-   *                 description: Delivery address
-   *               paymentMethod:
-   *                 type: string
-   *                 enum: [cash, yape, plin, transfer]
-   *                 default: cash
-   *               notes:
-   *                 type: string
-   *                 description: Order notes
-   *             required:
-   *               - storeId
-   *               - customerPhone
-   *               - customerName
-   *               - items
-   *               - deliveryAddress
-   *     responses:
-   *       201:
-   *         description: Quick order created successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/OrderWithDetailsResponse'
-   */
-  router.post(
-    "/quick",
-    isAuthenticated,
-    requirePermission(ModuleEnum.ORDERS, ActionEnum.CREATE),
-    asyncHandler(async (req: AuthRequest, res: Response) => {
-      const { customerPhone, customerName, storeId, items } = req.body;
-
-      const result = await orderService.createQuickOrder(
-        customerPhone,
-        customerName,
-        storeId,
-        items,
-        req.user!.userId
-      );
-
-      res.status(201).json(result);
-    })
-  );
 
   /**
    * @openapi

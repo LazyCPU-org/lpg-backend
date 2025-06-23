@@ -84,7 +84,6 @@ export abstract class IOrderRepository extends IOrderCoreRepository {
 
   // Validation methods
   abstract validateOrderData(
-    storeId: number,
     customerName: string,
     customerPhone: string,
     deliveryAddress: string,

@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { customers } from "../customers/customers";
-import { stores } from "../locations/stores";
+import { storeAssignments } from "../locations/store-assignments";
 import { users } from "../user-management/users";
 import {
   OrderStatusEnum,
@@ -29,9 +29,9 @@ export const orders = pgTable(
     customerId: integer("customer_id").references(() => customers.customerId),
     customerName: varchar("customer_name", { length: 255 }),
     customerPhone: varchar("customer_phone", { length: 20 }),
-    storeId: integer("store_id")
-      .notNull()
-      .references(() => stores.storeId),
+    assignedTo: integer("assigned_to_store_assignment").references(
+      () => storeAssignments.assignmentId
+    ),
     orderDate: timestamp("order_date").defaultNow(),
     deliveryAddress: text("delivery_address").notNull(),
     locationReference: text("location_reference"),
@@ -47,7 +47,6 @@ export const orders = pgTable(
     createdBy: integer("created_by")
       .notNull()
       .references(() => users.userId),
-    deliveredBy: integer("delivered_by").references(() => users.userId),
     deliveryDate: timestamp("delivery_date"),
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow(),
@@ -62,19 +61,15 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.customerId],
     references: [customers.customerId],
   }),
-  store: one(stores, {
-    fields: [orders.storeId],
-    references: [stores.storeId],
+  assignation: one(storeAssignments, {
+    fields: [orders.assignedTo],
+    references: [storeAssignments.assignmentId],
+    relationName: "assignedOrders",
   }),
   createdByUser: one(users, {
     fields: [orders.createdBy],
     references: [users.userId],
     relationName: "createdOrders",
-  }),
-  deliveredByUser: one(users, {
-    fields: [orders.deliveredBy],
-    references: [users.userId],
-    relationName: "deliveredOrders",
   }),
   orderItems: many(orderItems),
   reservations: many(inventoryReservations),

@@ -14,7 +14,6 @@ type DbTransaction = Parameters<Parameters<typeof import("../../db").db.transact
 export abstract class IOrderCoreRepository {
   // Core CRUD operations
   abstract create(
-    storeId: number,
     customerName: string,
     customerPhone: string,
     deliveryAddress: string,
@@ -39,7 +38,6 @@ export abstract class IOrderCoreRepository {
 
   abstract updateDeliveryInfo(
     orderId: number,
-    deliveredBy: number,
     deliveryDate: Date
   ): Promise<OrderType>;
 
@@ -58,7 +56,6 @@ export abstract class IOrderCoreRepository {
   // Transaction-aware operations (critical for atomic operations)
   abstract createWithTransaction(
     trx: DbTransaction,
-    storeId: number,
     customerName: string,
     customerPhone: string,
     deliveryAddress: string,

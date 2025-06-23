@@ -87,23 +87,7 @@ export abstract class IOrderService {
     status?: OrderStatusEnum
   ): Promise<OrderWithDetails[]>;
 
-  // UX Support Methods
-  abstract createQuickOrder(
-    phoneNumber: string,
-    customerName: string,
-    storeId: number,
-    items: Array<{
-      itemType: "tank" | "item";
-      itemId: number;
-      quantity: number;
-    }>,
-    userId: number
-  ): Promise<{
-    order: OrderWithDetails;
-    customerCreated: boolean;
-    warnings: string[];
-  }>;
-
+  // UX Support Methods  
   abstract getCustomerOrderHistory(
     phoneNumber: string,
     limit?: number
