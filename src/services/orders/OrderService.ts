@@ -1,6 +1,7 @@
+import { eq } from "drizzle-orm";
 import { db } from "../../db";
+import { orders } from "../../db/schemas/orders";
 import {
-  PaymentMethodEnum,
   PaymentStatusEnum,
   type OrderStatusEnum,
 } from "../../db/schemas/orders/order-status-types";
@@ -25,53 +26,61 @@ export class OrderService implements IOrderService {
     private reservationService: IInventoryReservationService
   ) {}
 
-  async createOrder(orderData: CreateOrderRequest): Promise<OrderWithDetails> {
+  async createOrder(
+    orderData: CreateOrderRequest,
+    createdBy: number
+  ): Promise<OrderWithDetails> {
     return await db.transaction(async (trx) => {
-      // Create or get customer
-      let customerId = orderData.customerId;
-      if (!customerId && orderData.customerPhone) {
-        const customer = await this.customerRepository.findByPhone(
-          orderData.customerPhone
+      // Get customer data from repository
+      const customer = await this.customerRepository.findById(
+        orderData.customerId
+      );
+      if (!customer) {
+        throw new NotFoundError(
+          `Cliente con ID ${orderData.customerId} no encontrado`
         );
-        if (customer) {
-          customerId = customer.customerId;
-        } else {
-          // Create new customer
-          // Parse customer name into first and last name
-          const nameParts = (orderData.customerName ?? "").trim().split(" ");
-          const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
-
-          const newCustomer = await this.customerRepository.create(
-            firstName,
-            lastName,
-            orderData.customerPhone,
-            orderData.deliveryAddress,
-            undefined, // alternativePhone
-            orderData.locationReference,
-            "regular", // customerType
-            undefined // rating
-          );
-          customerId = newCustomer.customerId;
-        }
       }
 
       // Create the order (starts as PENDING without store assignment)
       const order = await this.orderRepository.createWithTransaction(
         trx,
-        orderData.customerName ?? "",
-        orderData.customerPhone ?? "",
-        orderData.deliveryAddress,
+        `${customer.firstName} ${customer.lastName}`.trim(),
+        customer.phoneNumber,
+        customer.address,
         orderData.paymentMethod,
-        orderData.paymentStatus,
-        1, // TODO: createdBy from context
-        customerId,
-        orderData.locationReference,
-        orderData.priority,
+        PaymentStatusEnum.PENDING, // Always start with pending payment
+        createdBy,
+        customer.customerId,
+        customer.locationReference ?? "",
+        1, // For now all of them have the same priority
         orderData.notes
       );
 
-      return order;
+      // Create order items from the request
+      await this.orderRepository.createOrderItemsWithTransaction(
+        trx,
+        order.orderId,
+        orderData.items
+      );
+
+      // Calculate total amount from items
+      const totalAmount = this.calculateOrderTotal(orderData.items);
+
+      // Update order with calculated total
+      await trx
+        .update(orders)
+        .set({
+          totalAmount,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.orderId, order.orderId));
+
+      // Return order with items included
+      return await this.orderRepository.findByIdWithRelations(order.orderId, {
+        customer: true,
+        assignation: true,
+        items: true,
+      });
     });
   }
 
@@ -104,7 +113,7 @@ export class OrderService implements IOrderService {
   ): Promise<OrderWithDetails> {
     const existingOrder = await this.orderRepository.findById(orderId);
     if (!existingOrder) {
-      throw new NotFoundError(`Order with ID ${orderId} not found`);
+      throw new NotFoundError(`Pedido con ID ${orderId} no encontrado`);
     }
 
     const updates: Partial<OrderType> = {};
@@ -126,12 +135,12 @@ export class OrderService implements IOrderService {
   ): Promise<void> {
     const order = await this.orderRepository.findById(orderId);
     if (!order) {
-      throw new NotFoundError(`Order with ID ${orderId} not found`);
+      throw new NotFoundError(`Pedido con ID ${orderId} no encontrado`);
     }
 
-    // Only allow deletion of pending orders
+    // Solo permitir eliminación de pedidos pendientes
     if (order.status !== "pending") {
-      throw new BadRequestError("Only pending orders can be deleted");
+      throw new BadRequestError("Solo se pueden eliminar pedidos pendientes");
     }
 
     await this.orderRepository.delete(orderId);
@@ -142,17 +151,22 @@ export class OrderService implements IOrderService {
   ): Promise<{ valid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
-    // Customer validation
-    if (!request.customerId && !request.customerName) {
-      errors.push("Customer name is required when customer ID is not provided");
+    // Validación del cliente
+    if (!request.customerId) {
+      errors.push("ID del cliente es requerido");
+    } else {
+      // Verificar que el cliente existe
+      const customer = await this.customerRepository.findById(
+        request.customerId
+      );
+      if (!customer) {
+        errors.push(`Cliente con ID ${request.customerId} no encontrado`);
+      }
     }
 
-    // Note: Store validation removed since orders start without store assignment
-    // Store assignment happens in a later workflow step
-
-    // Item validation
+    // Validación de items
     if (!request.items || request.items.length === 0) {
-      errors.push("Order must contain at least one item");
+      errors.push("El pedido debe contener al menos un artículo");
     }
 
     return { valid: errors.length === 0, errors };
@@ -274,7 +288,6 @@ export class OrderService implements IOrderService {
   ): Promise<OrderWithDetails[]> {
     return await this.orderRepository.search(query, storeId, status as string);
   }
-
 
   async getCustomerOrderHistory(
     phoneNumber: string,

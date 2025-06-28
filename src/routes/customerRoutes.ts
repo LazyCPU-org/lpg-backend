@@ -1,9 +1,9 @@
 import { Request, Response, Router } from "express";
 import {
-  QuickCustomerCreationRequestSchema,
-  CustomerUpdateRequestSchema,
   CustomerListRequestSchema,
   CustomerSearchRequestSchemaV2,
+  CustomerUpdateRequestSchema,
+  QuickCustomerCreationRequestSchema,
 } from "../dtos/request/customerDTO";
 import { asyncHandler } from "../middlewares/async-handler";
 import {
@@ -62,14 +62,14 @@ export function buildCustomerRouter(customerService: CustomerService) {
     asyncHandler(async (req: Request, res: Response) => {
       const filters = CustomerListRequestSchema.parse(req.query);
       const result = await customerService.getCustomers(filters);
-      
+
       res.json({
         data: result.data,
         pagination: {
           total: result.total,
           limit: filters.limit ?? 50,
-          offset: filters.offset ?? 0
-        }
+          offset: filters.offset ?? 0,
+        },
       });
     })
   );
@@ -121,7 +121,7 @@ export function buildCustomerRouter(customerService: CustomerService) {
     asyncHandler(async (req: Request, res: Response) => {
       const { q, limit } = CustomerSearchRequestSchemaV2.parse(req.query);
       const results = await customerService.searchCustomers(q, limit);
-      
+
       res.json(results);
     })
   );
@@ -153,11 +153,11 @@ export function buildCustomerRouter(customerService: CustomerService) {
         return res.status(400).json({
           error: {
             code: "INVALID_ID",
-            message: "ID de cliente inválido"
-          }
+            message: "ID de cliente inválido",
+          },
         });
       }
-      
+
       const customer = await customerService.getCustomerById(id);
       res.json(customer);
     })
@@ -190,7 +190,7 @@ export function buildCustomerRouter(customerService: CustomerService) {
     asyncHandler(async (req: Request, res: Response) => {
       const data = QuickCustomerCreationRequestSchema.parse(req.body);
       const customer = await customerService.createCustomer(data);
-      
+
       res.status(201).json(customer);
     })
   );
@@ -231,14 +231,14 @@ export function buildCustomerRouter(customerService: CustomerService) {
         return res.status(400).json({
           error: {
             code: "INVALID_ID",
-            message: "ID de cliente inválido"
-          }
+            message: "ID de cliente inválido",
+          },
         });
       }
-      
+
       const data = CustomerUpdateRequestSchema.parse(req.body);
       const customer = await customerService.updateCustomer(id, data);
-      
+
       res.json(customer);
     })
   );
@@ -273,16 +273,16 @@ export function buildCustomerRouter(customerService: CustomerService) {
         return res.status(400).json({
           error: {
             code: "INVALID_ID",
-            message: "ID de cliente inválido"
-          }
+            message: "ID de cliente inválido",
+          },
         });
       }
-      
+
       await customerService.deleteCustomer(id);
-      
+
       res.json({
         success: true,
-        message: "Cliente eliminado correctamente"
+        message: "Cliente eliminado correctamente",
       });
     })
   );
@@ -319,11 +319,11 @@ export function buildCustomerRouter(customerService: CustomerService) {
         return res.status(400).json({
           error: {
             code: "INVALID_ID",
-            message: "ID de cliente inválido"
-          }
+            message: "ID de cliente inválido",
+          },
         });
       }
-      
+
       const customer = await customerService.restoreCustomer(id);
       res.json(customer);
     })

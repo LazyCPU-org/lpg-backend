@@ -78,32 +78,11 @@ export const OrderItemRequestSchema = z
  *       properties:
  *         customerId:
  *           type: integer
- *           description: ID of the customer (optional for new customers)
- *         customerName:
- *           type: string
- *           description: Customer name (required if customerId not provided)
- *         customerPhone:
- *           type: string
- *           description: Customer phone (required if customerId not provided)
- *         deliveryAddress:
- *           type: string
- *           description: Address where the order should be delivered
- *         locationReference:
- *           type: string
- *           description: Additional location reference or landmarks
+ *           description: ID of the customer
  *         paymentMethod:
  *           type: string
  *           enum: [cash, yape, plin, transfer]
  *           description: Payment method for the order
- *         paymentStatus:
- *           type: string
- *           enum: [pending, paid, debt]
- *           description: Payment status
- *         priority:
- *           type: integer
- *           minimum: 1
- *           maximum: 5
- *           description: Order priority (1 = highest, 5 = lowest)
  *         notes:
  *           type: string
  *           description: Additional notes for the order
@@ -113,65 +92,28 @@ export const OrderItemRequestSchema = z
  *             $ref: '#/components/schemas/OrderItemRequest'
  *           description: List of items to order
  *       required:
- *         - deliveryAddress
+ *         - customerId
  *         - paymentMethod
- *         - paymentStatus
  *         - items
  */
-export const CreateOrderRequestSchema = z
-  .object({
-    customerId: z.number().positive("ID de cliente inválido").optional(),
-    customerName: z
-      .string()
-      .min(1, "Nombre del cliente es requerido")
-      .optional(),
-    customerPhone: z
-      .string()
-      .min(1, "Teléfono del cliente es requerido")
-      .optional(),
-    deliveryAddress: z.string().min(1, "Dirección de entrega es requerida"),
-    locationReference: z.string().optional(),
-    paymentMethod: z.enum(
-      [
-        PaymentMethodEnum.CASH,
-        PaymentMethodEnum.YAPE,
-        PaymentMethodEnum.PLIN,
-        PaymentMethodEnum.TRANSFER,
-      ],
-      {
-        errorMap: () => ({ message: "Método de pago inválido" }),
-      }
-    ),
-    paymentStatus: z.enum(
-      [
-        PaymentStatusEnum.PENDING,
-        PaymentStatusEnum.PAID,
-        PaymentStatusEnum.DEBT,
-      ],
-      {
-        errorMap: () => ({ message: "Estado de pago inválido" }),
-      }
-    ),
-    priority: z.number().min(1).max(5).default(1),
-    notes: z.string().optional(),
-    items: z
-      .array(OrderItemRequestSchema)
-      .min(1, "Debe incluir al menos un artículo"),
-  })
-  .refine(
-    (data) => {
-      // Either customerId OR (customerName AND customerPhone) must be provided
-      if (data.customerId) {
-        return true; // Customer ID provided
-      }
-      return data.customerName && data.customerPhone; // Both name and phone provided
-    },
+export const CreateOrderRequestSchema = z.object({
+  customerId: z.coerce.number().positive("ID de cliente inválido"),
+  paymentMethod: z.enum(
+    [
+      PaymentMethodEnum.CASH,
+      PaymentMethodEnum.YAPE,
+      PaymentMethodEnum.PLIN,
+      PaymentMethodEnum.TRANSFER,
+    ],
     {
-      message:
-        "Debe proporcionar ID de cliente o nombre y teléfono del cliente",
-      path: ["customerId"],
+      errorMap: () => ({ message: "Método de pago inválido" }),
     }
-  );
+  ),
+  notes: z.string().optional(),
+  items: z
+    .array(OrderItemRequestSchema)
+    .min(1, "Debe incluir al menos un artículo"),
+});
 
 /**
  * @openapi
@@ -182,7 +124,7 @@ export const CreateOrderRequestSchema = z
  *       properties:
  *         status:
  *           type: string
- *           enum: [pending, confirmed, reserved, in_transit, delivered, fulfilled, cancelled, failed]
+ *           enum: [pending, confirmed, in_transit, delivered, fulfilled, cancelled, failed]
  *           description: The new status for the order
  *         reason:
  *           type: string
@@ -198,7 +140,6 @@ export const UpdateOrderStatusRequestSchema = z.object({
     [
       OrderStatusEnum.PENDING,
       OrderStatusEnum.CONFIRMED,
-      OrderStatusEnum.RESERVED,
       OrderStatusEnum.IN_TRANSIT,
       OrderStatusEnum.DELIVERED,
       OrderStatusEnum.FULFILLED,
@@ -228,7 +169,7 @@ export const UpdateOrderStatusRequestSchema = z.object({
  *           description: Filter by customer ID (optional)
  *         status:
  *           type: string
- *           enum: [pending, confirmed, reserved, in_transit, delivered, fulfilled, cancelled, failed]
+ *           enum: [pending, confirmed, in_transit, delivered, fulfilled, cancelled, failed]
  *           description: Filter by order status (optional)
  *         deliveryUserId:
  *           type: integer
@@ -256,7 +197,6 @@ export const GetOrdersRequestSchema = z.object({
       [
         OrderStatusEnum.PENDING,
         OrderStatusEnum.CONFIRMED,
-        OrderStatusEnum.RESERVED,
         OrderStatusEnum.IN_TRANSIT,
         OrderStatusEnum.DELIVERED,
         OrderStatusEnum.FULFILLED,

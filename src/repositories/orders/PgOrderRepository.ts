@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../db";
-import { orders } from "../../db/schemas/orders";
+import { orders, orderItems } from "../../db/schemas/orders";
 import {
   OrderStatusEnum,
   PaymentMethodEnum,
@@ -8,6 +8,7 @@ import {
 } from "../../db/schemas/orders/order-status-types";
 import {
   NewOrderType,
+  NewOrderItemType,
   OrderRelationOptions,
   OrderType,
   OrderWithDetails,
@@ -409,6 +410,37 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     }
   }
 
+  async createOrderItemsWithTransaction(
+    trx: DbTransaction,
+    orderId: number,
+    items: Array<{
+      itemType: "tank" | "item";
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      quantity: number;
+      unitPrice: string;
+    }>
+  ): Promise<void> {
+    for (const item of items) {
+      const totalPrice = (parseFloat(item.unitPrice) * item.quantity).toFixed(2);
+      
+      const orderItemData: NewOrderItemType = {
+        orderId,
+        itemType: item.itemType as any,
+        tankTypeId: item.itemType === "tank" ? item.tankTypeId : null,
+        inventoryItemId: item.itemType === "item" ? item.inventoryItemId : null,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice,
+        tankReturned: item.itemType === "tank" ? true : null,
+        deliveryStatus: "pending" as any,
+        deliveredBy: null,
+      };
+
+      await trx.insert(orderItems).values(orderItemData);
+    }
+  }
+
   async generateOrderNumber(): Promise<string> {
     return OrderUtils.generateOrderNumber();
   }
@@ -559,5 +591,46 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
       successful,
       failed,
     };
+  }
+
+  async assignOrderToStore(
+    orderId: number,
+    assignmentId: number,
+    trx?: DbTransaction
+  ): Promise<void> {
+    const updateOperation = async (transaction: DbTransaction) => {
+      // Verify order exists and is in correct status
+      const order = await transaction
+        .select()
+        .from(orders)
+        .where(eq(orders.orderId, orderId))
+        .limit(1);
+
+      if (!order || order.length === 0) {
+        throw new NotFoundError(`Pedido con ID ${orderId} no encontrado`);
+      }
+
+      // Verify order is in PENDING status (only pending orders can be assigned)
+      if (order[0].status !== OrderStatusEnum.PENDING) {
+        throw new BadRequestError(
+          `Solo se pueden asignar pedidos pendientes. Estado actual: ${order[0].status}`
+        );
+      }
+
+      // Update the order with store assignment
+      await transaction
+        .update(orders)
+        .set({
+          assignedTo: assignmentId,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.orderId, orderId));
+    };
+
+    if (trx) {
+      await updateOperation(trx);
+    } else {
+      await db.transaction(updateOperation);
+    }
   }
 }

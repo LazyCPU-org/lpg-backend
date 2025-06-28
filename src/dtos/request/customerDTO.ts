@@ -17,11 +17,11 @@ export const CreateCustomerRequestSchema = z.object({
     .string()
     .nonempty("Campo teléfono es obligatorio")
     .regex(/^(\+51)?[0-9]{9}$/, "Formato de teléfono peruano inválido")
-    .transform(phone => phone.startsWith('+51') ? phone : `+51${phone}`),
+    .transform((phone) => (phone.startsWith("+51") ? phone : `+51${phone}`)),
   alternativePhone: z
     .string()
     .regex(/^(\+51)?[0-9]{9}$/, "Formato de teléfono peruano inválido")
-    .transform(phone => phone.startsWith('+51') ? phone : `+51${phone}`)
+    .transform((phone) => (phone.startsWith("+51") ? phone : `+51${phone}`))
     .optional(),
   address: z
     .string()
@@ -59,12 +59,12 @@ export const UpdateCustomerRequestSchema = z.object({
   phoneNumber: z
     .string()
     .regex(/^(\+51)?[0-9]{9}$/, "Formato de teléfono peruano inválido")
-    .transform(phone => phone.startsWith('+51') ? phone : `+51${phone}`)
+    .transform((phone) => (phone.startsWith("+51") ? phone : `+51${phone}`))
     .optional(),
   alternativePhone: z
     .string()
     .regex(/^(\+51)?[0-9]{9}$/, "Formato de teléfono peruano inválido")
-    .transform(phone => phone.startsWith('+51') ? phone : `+51${phone}`)
+    .transform((phone) => (phone.startsWith("+51") ? phone : `+51${phone}`))
     .optional(),
   address: z
     .string()
@@ -87,25 +87,24 @@ export const UpdateCustomerRequestSchema = z.object({
 export type UpdateCustomerRequest = z.infer<typeof UpdateCustomerRequestSchema>;
 
 // Customer Search Request (for phone/name lookup)
-export const CustomerSearchRequestSchema = z.object({
-  phone: z
-    .string()
-    .regex(/^(\+51)?[0-9]{9}$/, "Formato de teléfono peruano inválido")
-    .transform(phone => phone.startsWith('+51') ? phone : `+51${phone}`)
-    .optional(),
-  name: z
-    .string()
-    .min(2, "El nombre debe tener al menos 2 caracteres")
-    .optional(),
-  customerType: z.nativeEnum(CustomerTypeEnum).optional(),
-  isActive: z.boolean().default(true),
-}).refine(
-  (data) => data.phone || data.name,
-  {
+export const CustomerSearchRequestSchema = z
+  .object({
+    phone: z
+      .string()
+      .regex(/^(\+51)?[0-9]{9}$/, "Formato de teléfono peruano inválido")
+      .transform((phone) => (phone.startsWith("+51") ? phone : `+51${phone}`))
+      .optional(),
+    name: z
+      .string()
+      .min(2, "El nombre debe tener al menos 2 caracteres")
+      .optional(),
+    customerType: z.nativeEnum(CustomerTypeEnum).optional(),
+    isActive: z.boolean().default(true),
+  })
+  .refine((data) => data.phone || data.name, {
     message: "Debe proporcionar teléfono o nombre para buscar",
     path: ["phone", "name"],
-  }
-);
+  });
 
 export type CustomerSearchRequest = z.infer<typeof CustomerSearchRequestSchema>;
 
@@ -120,7 +119,7 @@ export const QuickCustomerCreationSchema = z.object({
     .string()
     .nonempty("Teléfono del cliente es obligatorio")
     .regex(/^(\+51)?[0-9]{9}$/, "Formato de teléfono peruano inválido")
-    .transform(phone => phone.startsWith('+51') ? phone : `+51${phone}`),
+    .transform((phone) => (phone.startsWith("+51") ? phone : `+51${phone}`)),
   deliveryAddress: z
     .string()
     .nonempty("Dirección de entrega es obligatoria")
@@ -143,36 +142,29 @@ export const QuickCustomerCreationRequestSchema = z.object({
     .string()
     .min(1, "Apellido es requerido")
     .max(50, "Apellido debe tener máximo 50 caracteres"),
-  phoneNumber: z
+  phoneNumber: z.coerce
     .string()
-    .regex(/^\+51[0-9]{9}$/, "Formato de teléfono peruano inválido (+51xxxxxxxxx)"),
-  address: z
-    .string()
-    .min(1, "Dirección es requerida"),
+    .regex(/[0-9]{9}$/, "Formato de teléfono peruano inválido"),
+  address: z.string().min(1, "Dirección es requerida"),
   alternativePhone: z
     .string()
-    .regex(/^\+51[0-9]{9}$/, "Formato de teléfono peruano inválido")
+    .regex(/[0-9]{9}$/, "Formato de teléfono peruano inválido")
     .optional(),
-  locationReference: z
-    .string()
-    .optional(),
+  locationReference: z.string().optional(),
 });
 
-export type QuickCustomerCreationRequest = z.infer<typeof QuickCustomerCreationRequestSchema>;
+export type QuickCustomerCreationRequest = z.infer<
+  typeof QuickCustomerCreationRequestSchema
+>;
 
 // Customer Update Request (for PRD specification)
 export const CustomerUpdateRequestSchema = z.object({
-  address: z
-    .string()
-    .min(1, "Dirección es requerida")
-    .optional(),
+  address: z.string().min(1, "Dirección es requerida").optional(),
   alternativePhone: z
     .string()
-    .regex(/^\+51[0-9]{9}$/, "Formato de teléfono peruano inválido")
+    .regex(/^\[0-9]{9}$/, "Formato de teléfono peruano inválido")
     .optional(),
-  locationReference: z
-    .string()
-    .optional(),
+  locationReference: z.string().optional(),
 });
 
 export type CustomerUpdateRequest = z.infer<typeof CustomerUpdateRequestSchema>;
@@ -183,35 +175,19 @@ export const CustomerListRequestSchema = z.object({
     .string()
     .min(2, "Término de búsqueda debe tener al menos 2 caracteres")
     .optional(),
-  include_inactive: z
-    .boolean()
-    .optional(),
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional(),
-  offset: z
-    .number()
-    .int()
-    .min(0)
-    .optional(),
+  include_inactive: z.coerce.boolean().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 export type CustomerListRequest = z.infer<typeof CustomerListRequestSchema>;
 
 // Customer Search Request (for PRD specification)
 export const CustomerSearchRequestSchemaV2 = z.object({
-  q: z
-    .string()
-    .min(2, "Término de búsqueda debe tener al menos 2 caracteres"),
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .max(50)
-    .optional(),
+  q: z.string().min(2, "Término de búsqueda debe tener al menos 2 caracteres"),
+  limit: z.number().int().min(1).max(50).optional(),
 });
 
-export type CustomerSearchRequestV2 = z.infer<typeof CustomerSearchRequestSchemaV2>;
+export type CustomerSearchRequestV2 = z.infer<
+  typeof CustomerSearchRequestSchemaV2
+>;

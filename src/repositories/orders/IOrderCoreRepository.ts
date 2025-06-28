@@ -80,6 +80,24 @@ export abstract class IOrderCoreRepository {
     paymentStatus: PaymentStatusEnum
   ): Promise<void>;
 
+  abstract createOrderItemsWithTransaction(
+    trx: DbTransaction,
+    orderId: number,
+    items: Array<{
+      itemType: "tank" | "item";
+      tankTypeId?: number;
+      inventoryItemId?: number;
+      quantity: number;
+      unitPrice: string;
+    }>
+  ): Promise<void>;
+
+  abstract assignOrderToStore(
+    orderId: number,
+    assignmentId: number,
+    trx?: DbTransaction
+  ): Promise<void>;
+
   abstract bulkUpdate(
     orderIds: number[],
     updates: Partial<OrderType>,

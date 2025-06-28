@@ -24,59 +24,55 @@ import { TimelineItem } from "./orderTypes";
 // Transaction type for consistency
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-// Status transition configuration
+// Status transition configuration - Simplified workflow without RESERVED
 const STATUS_TRANSITIONS: Record<OrderStatusEnum, OrderStatusEnum[]> = {
   [OrderStatusEnum.PENDING]: [
     OrderStatusEnum.CONFIRMED,
     OrderStatusEnum.CANCELLED,
   ],
   [OrderStatusEnum.CONFIRMED]: [
-    OrderStatusEnum.RESERVED,
-    OrderStatusEnum.CANCELLED,
-  ],
-  [OrderStatusEnum.RESERVED]: [
-    OrderStatusEnum.IN_TRANSIT,
+    OrderStatusEnum.IN_TRANSIT, // Direct transition to delivery
     OrderStatusEnum.CANCELLED,
   ],
   [OrderStatusEnum.IN_TRANSIT]: [
     OrderStatusEnum.DELIVERED,
     OrderStatusEnum.FAILED,
+    OrderStatusEnum.CANCELLED,
   ],
-  [OrderStatusEnum.DELIVERED]: [OrderStatusEnum.FULFILLED],
+  [OrderStatusEnum.DELIVERED]: [
+    OrderStatusEnum.FULFILLED,
+    OrderStatusEnum.FAILED, // Can fail after delivery
+  ],
   [OrderStatusEnum.FULFILLED]: [], // Terminal state
   [OrderStatusEnum.CANCELLED]: [], // Terminal state
   [OrderStatusEnum.FAILED]: [
-    OrderStatusEnum.IN_TRANSIT,
+    OrderStatusEnum.CONFIRMED, // Can restore to confirmed
+    OrderStatusEnum.IN_TRANSIT, // Can retry delivery
     OrderStatusEnum.CANCELLED,
-  ], // Can retry or cancel
+  ],
 };
 
 const STATUS_DESCRIPTIONS: Record<OrderStatusEnum, string> = {
-  [OrderStatusEnum.PENDING]: "Order created, awaiting confirmation",
-  [OrderStatusEnum.CONFIRMED]:
-    "Order confirmed, ready for inventory reservation",
-  [OrderStatusEnum.RESERVED]: "Inventory reserved, ready for delivery",
-  [OrderStatusEnum.IN_TRANSIT]: "Order out for delivery",
-  [OrderStatusEnum.DELIVERED]: "Order delivered successfully",
-  [OrderStatusEnum.FULFILLED]: "Order complete, invoice generated",
-  [OrderStatusEnum.CANCELLED]: "Order cancelled",
-  [OrderStatusEnum.FAILED]: "Delivery failed, requires attention",
+  [OrderStatusEnum.PENDING]: "Pedido creado, esperando confirmación",
+  [OrderStatusEnum.CONFIRMED]: "Pedido confirmado, tienda asignada, inventario reservado",
+  [OrderStatusEnum.IN_TRANSIT]: "Pedido en camino para entrega",
+  [OrderStatusEnum.DELIVERED]: "Pedido entregado exitosamente",
+  [OrderStatusEnum.FULFILLED]: "Pedido completo, factura generada",
+  [OrderStatusEnum.CANCELLED]: "Pedido cancelado",
+  [OrderStatusEnum.FAILED]: "Entrega fallida, requiere atención",
 };
 
 const COMMON_TRANSITION_REASONS: Record<string, string[]> = {
   "pending->confirmed": [
-    "Order details verified",
-    "Customer confirmed order",
-    "Inventory available",
+    "Detalles del pedido verificados",
+    "Cliente confirmó el pedido",
+    "Inventario disponible",
+    "Tienda asignada e inventario reservado",
   ],
-  "confirmed->reserved": [
-    "Inventory successfully reserved",
-    "Items allocated for order",
-  ],
-  "reserved->in_transit": [
-    "Driver assigned",
-    "Delivery started",
-    "Out for delivery",
+  "confirmed->in_transit": [
+    "Conductor asignado",
+    "Entrega iniciada",
+    "En camino para entrega",
   ],
   "in_transit->delivered": [
     "Successfully delivered",
@@ -624,9 +620,8 @@ export class PgOrderWorkflowRepository implements IOrderWorkflowRepository {
     // Simplified average time calculation (would need more complex queries for real implementation)
     const averageTimeInStatus: Record<string, number> = {
       [OrderStatusEnum.PENDING]: 2,
-      [OrderStatusEnum.CONFIRMED]: 1,
-      [OrderStatusEnum.RESERVED]: 4,
-      [OrderStatusEnum.IN_TRANSIT]: 3,
+      [OrderStatusEnum.CONFIRMED]: 3, // Now includes store assignment + inventory reservation
+      [OrderStatusEnum.IN_TRANSIT]: 4,
       [OrderStatusEnum.DELIVERED]: 0.5,
     };
 

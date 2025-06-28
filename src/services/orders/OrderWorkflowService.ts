@@ -18,13 +18,14 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     private reservationService: IInventoryReservationService
   ) {}
 
-  async confirmOrder(orderId: number, userId: number): Promise<any> {
-    const detailed = await this.confirmOrderDetailed(orderId, userId);
+  async confirmOrder(orderId: number, assignmentId: number, userId: number): Promise<any> {
+    const detailed = await this.confirmOrderDetailed(orderId, assignmentId, userId);
     return detailed;
   }
 
   async confirmOrderDetailed(
     orderId: number,
+    assignmentId: number,
     userId: number,
     notes?: string
   ): Promise<{
@@ -37,7 +38,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
       // Get current order status
       const order = await this.orderRepository.findById(orderId);
       if (!order) {
-        throw new NotFoundError(`Order ${orderId} not found`);
+        throw new NotFoundError(`Pedido ${orderId} no encontrado`);
       }
 
       const fromStatus = order.status as OrderStatusEnum;
@@ -50,7 +51,31 @@ export class OrderWorkflowService implements IOrderWorkflowService {
       );
       if (!validation.valid) {
         throw new BadRequestError(
-          validation.error || "Invalid status transition"
+          validation.error || "Transición de estado inválida"
+        );
+      }
+
+      // Assign order to store and reserve inventory atomically
+      await this.orderRepository.assignOrderToStore(orderId, assignmentId, trx);
+      
+      // Get order with items for inventory reservation
+      const orderWithItems = await this.orderRepository.findByIdWithRelations(orderId, {
+        items: true,
+      });
+      
+      if (orderWithItems?.orderItems && orderWithItems.orderItems.length > 0) {
+        const items = orderWithItems.orderItems.map((item) => ({
+          itemType: item.itemType as "tank" | "item",
+          itemId: item.tankTypeId || item.inventoryItemId || 0,
+          quantity: item.quantity,
+        }));
+
+        // Create inventory reservations
+        await this.reservationService.createReservation(
+          orderId,
+          assignmentId, // Store assignment ID contains the store information
+          items,
+          userId
         );
       }
 
@@ -60,7 +85,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
         fromStatus,
         toStatus,
         userId,
-        "Order confirmed by operator",
+        "Pedido confirmado, tienda asignada, inventario reservado",
         notes
       );
 
@@ -73,82 +98,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     });
   }
 
-  async reserveInventory(orderId: number): Promise<any> {
-    const detailed = await this.reserveInventoryDetailed(orderId, 1); // Default user ID
-    return detailed;
-  }
-
-  async reserveInventoryDetailed(
-    orderId: number,
-    userId: number
-  ): Promise<{
-    order: OrderWithDetails;
-    fromStatus: OrderStatusEnum;
-    toStatus: OrderStatusEnum;
-    historyEntry: OrderStatusHistoryType;
-  }> {
-    return await db.transaction(async (trx) => {
-      // Get current order
-      const order = await this.orderRepository.findByIdWithRelations(orderId, {
-        items: true,
-      });
-      if (!order) {
-        throw new NotFoundError(`Order ${orderId} not found`);
-      }
-
-      const fromStatus = order.status as OrderStatusEnum;
-      const toStatus: OrderStatusEnum = OrderStatusEnum.RESERVED;
-
-      // Validate transition
-      const validation = this.workflowRepository.validateStatusTransition(
-        fromStatus,
-        toStatus
-      );
-      if (!validation.valid) {
-        throw new BadRequestError(
-          validation.error || "Invalid status transition"
-        );
-      }
-
-      // Create inventory reservations
-      if (order.orderItems && order.orderItems.length > 0) {
-        const items = order.orderItems.map((item) => ({
-          itemType: item.itemType as "tank" | "item",
-          itemId: item.tankTypeId || item.inventoryItemId || 0,
-          quantity: item.quantity,
-        }));
-
-        // Get store from assignment
-        const storeId = order.assignation?.storeId;
-        if (!storeId) {
-          throw new BadRequestError("Order must be assigned to a store before reserving inventory");
-        }
-
-        await this.reservationService.createReservation(
-          orderId,
-          storeId,
-          items,
-          userId
-        );
-      }
-
-      // Update order status
-      const result = await this.workflowRepository.performStatusTransition(
-        orderId,
-        fromStatus,
-        toStatus,
-        userId,
-        "Inventory reserved for order"
-      );
-
-      return {
-        order: result.order,
-        fromStatus,
-        toStatus,
-        historyEntry: result.historyEntry,
-      };
-    });
-  }
+  // reserveInventory methods removed - now handled in confirmOrder
 
   async startDelivery(orderId: number, deliveryUserId: number): Promise<any> {
     const detailed = await this.startDeliveryDetailed(orderId, deliveryUserId);
@@ -168,7 +118,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     return await db.transaction(async (trx) => {
       const order = await this.orderRepository.findById(orderId);
       if (!order) {
-        throw new NotFoundError(`Order ${orderId} not found`);
+        throw new NotFoundError(`Pedido ${orderId} no encontrado`);
       }
 
       const fromStatus = order.status as OrderStatusEnum;
@@ -181,7 +131,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
       );
       if (!validation.valid) {
         throw new BadRequestError(
-          validation.error || "Invalid status transition"
+          validation.error || "Transición de estado inválida"
         );
       }
 
@@ -191,7 +141,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
         fromStatus,
         toStatus,
         deliveryUserId,
-        "Delivery started",
+        "Entrega iniciada",
         specialInstructions
       );
 
@@ -228,7 +178,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     return await db.transaction(async (trx) => {
       const order = await this.orderRepository.findById(orderId);
       if (!order) {
-        throw new NotFoundError(`Order ${orderId} not found`);
+        throw new NotFoundError(`Pedido ${orderId} no encontrado`);
       }
 
       const fromStatus = order.status as OrderStatusEnum;
@@ -241,7 +191,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
       );
       if (!validation.valid) {
         throw new BadRequestError(
-          validation.error || "Invalid status transition"
+          validation.error || "Transición de estado inválida"
         );
       }
 
@@ -260,7 +210,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
         fromStatus,
         toStatus,
         deliveryUserId,
-        "Delivery completed successfully",
+        "Entrega completada exitosamente",
         deliveryNotes
       );
 
@@ -292,7 +242,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     return await db.transaction(async (trx) => {
       const order = await this.orderRepository.findById(orderId);
       if (!order) {
-        throw new NotFoundError(`Order ${orderId} not found`);
+        throw new NotFoundError(`Pedido ${orderId} no encontrado`);
       }
 
       const fromStatus = order.status as OrderStatusEnum;
@@ -305,7 +255,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
       );
       if (!validation.valid) {
         throw new BadRequestError(
-          validation.error || "Invalid status transition"
+          validation.error || "Transición de estado inválida"
         );
       }
 
@@ -315,8 +265,8 @@ export class OrderWorkflowService implements IOrderWorkflowService {
         fromStatus,
         toStatus,
         userId,
-        `Delivery failed: ${reason}`,
-        reschedule ? "Will be rescheduled" : "Manual intervention required"
+        `Entrega fallida: ${reason}`,
+        reschedule ? "Se reprogramará" : "Requiere intervención manual"
       );
 
       return {
@@ -346,7 +296,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     return await db.transaction(async (trx) => {
       const order = await this.orderRepository.findById(orderId);
       if (!order) {
-        throw new NotFoundError(`Order ${orderId} not found`);
+        throw new NotFoundError(`Pedido ${orderId} no encontrado`);
       }
 
       const fromStatus = order.status as OrderStatusEnum;
@@ -359,15 +309,15 @@ export class OrderWorkflowService implements IOrderWorkflowService {
       );
       if (!validation.valid) {
         throw new BadRequestError(
-          validation.error || "Invalid status transition"
+          validation.error || "Transición de estado inválida"
         );
       }
 
       // Restore any reserved inventory
-      if (["reserved", "in_transit"].includes(fromStatus)) {
+      if (["confirmed", "in_transit"].includes(fromStatus)) {
         await this.reservationService.restoreReservation(
           orderId,
-          `Order cancelled: ${reason}`,
+          `Pedido cancelado: ${reason}`,
           userId
         );
       }
@@ -378,7 +328,7 @@ export class OrderWorkflowService implements IOrderWorkflowService {
         fromStatus,
         toStatus,
         userId,
-        `Order cancelled: ${reason}`
+        `Pedido cancelado: ${reason}`
       );
 
       return {
@@ -391,14 +341,15 @@ export class OrderWorkflowService implements IOrderWorkflowService {
   }
 
   validateTransition(fromStatus: string, toStatus: string): boolean {
-    // Simple validation logic
+    // Simplified workflow validation - RESERVED status removed
     const validTransitions: Record<string, string[]> = {
       pending: ["confirmed", "cancelled"],
-      confirmed: ["reserved", "cancelled"],
-      reserved: ["in_transit", "cancelled"],
+      confirmed: ["in_transit", "cancelled"], // Direct transition to delivery
       in_transit: ["delivered", "failed", "cancelled"],
-      delivered: ["fulfilled"],
-      failed: ["in_transit", "cancelled"],
+      delivered: ["fulfilled", "failed"],
+      failed: ["confirmed", "in_transit", "cancelled"], // Can restore or retry
+      fulfilled: [], // Terminal state
+      cancelled: [], // Terminal state
     };
 
     return validTransitions[fromStatus]?.includes(toStatus) || false;
@@ -497,13 +448,13 @@ export class OrderWorkflowService implements IOrderWorkflowService {
       try {
         switch (toStatus) {
           case "confirmed":
-            await this.confirmOrder(orderId, userId);
-            break;
+            // Note: Bulk confirm requires assignmentId, which we don't have here
+            throw new Error("Confirmación masiva requiere asignaciones individuales de tienda");
           case "cancelled":
             await this.cancelOrder(orderId, reason, userId);
             break;
           default:
-            throw new Error(`Bulk transition to ${toStatus} not supported`);
+            throw new Error(`Transición masiva a ${toStatus} no soportada`);
         }
 
         successful.push(orderId);
@@ -549,14 +500,13 @@ export class OrderWorkflowService implements IOrderWorkflowService {
     toStatus: OrderStatusEnum
   ): string {
     const descriptions: Record<string, string> = {
-      "pending->confirmed": "Confirm order details and availability",
-      "confirmed->reserved": "Reserve inventory for this order",
-      "reserved->in_transit": "Start delivery process",
-      "in_transit->delivered": "Complete delivery and update inventory",
-      "delivered->fulfilled": "Generate invoice and finalize order",
-      "any->cancelled": "Cancel order and restore inventory",
-      "in_transit->failed": "Mark delivery as failed",
-      "failed->in_transit": "Retry delivery",
+      "pending->confirmed": "Confirmar pedido, asignar tienda y reservar inventario",
+      "confirmed->in_transit": "Iniciar proceso de entrega",
+      "in_transit->delivered": "Completar entrega y actualizar inventario",
+      "delivered->fulfilled": "Generar factura y finalizar pedido",
+      "any->cancelled": "Cancelar pedido y restaurar inventario",
+      "in_transit->failed": "Marcar entrega como fallida",
+      "failed->in_transit": "Reintentar entrega",
     };
 
     const key = `${fromStatus}->${toStatus}`;

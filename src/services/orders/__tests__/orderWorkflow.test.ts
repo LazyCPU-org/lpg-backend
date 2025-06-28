@@ -29,10 +29,9 @@ describe("Order Workflow Service", () => {
     mockOrderRepository = createMockOrderRepository();
     mockWorkflowRepository = createMockOrderWorkflowRepository();
 
-    // Mock implementation matching actual interface
+    // Mock implementation matching simplified workflow interface
     orderWorkflowService = {
       confirmOrder: jest.fn(),
-      reserveInventory: jest.fn(),
       startDelivery: jest.fn(),
       completeDelivery: jest.fn(),
       failDelivery: jest.fn(),
@@ -40,7 +39,6 @@ describe("Order Workflow Service", () => {
       validateTransition: jest.fn(),
       // Additional methods from actual interface
       confirmOrderDetailed: jest.fn(),
-      reserveInventoryDetailed: jest.fn(),
       startDeliveryDetailed: jest.fn(),
       completeDeliveryDetailed: jest.fn(),
       failDeliveryDetailed: jest.fn(),
@@ -69,15 +67,15 @@ describe("Order Workflow Service", () => {
       },
       {
         from: OrderStatusEnum.PENDING,
-        to: OrderStatusEnum.RESERVED,
-        valid: false,
+        to: OrderStatusEnum.IN_TRANSIT,
+        valid: false, // Cannot skip confirmation
       },
 
-      // From CONFIRMED
+      // From CONFIRMED (now includes assignment + inventory reservation)
       {
         from: OrderStatusEnum.CONFIRMED,
-        to: OrderStatusEnum.RESERVED,
-        valid: true,
+        to: OrderStatusEnum.IN_TRANSIT,
+        valid: true, // Direct transition to delivery
       },
       {
         from: OrderStatusEnum.CONFIRMED,
@@ -87,24 +85,7 @@ describe("Order Workflow Service", () => {
       {
         from: OrderStatusEnum.CONFIRMED,
         to: OrderStatusEnum.PENDING,
-        valid: false,
-      },
-
-      // From RESERVED
-      {
-        from: OrderStatusEnum.RESERVED,
-        to: OrderStatusEnum.IN_TRANSIT,
-        valid: true,
-      },
-      {
-        from: OrderStatusEnum.RESERVED,
-        to: OrderStatusEnum.CANCELLED,
-        valid: true,
-      },
-      {
-        from: OrderStatusEnum.RESERVED,
-        to: OrderStatusEnum.CONFIRMED,
-        valid: false,
+        valid: false, // Cannot go backwards
       },
 
       // From IN_TRANSIT
@@ -125,8 +106,8 @@ describe("Order Workflow Service", () => {
       },
       {
         from: OrderStatusEnum.IN_TRANSIT,
-        to: OrderStatusEnum.RESERVED,
-        valid: false,
+        to: OrderStatusEnum.CONFIRMED,
+        valid: false, // Cannot go backwards
       },
 
       // From DELIVERED
@@ -149,13 +130,13 @@ describe("Order Workflow Service", () => {
       // From FAILED
       {
         from: OrderStatusEnum.FAILED,
-        to: OrderStatusEnum.RESERVED,
-        valid: true,
+        to: OrderStatusEnum.CONFIRMED,
+        valid: true, // Can restore to confirmed (with assignment intact)
       },
       {
         from: OrderStatusEnum.FAILED,
         to: OrderStatusEnum.IN_TRANSIT,
-        valid: true,
+        valid: true, // Can retry delivery
       },
       {
         from: OrderStatusEnum.FAILED,
@@ -165,7 +146,7 @@ describe("Order Workflow Service", () => {
       {
         from: OrderStatusEnum.FAILED,
         to: OrderStatusEnum.DELIVERED,
-        valid: false,
+        valid: false, // Cannot mark as delivered after failure
       },
 
       // Terminal states
@@ -219,7 +200,7 @@ describe("Order Workflow Service", () => {
         mockTransition
       );
 
-      const result = await orderWorkflowService.confirmOrder(1, 1);
+      const result = await orderWorkflowService.confirmOrder(1, 1, 1);
 
       expect(result).toEqual(mockTransition);
       expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.PENDING);
@@ -236,64 +217,62 @@ describe("Order Workflow Service", () => {
         new Error("Order cannot be confirmed from status: confirmed")
       );
 
-      await expect(orderWorkflowService.confirmOrder(1, 1)).rejects.toThrow(
+      await expect(orderWorkflowService.confirmOrder(1, 1, 1)).rejects.toThrow(
         "Order cannot be confirmed from status: confirmed"
       );
     });
   });
 
-  describe("Inventory Reservation Workflow", () => {
-    test("should reserve inventory for confirmed order", async () => {
+  describe("Order Confirmation with Assignment", () => {
+    test("should confirm order with store assignment and reserve inventory", async () => {
+      const scenario = createOrderWorkflowScenario();
+      const mockTransition = createMockOrderTransition({
+        statusChange: {
+          historyId: 1,
+          orderId: 1,
+          fromStatus: OrderStatusEnum.PENDING,
+          toStatus: OrderStatusEnum.CONFIRMED,
+          changedBy: 1,
+          reason: "Order confirmed, store assigned, inventory reserved",
+          notes: null,
+          createdAt: new Date("2024-01-01T10:30:00Z"),
+        },
+      });
+
+      mockOrderRepository.getOrderById.mockResolvedValue(scenario.initialOrder);
+      (orderWorkflowService.confirmOrder as jest.Mock).mockResolvedValue(
+        mockTransition
+      );
+
+      const result = await orderWorkflowService.confirmOrder(1, 123, 1); // assignmentId = 123
+
+      expect(result).toEqual(mockTransition);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.PENDING);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.CONFIRMED);
+    });
+
+    test("should reject confirmation with invalid assignment", async () => {
+      const scenario = createOrderWorkflowScenario();
+
+      mockOrderRepository.getOrderById.mockResolvedValue(scenario.initialOrder);
+      (orderWorkflowService.confirmOrder as jest.Mock).mockRejectedValue(
+        new Error("Store assignment not found")
+      );
+
+      await expect(orderWorkflowService.confirmOrder(1, 999, 1)).rejects.toThrow(
+        "Store assignment not found"
+      );
+    });
+  });
+
+  describe("Delivery Workflow", () => {
+    test("should start delivery for confirmed order", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
           fromStatus: OrderStatusEnum.CONFIRMED,
-          toStatus: OrderStatusEnum.RESERVED,
-          changedBy: 1,
-          reason: "Inventory reserved",
-          notes: null,
-          createdAt: new Date("2024-01-01T10:30:00Z"),
-        },
-      });
-
-      mockOrderRepository.getOrderById.mockResolvedValue(
-        scenario.confirmedOrder
-      );
-      (orderWorkflowService.reserveInventory as jest.Mock).mockResolvedValue(
-        mockTransition
-      );
-
-      const result = await orderWorkflowService.reserveInventory(1);
-
-      expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.CONFIRMED);
-      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.RESERVED);
-    });
-
-    test("should reject reservation for non-confirmed order", async () => {
-      const scenario = createOrderWorkflowScenario();
-
-      mockOrderRepository.getOrderById.mockResolvedValue(scenario.initialOrder);
-      (orderWorkflowService.reserveInventory as jest.Mock).mockRejectedValue(
-        new Error("Order must be confirmed before inventory can be reserved")
-      );
-
-      await expect(orderWorkflowService.reserveInventory(1)).rejects.toThrow(
-        "Order must be confirmed before inventory can be reserved"
-      );
-    });
-  });
-
-  describe("Delivery Workflow", () => {
-    test("should start delivery for reserved order", async () => {
-      const scenario = createOrderWorkflowScenario();
-      const mockTransition = createMockOrderTransition({
-        statusChange: {
-          historyId: 1,
-          orderId: 1,
-          fromStatus: OrderStatusEnum.RESERVED,
           toStatus: OrderStatusEnum.IN_TRANSIT,
           changedBy: 2,
           reason: "Delivery started",
@@ -303,7 +282,7 @@ describe("Order Workflow Service", () => {
       });
 
       mockOrderRepository.getOrderById.mockResolvedValue(
-        scenario.reservedOrder
+        scenario.confirmedOrder
       );
       (orderWorkflowService.startDelivery as jest.Mock).mockResolvedValue(
         mockTransition
@@ -312,7 +291,7 @@ describe("Order Workflow Service", () => {
       const result = await orderWorkflowService.startDelivery(1, 2);
 
       expect(result).toEqual(mockTransition);
-      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.RESERVED);
+      expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.CONFIRMED);
       expect(result.statusChange.toStatus).toBe(OrderStatusEnum.IN_TRANSIT);
     });
 
@@ -382,7 +361,6 @@ describe("Order Workflow Service", () => {
     const cancellableStatuses = [
       OrderStatusEnum.PENDING,
       OrderStatusEnum.CONFIRMED,
-      OrderStatusEnum.RESERVED,
       OrderStatusEnum.IN_TRANSIT,
       OrderStatusEnum.FAILED,
     ];
@@ -471,31 +449,31 @@ describe("Order Workflow Service", () => {
       expect(result.statusChange.toStatus).toBe(OrderStatusEnum.IN_TRANSIT);
     });
 
-    test("should allow reservation restoration from failed status", async () => {
+    test("should allow restoration to confirmed status from failed order", async () => {
       const scenario = createOrderWorkflowScenario();
       const mockTransition = createMockOrderTransition({
         statusChange: {
           historyId: 1,
           orderId: 1,
           fromStatus: OrderStatusEnum.FAILED,
-          toStatus: OrderStatusEnum.RESERVED,
+          toStatus: OrderStatusEnum.CONFIRMED,
           changedBy: 1,
-          reason: "Restore reservations",
+          reason: "Restore order to confirmed status",
           notes: null,
           createdAt: new Date("2024-01-01T10:30:00Z"),
         },
       });
 
       mockOrderRepository.getOrderById.mockResolvedValue(scenario.failedOrder);
-      (orderWorkflowService.reserveInventory as jest.Mock).mockResolvedValue(
+      (orderWorkflowService.confirmOrder as jest.Mock).mockResolvedValue(
         mockTransition
       );
 
-      const result = await orderWorkflowService.reserveInventory(1);
+      const result = await orderWorkflowService.confirmOrder(1, 123, 1);
 
       expect(result).toEqual(mockTransition);
       expect(result.statusChange.fromStatus).toBe(OrderStatusEnum.FAILED);
-      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.RESERVED);
+      expect(result.statusChange.toStatus).toBe(OrderStatusEnum.CONFIRMED);
     });
   });
 
@@ -522,7 +500,7 @@ describe("Order Workflow Service", () => {
         mockTransition
       );
 
-      await orderWorkflowService.confirmOrder(1, 1);
+      await orderWorkflowService.confirmOrder(1, 1, 1);
 
       // In real implementation, this would be called internally
       expect(

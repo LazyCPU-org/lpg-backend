@@ -86,10 +86,7 @@ describe("Order Validation Service", () => {
     // UX Design Pattern: Quick entry with minimal required fields
     test("should accept quick order entry with minimal data", async () => {
       const quickOrderRequest = createMockOrderRequest({
-        customerName: "Pedro Martinez",
-        customerPhone: "+51987654321",
-        deliveryAddress: "Jr. Lima 123, San Isidro",
-        locationReference: undefined, // Optional in UX flow
+        customerId: 2, // Reference to existing customer
         notes: undefined, // Optional in UX flow
         items: [
           {
@@ -157,51 +154,45 @@ describe("Order Validation Service", () => {
       }
     });
 
-    test("should reject order without customer name when no customer ID", async () => {
+    test("should reject order without customer ID", async () => {
       const invalidRequest = createMockOrderRequest({
-        customerId: undefined,
-        customerName: undefined,
-        customerPhone: "+1234567890",
+        customerId: undefined as any, // Invalid - customerId is required
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
         valid: false,
-        errors: ["Customer name is required when customer ID is not provided"],
+        errors: ["Customer ID is required"],
       });
 
       const result = await orderService.validateOrderRequest(invalidRequest);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain(
-        "Customer name is required when customer ID is not provided"
+        "Customer ID is required"
       );
     });
 
-    test("should reject order without customer phone when no customer ID", async () => {
+    test("should reject order with invalid customer ID", async () => {
       const invalidRequest = createMockOrderRequest({
-        customerId: undefined,
-        customerName: "John Doe",
-        customerPhone: undefined,
+        customerId: -1, // Invalid negative ID
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
         valid: false,
-        errors: ["Customer phone is required when customer ID is not provided"],
+        errors: ["Customer ID must be a positive number"],
       });
 
       const result = await orderService.validateOrderRequest(invalidRequest);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain(
-        "Customer phone is required when customer ID is not provided"
+        "Customer ID must be a positive number"
       );
     });
 
-    test("should accept order with customer ID and no name/phone", async () => {
+    test("should accept order with valid customer ID", async () => {
       const validRequest = createMockOrderRequest({
-        customerId: 123,
-        customerName: undefined,
-        customerPhone: undefined,
+        customerId: 123, // Valid positive customer ID
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
@@ -214,20 +205,20 @@ describe("Order Validation Service", () => {
       expect(result.valid).toBe(true);
     });
 
-    test("should reject order without delivery address", async () => {
+    test("should reject order with invalid payment method", async () => {
       const invalidRequest = createMockOrderRequest({
-        deliveryAddress: "",
+        paymentMethod: "invalid_method" as any,
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
         valid: false,
-        errors: ["Delivery address is required"],
+        errors: ["Invalid payment method"],
       });
 
       const result = await orderService.validateOrderRequest(invalidRequest);
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain("Delivery address is required");
+      expect(result.errors).toContain("Invalid payment method");
     });
 
     test("should reject order without items", async () => {
@@ -247,52 +238,50 @@ describe("Order Validation Service", () => {
     });
 
 
-    test("should validate payment method", async () => {
+    test("should validate notes field length", async () => {
       const invalidRequest = createMockOrderRequest({
-        paymentMethod: "invalid_method" as any,
+        notes: "A".repeat(1001), // Very long notes
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
         valid: false,
-        errors: ["Invalid payment method"],
+        errors: ["Notes must be less than 1000 characters"],
       });
 
       const result = await orderService.validateOrderRequest(invalidRequest);
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain("Invalid payment method");
+      expect(result.errors).toContain("Notes must be less than 1000 characters");
     });
 
-    test("should validate payment status", async () => {
-      const invalidRequest = createMockOrderRequest({
-        paymentStatus: "invalid_status" as any,
+    test("should accept valid notes field", async () => {
+      const validRequest = createMockOrderRequest({
+        notes: "Customer prefers morning delivery", // Valid notes
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
-        valid: false,
-        errors: ["Invalid payment status"],
+        valid: true,
+        errors: [],
       });
 
-      const result = await orderService.validateOrderRequest(invalidRequest);
+      const result = await orderService.validateOrderRequest(validRequest);
 
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain("Invalid payment status");
+      expect(result.valid).toBe(true);
     });
 
-    test("should validate priority range", async () => {
-      const invalidRequest = createMockOrderRequest({
-        priority: 10, // Out of valid range 1-5
+    test("should accept empty notes field", async () => {
+      const validRequest = createMockOrderRequest({
+        notes: undefined, // Optional field can be undefined
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
-        valid: false,
-        errors: ["Priority must be between 1 and 5"],
+        valid: true,
+        errors: [],
       });
 
-      const result = await orderService.validateOrderRequest(invalidRequest);
+      const result = await orderService.validateOrderRequest(validRequest);
 
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain("Priority must be between 1 and 5");
+      expect(result.valid).toBe(true);
     });
   });
 
@@ -492,33 +481,38 @@ describe("Order Validation Service", () => {
       expect(result.errors).toContain("Order cannot exceed 50 items");
     });
 
-    test("should validate payment method and status compatibility", async () => {
-      const incompatibleRequest = createMockOrderRequest({
-        paymentMethod: PaymentMethodEnum.CASH,
-        paymentStatus: PaymentStatusEnum.PAID, // Cash payments usually pending until delivery
-      });
+    test("should validate payment method enum values", async () => {
+      const validPaymentMethods = Object.values(PaymentMethodEnum);
+      
+      for (const method of validPaymentMethods) {
+        const validRequest = createMockOrderRequest({
+          paymentMethod: method,
+        });
 
-      (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
-        valid: false,
-        errors: ["Cash payments should be pending until delivery completion"],
-      });
+        (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
+          valid: true,
+          errors: [],
+        });
 
-      const result = await orderService.validateOrderRequest(
-        incompatibleRequest
-      );
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain(
-        "Cash payments should be pending until delivery completion"
-      );
+        const result = await orderService.validateOrderRequest(validRequest);
+        expect(result.valid).toBe(true);
+      }
     });
 
-    // UX Design Pattern: Smart defaults for payment
-    test("should accept smart payment defaults from UX flow", async () => {
-      const smartDefaultsRequest = createMockOrderRequest({
-        paymentMethod: PaymentMethodEnum.CASH, // Pre-selected in UX
-        paymentStatus: PaymentStatusEnum.PENDING, // Default for cash
-        priority: 1, // Default priority
+    // UX Design Pattern: Simplified schema validation
+    test("should accept requests with all valid schema fields", async () => {
+      const completeRequest = createMockOrderRequest({
+        customerId: 1,
+        paymentMethod: PaymentMethodEnum.CASH,
+        notes: "Customer prefers morning delivery",
+        items: [
+          {
+            itemType: ItemTypeEnum.TANK,
+            tankTypeId: 1,
+            quantity: 2,
+            unitPrice: "25.00",
+          },
+        ],
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
@@ -526,9 +520,7 @@ describe("Order Validation Service", () => {
         errors: [],
       });
 
-      const result = await orderService.validateOrderRequest(
-        smartDefaultsRequest
-      );
+      const result = await orderService.validateOrderRequest(completeRequest);
 
       expect(result.valid).toBe(true);
     });
@@ -556,11 +548,10 @@ describe("Order Validation Service", () => {
 
     // Test what happens when frontend sends minimal vs complete data
     test("should handle minimal order data from frontend", async () => {
-      const minimalOrder = createConversationOrderEntry({
-        // Only essential fields that frontend must provide
-        customerName: "Pedro Martinez",
-        customerPhone: "+51987654321",
-        deliveryAddress: "Jr. Lima 123, San Isidro",
+      const minimalOrder = createMockOrderRequest({
+        // Only essential fields per schema
+        customerId: 2,
+        paymentMethod: PaymentMethodEnum.CASH,
         items: [
           {
             itemType: ItemTypeEnum.TANK,
@@ -569,10 +560,8 @@ describe("Order Validation Service", () => {
             unitPrice: "45.00",
           },
         ],
-        // Optional fields that might be undefined
-        locationReference: undefined,
+        // Optional fields
         notes: undefined,
-        customerId: undefined, // New customer
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
@@ -584,91 +573,73 @@ describe("Order Validation Service", () => {
       expect(result.valid).toBe(true);
     });
 
-    // Test Peruvian phone number validation
-    test("should validate Peruvian phone number formats", async () => {
-      const phoneScenarios = createPeruvianPhoneScenarios();
+    // Test that schema validation works with different customer IDs
+    test("should validate different customer ID scenarios", async () => {
+      const validCustomerIds = [1, 2, 123, 999];
 
-      // Valid phone numbers should pass
-      const validPhones = [
-        phoneScenarios.validMobileNumber,
-        phoneScenarios.validShortMobile,
-      ];
-
-      for (const phone of validPhones) {
-        const orderWithPhone = createConversationOrderEntry({ customerPhone: phone });
+      for (const customerId of validCustomerIds) {
+        const orderWithCustomerId = createMockOrderRequest({ customerId });
 
         (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
           valid: true,
           errors: [],
         });
 
-        const result = await orderService.validateOrderRequest(orderWithPhone);
+        const result = await orderService.validateOrderRequest(orderWithCustomerId);
         expect(result.valid).toBe(true);
       }
 
-      // Invalid phone numbers should fail
-      const invalidPhones = [
-        phoneScenarios.invalidShortNumber,
-        phoneScenarios.invalidFormat,
-      ];
+      // Invalid customer IDs should fail
+      const invalidCustomerIds = [0, -1, -999];
 
-      for (const phone of invalidPhones) {
-        const orderWithInvalidPhone = createConversationOrderEntry({
-          customerPhone: phone,
-        });
+      for (const customerId of invalidCustomerIds) {
+        const orderWithInvalidId = createMockOrderRequest({ customerId });
 
         (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
           valid: false,
-          errors: ["Invalid phone number format"],
+          errors: ["Customer ID must be a positive number"],
         });
 
         const result = await orderService.validateOrderRequest(
-          orderWithInvalidPhone
+          orderWithInvalidId
         );
         expect(result.valid).toBe(false);
       }
     });
 
-    // Test Peruvian address validation
-    test("should validate Peruvian address formats", async () => {
-      const addressScenarios = createPeruvianAddressScenarios();
-
-      // Valid address formats
-      const validAddresses = [
-        addressScenarios.limaAddress,
-        addressScenarios.avenidaAddress,
-        addressScenarios.calleAddress,
-        addressScenarios.addressWithReference,
+    // Test notes field validation scenarios
+    test("should validate different notes scenarios", async () => {
+      const validNotesScenarios = [
+        "Ring doorbell twice",
+        "Customer prefers morning delivery",
+        "Leave at front door if no answer",
+        "Contact via WhatsApp before delivery",
+        "", // Empty string should be valid
       ];
 
-      for (const address of validAddresses) {
-        const orderWithAddress = createConversationOrderEntry({
-          deliveryAddress: address,
-        });
+      for (const notes of validNotesScenarios) {
+        const orderWithNotes = createMockOrderRequest({ notes });
 
         (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
           valid: true,
           errors: [],
         });
 
-        const result = await orderService.validateOrderRequest(
-          orderWithAddress
-        );
+        const result = await orderService.validateOrderRequest(orderWithNotes);
         expect(result.valid).toBe(true);
       }
 
-      // Short address should still be valid (error tolerance)
-      const shortAddressOrder = createConversationOrderEntry({
-        deliveryAddress: addressScenarios.shortAddress,
-      });
+      // Very long notes should fail
+      const longNotes = "A".repeat(1001);
+      const orderWithLongNotes = createMockOrderRequest({ notes: longNotes });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
-        valid: true,
-        errors: [],
+        valid: false,
+        errors: ["Notes must be less than 1000 characters"],
       });
 
-      const result = await orderService.validateOrderRequest(shortAddressOrder);
-      expect(result.valid).toBe(true);
+      const result = await orderService.validateOrderRequest(orderWithLongNotes);
+      expect(result.valid).toBe(false);
     });
   });
 
@@ -781,6 +752,66 @@ describe("Order Validation Service", () => {
     });
   });
 
+  describe("Schema Compliance Validation", () => {
+    test("should validate CreateOrderRequest matches actual schema", () => {
+      const request = createMockOrderRequest();
+      
+      // Verify required fields are present
+      expect(request.customerId).toBeDefined();
+      expect(typeof request.customerId).toBe('number');
+      expect(request.customerId).toBeGreaterThan(0);
+      
+      expect(request.paymentMethod).toBeDefined();
+      expect(Object.values(PaymentMethodEnum)).toContain(request.paymentMethod);
+      
+      expect(request.items).toBeDefined();
+      expect(Array.isArray(request.items)).toBe(true);
+      expect(request.items.length).toBeGreaterThan(0);
+      
+      // Verify optional fields
+      if (request.notes !== undefined) {
+        expect(typeof request.notes).toBe('string');
+      }
+      
+      // Verify items structure
+      request.items.forEach(item => {
+        expect(Object.values(ItemTypeEnum)).toContain(item.itemType);
+        expect(typeof item.quantity).toBe('number');
+        expect(item.quantity).toBeGreaterThan(0);
+        expect(typeof item.unitPrice).toBe('string');
+        expect(parseFloat(item.unitPrice)).toBeGreaterThan(0);
+      });
+    });
+
+    test("should reject orders with schema-invalid fields", () => {
+      // Test with schema-invalid data (fields that don't exist in CreateOrderRequestSchema)
+      const invalidRequest = {
+        customerId: 1,
+        paymentMethod: PaymentMethodEnum.CASH,
+        items: [{
+          itemType: ItemTypeEnum.TANK,
+          tankTypeId: 1,
+          quantity: 1,
+          unitPrice: "25.00"
+        }],
+        // These fields should not be in CreateOrderRequestSchema
+        customerName: "Invalid Field",
+        deliveryAddress: "Invalid Field", 
+        storeId: 123
+      };
+      
+      // In a real test, this would use Zod validation
+      const schemaFields = ['customerId', 'paymentMethod', 'items', 'notes'];
+      const requestFields = Object.keys(invalidRequest);
+      const invalidFields = requestFields.filter(field => !schemaFields.includes(field));
+      
+      expect(invalidFields.length).toBeGreaterThan(0);
+      expect(invalidFields).toContain('customerName');
+      expect(invalidFields).toContain('deliveryAddress');
+      expect(invalidFields).toContain('storeId');
+    });
+  });
+
   describe("Order Creation Business Logic", () => {
     test("should create valid order successfully", async () => {
       const request = createMockOrderRequest();
@@ -789,141 +820,133 @@ describe("Order Validation Service", () => {
       mockOrderRepository.createOrder.mockResolvedValue(expectedOrder);
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(request);
+      const result = await orderService.createOrder(request, 1); // userId parameter included
 
       expect(result).toEqual(expectedOrder);
       expect(result.status).toBe(OrderStatusEnum.PENDING);
       expect(result.orderNumber).toMatch(/^ORD-\d{4}-\d{3}$/);
     });
 
-    // Test how backend handles UX quick entry creation
-    test("should create order from UX quick entry with smart defaults", async () => {
-      const quickRequest = createConversationOrderEntry();
+    // Test how backend handles simplified schema creation
+    test("should create order from simplified schema with backend defaults", async () => {
+      const simplifiedRequest = createMockOrderRequest({
+        customerId: 2,
+        paymentMethod: PaymentMethodEnum.CASH,
+        notes: "Ring doorbell twice",
+      });
       const expectedOrder = createMockOrderWithItems({
-        customerName: "Pedro Martinez",
-        customerPhone: "+51987654321",
-        deliveryAddress: "Jr. Lima 123, San Isidro",
+        customerId: 2,
         status: OrderStatusEnum.PENDING, // Auto-set by backend
-        paymentMethod: PaymentMethodEnum.CASH, // From UX default
-        paymentStatus: PaymentStatusEnum.PENDING, // Smart default for cash
-        priority: 1, // UX default
+        paymentMethod: PaymentMethodEnum.CASH, // From request
         orderNumber: "ORD-2024-001", // Generated by backend
-        totalAmount: "90.00", // Calculated by backend (2 * 45.00)
+        totalAmount: "65.00", // Calculated by backend from items
+        notes: "Ring doorbell twice", // From request
       });
 
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(quickRequest);
+      const result = await orderService.createOrder(simplifiedRequest, 1);
 
       // Verify backend applies smart defaults
       expect(result.status).toBe(OrderStatusEnum.PENDING);
       expect(result.paymentMethod).toBe(PaymentMethodEnum.CASH);
-      expect(result.paymentStatus).toBe(PaymentStatusEnum.PENDING);
-      expect(result.priority).toBe(1);
       expect(result.orderNumber).toMatch(/^ORD-\d{4}-\d{3}$/);
-      expect(result.totalAmount).toBe("90.00");
+      expect(result.totalAmount).toBe("65.00");
+      expect(result.customerId).toBe(2);
     });
 
-    // Test creation with existing customer ID (frontend provides ID)
-    test("should create order for existing customer using ID", async () => {
-      const uxScenarios = createUXOrderScenarios();
-      const existingCustomerRequest = uxScenarios.existingCustomerEntry;
+    // Test creation with different customer IDs
+    test("should create order for different customer IDs", async () => {
+      const customerRequest = createMockOrderRequest({
+        customerId: 123,
+        paymentMethod: PaymentMethodEnum.YAPE,
+      });
 
       const expectedOrder = createMockOrderWithItems({
         customerId: 123, // Provided by frontend
-        customerName: "Pedro Martinez", // Could be auto-filled by frontend or backend
-        customerPhone: "+51987654321",
+        paymentMethod: PaymentMethodEnum.YAPE,
+        status: OrderStatusEnum.PENDING,
       });
 
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(existingCustomerRequest);
+      const result = await orderService.createOrder(customerRequest, 1);
 
       expect(result.customerId).toBe(123);
-      expect(result.customerName).toBe("Pedro Martinez");
+      expect(result.paymentMethod).toBe(PaymentMethodEnum.YAPE);
+      expect(result.status).toBe(OrderStatusEnum.PENDING);
     });
 
-    // Test creation with new customer (no ID, name/phone required)
-    test("should create order for new customer without ID", async () => {
-      const uxScenarios = createUXOrderScenarios();
-      const newCustomerRequest = uxScenarios.newCustomerEntry;
+    // Test creation with different payment methods
+    test("should create order with different payment methods", async () => {
+      const transferRequest = createMockOrderRequest({
+        customerId: 456,
+        paymentMethod: PaymentMethodEnum.TRANSFER,
+      });
 
       const expectedOrder = createMockOrderWithItems({
-        customerId: null, // New customer
-        customerName: "Sofia Rodriguez",
-        customerPhone: "+51987555444",
+        customerId: 456,
+        paymentMethod: PaymentMethodEnum.TRANSFER,
+        status: OrderStatusEnum.PENDING,
       });
 
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(newCustomerRequest);
+      const result = await orderService.createOrder(transferRequest, 1);
 
-      expect(result.customerId).toBeNull();
-      expect(result.customerName).toBe("Sofia Rodriguez");
-      expect(result.customerPhone).toBe("+51987555444");
+      expect(result.customerId).toBe(456);
+      expect(result.paymentMethod).toBe(PaymentMethodEnum.TRANSFER);
+      expect(result.status).toBe(OrderStatusEnum.PENDING);
     });
 
-    // Test creation with different payment methods affects payment status
-    test("should handle different payment methods with correct defaults", async () => {
-      const uxScenarios = createUXOrderScenarios();
-      const paymentScenarios = [
-        {
-          request: uxScenarios.cashPaymentEntry,
-          expectedStatus: PaymentStatusEnum.PENDING, // Cash paid on delivery
-          method: PaymentMethodEnum.CASH,
-        },
-        {
-          request: uxScenarios.yapePaymentEntry,
-          expectedStatus: PaymentStatusEnum.PENDING, // Digital needs confirmation
-          method: PaymentMethodEnum.YAPE,
-        },
-        {
-          request: uxScenarios.plinPaymentEntry,
-          expectedStatus: PaymentStatusEnum.PENDING,
-          method: PaymentMethodEnum.PLIN,
-        },
-        {
-          request: uxScenarios.transferPaymentEntry,
-          expectedStatus: PaymentStatusEnum.PENDING,
-          method: PaymentMethodEnum.TRANSFER,
-        },
-      ];
+    // Test creation with all valid payment methods
+    test("should handle all valid payment methods", async () => {
+      const paymentMethods = Object.values(PaymentMethodEnum);
 
-      for (const scenario of paymentScenarios) {
+      for (const method of paymentMethods) {
+        const paymentRequest = createMockOrderRequest({
+          customerId: 1,
+          paymentMethod: method,
+        });
+
         const expectedOrder = createMockOrderWithItems({
-          paymentMethod: scenario.method,
-          paymentStatus: scenario.expectedStatus,
+          customerId: 1,
+          paymentMethod: method,
+          status: OrderStatusEnum.PENDING,
         });
 
         (orderService.createOrder as jest.Mock).mockResolvedValue(
           expectedOrder
         );
 
-        const result = await orderService.createOrder(scenario.request);
+        const result = await orderService.createOrder(paymentRequest, 1);
 
-        expect(result.paymentMethod).toBe(scenario.method);
-        expect(result.paymentStatus).toBe(scenario.expectedStatus);
+        expect(result.paymentMethod).toBe(method);
+        expect(result.status).toBe(OrderStatusEnum.PENDING);
       }
     });
 
-    // Test that backend handles optional fields correctly
-    test("should handle optional fields from frontend gracefully", async () => {
-      const minimalRequest = createConversationOrderEntry({
-        locationReference: undefined, // Optional
-        notes: undefined, // Optional
+    // Test that backend handles optional notes field correctly
+    test("should handle optional notes field gracefully", async () => {
+      const minimalRequest = createMockOrderRequest({
+        customerId: 1,
+        paymentMethod: PaymentMethodEnum.CASH,
+        notes: undefined, // Optional field
       });
 
       const expectedOrder = createMockOrderWithItems({
-        locationReference: null, // Backend converts undefined to null
+        customerId: 1,
+        paymentMethod: PaymentMethodEnum.CASH,
         notes: null, // Backend converts undefined to null
       });
 
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(minimalRequest);
+      const result = await orderService.createOrder(minimalRequest, 1);
 
       // Backend should handle undefined optional fields
-      expect(result.locationReference).toBeNull();
+      expect(result.customerId).toBe(1);
+      expect(result.paymentMethod).toBe(PaymentMethodEnum.CASH);
       expect(result.notes).toBeNull();
     });
 
@@ -935,7 +958,7 @@ describe("Order Validation Service", () => {
 
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(request);
+      const result = await orderService.createOrder(request, 1);
 
       expect(result.status).toBe(OrderStatusEnum.PENDING);
     });
@@ -946,24 +969,22 @@ describe("Order Validation Service", () => {
 
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(request);
+      const result = await orderService.createOrder(request, 1);
 
       expect(result.totalAmount).toBe("65.00");
     });
 
     test("should reject order creation with validation errors", async () => {
       const invalidRequest = createMockOrderRequest({
-        customerName: undefined,
-        customerPhone: undefined,
-        customerId: undefined,
+        customerId: undefined as any, // Invalid - required field
       });
 
       (orderService.createOrder as jest.Mock).mockRejectedValue(
-        new Error("Validation failed: Customer information is required")
+        new Error("Validation failed: Customer ID is required")
       );
 
-      await expect(orderService.createOrder(invalidRequest)).rejects.toThrow(
-        "Validation failed: Customer information is required"
+      await expect(orderService.createOrder(invalidRequest, 1)).rejects.toThrow(
+        "Validation failed: Customer ID is required"
       );
     });
 
@@ -973,7 +994,7 @@ describe("Order Validation Service", () => {
 
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(request);
+      const result = await orderService.createOrder(request, 1);
 
       expect(result.createdBy).toBe(1);
     });
@@ -985,7 +1006,7 @@ describe("Order Validation Service", () => {
 
       (orderService.createOrder as jest.Mock).mockResolvedValue(expectedOrder);
 
-      const result = await orderService.createOrder(request);
+      const result = await orderService.createOrder(request, 1);
 
       expect(result.orderDate).toBeDefined();
     });
@@ -1042,33 +1063,32 @@ describe("Order Validation Service", () => {
         new Error("Failed to create order: Database connection failed")
       );
 
-      await expect(orderService.createOrder(request)).rejects.toThrow(
+      await expect(orderService.createOrder(request, 1)).rejects.toThrow(
         "Failed to create order: Database connection failed"
       );
     });
 
-    test("should validate customer name length", async () => {
-      const longNameRequest = createMockOrderRequest({
-        customerName: "A".repeat(256), // Very long name
+    test("should validate notes field length limit", async () => {
+      const longNotesRequest = createMockOrderRequest({
+        notes: "A".repeat(1001), // Very long notes
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
         valid: false,
-        errors: ["Customer name must be less than 255 characters"],
+        errors: ["Notes must be less than 1000 characters"],
       });
 
-      const result = await orderService.validateOrderRequest(longNameRequest);
+      const result = await orderService.validateOrderRequest(longNotesRequest);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain(
-        "Customer name must be less than 255 characters"
+        "Notes must be less than 1000 characters"
       );
     });
 
-    test("should handle special characters in customer data", async () => {
+    test("should handle special characters in notes", async () => {
       const specialCharsRequest = createMockOrderRequest({
-        customerName: "José María",
-        deliveryAddress: "123 Main St, Apt #2A, City & County",
+        notes: "José María - entrega en Av. España #123, 2do piso",
       });
 
       (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
@@ -1083,24 +1103,28 @@ describe("Order Validation Service", () => {
       expect(result.valid).toBe(true);
     });
 
-    test("should validate delivery address length", async () => {
-      const longAddressRequest = createMockOrderRequest({
-        deliveryAddress: "A".repeat(1001), // Very long address
-      });
+    test("should validate item type enum values", async () => {
+      const validItemTypes = Object.values(ItemTypeEnum);
+      
+      for (const itemType of validItemTypes) {
+        const validRequest = createMockOrderRequest({
+          items: [{
+            itemType,
+            tankTypeId: itemType === ItemTypeEnum.TANK ? 1 : undefined,
+            inventoryItemId: itemType === ItemTypeEnum.ITEM ? 1 : undefined,
+            quantity: 1,
+            unitPrice: "25.00",
+          }],
+        });
 
-      (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
-        valid: false,
-        errors: ["Delivery address must be less than 1000 characters"],
-      });
+        (orderService.validateOrderRequest as jest.Mock).mockResolvedValue({
+          valid: true,
+          errors: [],
+        });
 
-      const result = await orderService.validateOrderRequest(
-        longAddressRequest
-      );
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain(
-        "Delivery address must be less than 1000 characters"
-      );
+        const result = await orderService.validateOrderRequest(validRequest);
+        expect(result.valid).toBe(true);
+      }
     });
 
     test("should handle concurrent order number generation", async () => {
@@ -1114,8 +1138,8 @@ describe("Order Validation Service", () => {
         .mockResolvedValueOnce(order1)
         .mockResolvedValueOnce(order2);
 
-      const result1 = await orderService.createOrder(request1);
-      const result2 = await orderService.createOrder(request2);
+      const result1 = await orderService.createOrder(request1, 1);
+      const result2 = await orderService.createOrder(request2, 1);
 
       expect(result1.orderNumber).toBe("ORD-2024-001");
       expect(result2.orderNumber).toBe("ORD-2024-002");

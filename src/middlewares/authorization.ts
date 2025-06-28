@@ -6,7 +6,6 @@ import { ActionEnum, createPermission, ModuleEnum } from "../utils/permissions";
 export interface AuthRequest extends Request {
   user?: {
     id: string;
-    userId: number;
     role: string;
     permissions: string[];
   };

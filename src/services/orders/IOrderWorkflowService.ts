@@ -12,10 +12,8 @@ import { TimelineItem } from "../../repositories/orders/orderTypes";
  * following simple parameter patterns from inventory services.
  */
 export abstract class IOrderWorkflowService {
-  // Test-aligned methods (primary interface - matching test expectations exactly)
-  abstract confirmOrder(orderId: number, userId: number): Promise<any>;
-
-  abstract reserveInventory(orderId: number): Promise<any>;
+  // Test-aligned methods (primary interface - matching simplified workflow)
+  abstract confirmOrder(orderId: number, assignmentId: number, userId: number): Promise<any>;
 
   abstract startDelivery(orderId: number, deliveryUserId: number): Promise<any>;
 
@@ -28,21 +26,12 @@ export abstract class IOrderWorkflowService {
   // Test-aligned methods (simplified interface - matching test expectations exactly)
   abstract validateTransition(fromStatus: string, toStatus: string): boolean;
 
-  // Legacy detailed workflow methods  
+  // Updated detailed workflow methods  
   abstract confirmOrderDetailed(
     orderId: number,
+    assignmentId: number,
     userId: number,
     notes?: string
-  ): Promise<{
-    order: OrderWithDetails;
-    fromStatus: OrderStatusEnum;
-    toStatus: OrderStatusEnum;
-    historyEntry: OrderStatusHistoryType;
-  }>;
-
-  abstract reserveInventoryDetailed(
-    orderId: number,
-    userId: number
   ): Promise<{
     order: OrderWithDetails;
     fromStatus: OrderStatusEnum;

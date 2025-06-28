@@ -1,11 +1,11 @@
-import { Request, Response, Router } from "express";
+import { Response, Router } from "express";
 import { asyncHandler } from "../../middlewares/async-handler";
 import {
   AuthRequest,
   isAuthenticated,
   requirePermission,
 } from "../../middlewares/authorization";
-import { BadRequestError, NotFoundError } from "../../utils/custom-errors";
+import { BadRequestError } from "../../utils/custom-errors";
 import { ActionEnum, ModuleEnum } from "../../utils/permissions";
 import { OrderRoutesDependencies } from "./index";
 
@@ -13,7 +13,9 @@ import { OrderRoutesDependencies } from "./index";
  * Order Workflow Routes - Order status transitions and workflow management
  * Handles: Confirm, Reserve, Start Delivery, Complete Delivery, Fail Delivery
  */
-export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) {
+export function buildOrderWorkflowRoutes(
+  dependencies: OrderRoutesDependencies
+) {
   const { orderWorkflowService } = dependencies;
   const router = Router();
 
@@ -70,80 +72,15 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
       }
 
       const result = await orderWorkflowService.confirmOrderDetailed(
-        orderId, 
-        req.user!.userId,
+        orderId,
+        parseInt(req.user!.id),
         notes
       );
 
       res.json({
         success: true,
         data: result,
-        message: "Order confirmed successfully"
-      });
-    })
-  );
-
-  /**
-   * @openapi
-   * /orders/{orderId}/reserve:
-   *   post:
-   *     tags: [Orders, Workflow]
-   *     summary: Reserve inventory for order
-   *     description: Reserves inventory for the order and transitions from CONFIRMED to RESERVED status
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: orderId
-   *         required: true
-   *         schema:
-   *           type: integer
-   *         description: Order ID
-   *     requestBody:
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               forceReservation:
-   *                 type: boolean
-   *                 description: Force reservation even with low inventory (admin only)
-   *               notes:
-   *                 type: string
-   *                 description: Optional reservation notes
-   *     responses:
-   *       200:
-   *         description: Inventory reserved successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/OrderTransitionResponse'
-   *       400:
-   *         description: Insufficient inventory or order cannot be reserved
-   *       404:
-   *         description: Order not found
-   */
-  router.post(
-    "/:orderId/reserve",
-    isAuthenticated,
-    requirePermission(ModuleEnum.ORDERS, ActionEnum.UPDATE),
-    asyncHandler(async (req: AuthRequest, res: Response) => {
-      const orderId = parseInt(req.params.orderId);
-      const { forceReservation, notes } = req.body;
-
-      if (isNaN(orderId)) {
-        throw new BadRequestError("Invalid order ID");
-      }
-
-      const result = await orderWorkflowService.reserveInventoryDetailed(
-        orderId,
-        req.user!.userId
-      );
-
-      res.json({
-        success: true,
-        data: result,
-        message: "Inventory reserved successfully"
+        message: "Order confirmed successfully",
       });
     })
   );
@@ -206,7 +143,7 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
       }
 
       // Use provided delivery user ID or default to authenticated user
-      const actualDeliveryUserId = deliveryUserId || req.user!.userId;
+      const actualDeliveryUserId = deliveryUserId || parseInt(req.user!.id);
 
       const result = await orderWorkflowService.startDeliveryDetailed(
         orderId,
@@ -217,7 +154,7 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
       res.json({
         success: true,
         data: result,
-        message: "Delivery started successfully"
+        message: "Delivery started successfully",
       });
     })
   );
@@ -274,11 +211,11 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
     requirePermission(ModuleEnum.ORDERS, ActionEnum.UPDATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
       const orderId = parseInt(req.params.orderId);
-      const { 
-        customerSignature, 
-        deliveryNotes, 
+      const {
+        customerSignature,
+        deliveryNotes,
         paymentReceived,
-        generateInvoice 
+        generateInvoice,
       } = req.body;
 
       if (isNaN(orderId)) {
@@ -287,7 +224,7 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
 
       const result = await orderWorkflowService.completeDeliveryDetailed(
         orderId,
-        req.user!.userId,
+        parseInt(req.user!.id),
         customerSignature,
         deliveryNotes
       );
@@ -295,7 +232,7 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
       res.json({
         success: true,
         data: result,
-        message: "Delivery completed successfully"
+        message: "Delivery completed successfully",
       });
     })
   );
@@ -356,12 +293,8 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
     requirePermission(ModuleEnum.ORDERS, ActionEnum.UPDATE),
     asyncHandler(async (req: AuthRequest, res: Response) => {
       const orderId = parseInt(req.params.orderId);
-      const { 
-        reason, 
-        failureNotes, 
-        rescheduleDate,
-        customerNotified 
-      } = req.body;
+      const { reason, failureNotes, rescheduleDate, customerNotified } =
+        req.body;
 
       if (isNaN(orderId)) {
         throw new BadRequestError("Invalid order ID");
@@ -374,14 +307,14 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
       const result = await orderWorkflowService.failDeliveryDetailed(
         orderId,
         reason,
-        req.user!.userId,
+        parseInt(req.user!.id),
         false // reschedule parameter
       );
 
       res.json({
         success: true,
         data: result,
-        message: "Delivery failure recorded successfully"
+        message: "Delivery failure recorded successfully",
       });
     })
   );
@@ -454,21 +387,23 @@ export function buildOrderWorkflowRoutes(dependencies: OrderRoutesDependencies) 
 
       // Since updateOrderStatusManual doesn't exist, use cancelOrderDetailed for cancellation
       // or throw error for other manual status changes
-      if (status === 'cancelled') {
+      if (status === "cancelled") {
         const result = await orderWorkflowService.cancelOrderDetailed(
           orderId,
           reason,
-          req.user!.userId
+          parseInt(req.user!.id)
         );
         res.json({
           success: true,
           data: result,
-          message: "Order status updated successfully"
+          message: "Order status updated successfully",
         });
         return;
       }
-      
-      throw new BadRequestError("Manual status updates not supported for this status");
+
+      throw new BadRequestError(
+        "Manual status updates not supported for this status"
+      );
     })
   );
 
