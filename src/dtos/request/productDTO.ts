@@ -315,12 +315,12 @@ export const ProductSearchRequestSchema = z.object({
  */
 export const TankTypeFiltersRequestSchema = z
   .object({
-    include_deleted: z.coerce.boolean().optional(),
+    include_deleted: z.coerce.boolean().optional().default(false),
     search: z.string().optional(),
     weight: z.string().optional(),
     price_min: z.coerce.number().positive().optional(),
     price_max: z.coerce.number().positive().optional(),
-    limit: z.coerce.number().int().min(1).max(100).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(50),
     offset: z.coerce.number().int().min(0).optional(),
   })
   .refine(

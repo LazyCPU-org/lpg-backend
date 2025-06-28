@@ -11,7 +11,8 @@ import type { OrderWithDetails } from "../../dtos/response/orderInterface";
 export abstract class IOrderService {
   // Core Order Operations
   abstract createOrder(
-    orderData: CreateOrderRequest
+    orderData: CreateOrderRequest,
+    createdBy: number
   ): Promise<OrderWithDetails>;
 
   abstract getOrder(

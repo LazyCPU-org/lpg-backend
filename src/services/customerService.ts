@@ -1,27 +1,28 @@
-import { ICustomerRepository } from "../repositories/customers/ICustomerRepository";
 import { Customer } from "../dtos/response/customerInterface";
+import { ICustomerRepository } from "../repositories/customers/ICustomerRepository";
 import {
-  CreateCustomerRequest,
-  UpdateCustomerRequest,
-} from "../dtos/request/customerDTO";
-import { 
-  ConflictError, 
+  BadRequestError,
+  ConflictError,
   NotFoundError,
-  BadRequestError 
 } from "../utils/custom-errors";
 
 // Service interfaces for dependency injection
 export interface CustomerService {
   // Basic CRUD operations
-  getCustomers(filters?: CustomerListRequest): Promise<{ data: Customer[], total: number }>;
+  getCustomers(
+    filters?: CustomerListRequest
+  ): Promise<{ data: Customer[]; total: number }>;
   getCustomerById(id: number): Promise<Customer>;
   createCustomer(data: QuickCustomerCreationRequest): Promise<Customer>;
   updateCustomer(id: number, data: CustomerUpdateRequest): Promise<Customer>;
   deleteCustomer(id: number): Promise<void>;
   restoreCustomer(id: number): Promise<Customer>;
-  
+
   // Search operations
-  searchCustomers(query: string, limit?: number): Promise<{ data: Customer[], total_results: number }>;
+  searchCustomers(
+    query: string,
+    limit?: number
+  ): Promise<{ data: Customer[]; total_results: number }>;
 }
 
 // DTO interfaces following the PRD specifications
@@ -53,30 +54,34 @@ export interface CustomerSearchRequest {
 }
 
 export class CustomerServiceImpl implements CustomerService {
-  constructor(
-    private customerRepository: ICustomerRepository
-  ) {}
+  constructor(private customerRepository: ICustomerRepository) {}
 
-  async getCustomers(filters: CustomerListRequest = {}): Promise<{ data: Customer[], total: number }> {
+  async getCustomers(
+    filters: CustomerListRequest = {}
+  ): Promise<{ data: Customer[]; total: number }> {
     const {
       search,
       include_inactive = false,
       limit = 50,
-      offset = 0
+      offset = 0,
     } = filters;
 
     // For search functionality, we need to implement a different approach
     // since searchByName returns SearchResults, not full Customer objects
     if (search) {
       if (search.length < 2) {
-        throw new BadRequestError("El término de búsqueda debe tener al menos 2 caracteres");
+        throw new BadRequestError(
+          "El término de búsqueda debe tener al menos 2 caracteres"
+        );
       }
-      
+
       // Get all customers first, then filter by name
       let allCustomers: Customer[];
       if (include_inactive) {
-        const activeCustomers = await this.customerRepository.findActiveCustomers(10000);
-        const inactiveCustomers = await this.customerRepository.findInactiveCustomers(10000);
+        const activeCustomers =
+          await this.customerRepository.findActiveCustomers(10000);
+        const inactiveCustomers =
+          await this.customerRepository.findInactiveCustomers(10000);
         allCustomers = [...activeCustomers, ...inactiveCustomers];
       } else {
         allCustomers = await this.customerRepository.findActiveCustomers(10000);
@@ -84,8 +89,9 @@ export class CustomerServiceImpl implements CustomerService {
 
       // Filter by name search (case insensitive)
       const searchTerm = search.toLowerCase();
-      const filteredCustomers = allCustomers.filter(customer => {
-        const fullName = `${customer.firstName} ${customer.lastName}`.toLowerCase();
+      const filteredCustomers = allCustomers.filter((customer) => {
+        const fullName =
+          `${customer.firstName} ${customer.lastName}`.toLowerCase();
         return fullName.includes(searchTerm);
       });
 
@@ -97,7 +103,7 @@ export class CustomerServiceImpl implements CustomerService {
 
       return {
         data: paginatedCustomers,
-        total
+        total,
       };
     }
 
@@ -105,8 +111,11 @@ export class CustomerServiceImpl implements CustomerService {
     let customers: Customer[];
     if (include_inactive) {
       // Get both active and inactive customers
-      const activeCustomers = await this.customerRepository.findActiveCustomers(10000); // Large limit
-      const inactiveCustomers = await this.customerRepository.findInactiveCustomers(10000);
+      const activeCustomers = await this.customerRepository.findActiveCustomers(
+        10000
+      ); // Large limit
+      const inactiveCustomers =
+        await this.customerRepository.findInactiveCustomers(10000);
       customers = [...activeCustomers, ...inactiveCustomers];
     } else {
       // Get only active customers
@@ -121,7 +130,7 @@ export class CustomerServiceImpl implements CustomerService {
 
     return {
       data: paginatedCustomers,
-      total
+      total,
     };
   }
 
@@ -135,9 +144,13 @@ export class CustomerServiceImpl implements CustomerService {
 
   async createCustomer(data: QuickCustomerCreationRequest): Promise<Customer> {
     // Check for duplicate phone number
-    const existingCustomer = await this.customerRepository.findByPhone(data.phoneNumber);
+    const existingCustomer = await this.customerRepository.findByPhone(
+      data.phoneNumber
+    );
     if (existingCustomer) {
-      throw new ConflictError("Ya existe un cliente con este número de teléfono");
+      throw new ConflictError(
+        "Ya existe un cliente con este número de teléfono"
+      );
     }
 
     // Create customer using repository's create method
@@ -148,12 +161,15 @@ export class CustomerServiceImpl implements CustomerService {
       data.address,
       data.alternativePhone,
       data.locationReference,
-      'regular', // Default customer type
+      "regular", // Default customer type
       undefined // No initial rating
     );
   }
 
-  async updateCustomer(id: number, data: CustomerUpdateRequest): Promise<Customer> {
+  async updateCustomer(
+    id: number,
+    data: CustomerUpdateRequest
+  ): Promise<Customer> {
     // Check if customer exists
     const existingCustomer = await this.customerRepository.findById(id);
     if (!existingCustomer) {
@@ -167,8 +183,10 @@ export class CustomerServiceImpl implements CustomerService {
     // Use repository's update method with only the allowed fields
     const updatePayload: any = {};
     if (data.address !== undefined) updatePayload.address = data.address;
-    if (data.alternativePhone !== undefined) updatePayload.alternativePhone = data.alternativePhone;
-    if (data.locationReference !== undefined) updatePayload.locationReference = data.locationReference;
+    if (data.alternativePhone !== undefined)
+      updatePayload.alternativePhone = data.alternativePhone;
+    if (data.locationReference !== undefined)
+      updatePayload.locationReference = data.locationReference;
 
     return await this.customerRepository.update(id, updatePayload);
   }
@@ -183,7 +201,7 @@ export class CustomerServiceImpl implements CustomerService {
     // Check if referenced in orders - we'll need to implement this check
     // For now, we'll assume no orders reference since orders module might not be complete
     // TODO: Implement order reference check when orders are fully integrated
-    
+
     // Perform soft delete by setting isActive to false
     await this.customerRepository.update(id, { isActive: false });
   }
@@ -199,12 +217,18 @@ export class CustomerServiceImpl implements CustomerService {
     }
 
     // Check if phone conflicts with active customers
-    const duplicateCustomer = await this.customerRepository.findByPhone(customer.phoneNumber);
+    const duplicateCustomer = await this.customerRepository.findByPhone(
+      customer.phoneNumber
+    );
     if (duplicateCustomer) {
       // Get the full customer details to check if it's active
-      const fullDuplicateCustomer = await this.customerRepository.findById(duplicateCustomer.customerId);
+      const fullDuplicateCustomer = await this.customerRepository.findById(
+        duplicateCustomer.customerId
+      );
       if (fullDuplicateCustomer && fullDuplicateCustomer.isActive) {
-        throw new ConflictError("Ya existe un cliente activo con este número de teléfono");
+        throw new ConflictError(
+          "Ya existe un cliente activo con este número de teléfono"
+        );
       }
     }
 
@@ -213,29 +237,34 @@ export class CustomerServiceImpl implements CustomerService {
   }
 
   async searchCustomers(
-    query: string, 
+    query: string,
     limit = 20
-  ): Promise<{ data: Customer[], total_results: number }> {
+  ): Promise<{ data: Customer[]; total_results: number }> {
     if (query.length < 2) {
-      throw new BadRequestError("El término de búsqueda debe tener al menos 2 caracteres");
+      throw new BadRequestError(
+        "El término de búsqueda debe tener al menos 2 caracteres"
+      );
     }
 
     // Get all active customers and filter by name (more straightforward approach)
-    const allCustomers = await this.customerRepository.findActiveCustomers(10000);
-    
+    const allCustomers = await this.customerRepository.findActiveCustomers(
+      10000
+    );
+
     // Filter by name search (case insensitive)
     const searchTerm = query.toLowerCase();
-    const filteredCustomers = allCustomers.filter(customer => {
-      const fullName = `${customer.firstName} ${customer.lastName}`.toLowerCase();
+    const filteredCustomers = allCustomers.filter((customer) => {
+      const fullName =
+        `${customer.firstName} ${customer.lastName}`.toLowerCase();
       return fullName.includes(searchTerm);
     });
-    
+
     // Apply limit
     const limitedResults = filteredCustomers.slice(0, limit);
 
     return {
       data: limitedResults,
-      total_results: filteredCustomers.length
+      total_results: filteredCustomers.length,
     };
   }
 }

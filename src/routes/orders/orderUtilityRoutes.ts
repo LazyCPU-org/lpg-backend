@@ -103,7 +103,6 @@ export function buildOrderUtilityRoutes(dependencies: OrderRoutesDependencies) {
     })
   );
 
-
   /**
    * @openapi
    * /orders/check-availability:
@@ -378,7 +377,7 @@ export function buildOrderUtilityRoutes(dependencies: OrderRoutesDependencies) {
         orderIds,
         action as any,
         notes || "",
-        req.user!.userId
+        parseInt(req.user!.id)
       );
 
       res.json({

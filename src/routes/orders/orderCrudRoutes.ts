@@ -60,12 +60,14 @@ export function buildOrderCrudRoutes(dependencies: OrderRoutesDependencies) {
       const orderData = CreateOrderRequestSchema.parse(req.body);
 
       // Add creator information from authenticated user
-      const orderRequest = {
-        ...orderData,
-        createdBy: req.user!.userId,
-      };
+      if (!req.user?.id) {
+        throw new BadRequestError("User authentication required");
+      }
 
-      const result = await orderService.createOrder(orderRequest);
+      const result = await orderService.createOrder(
+        orderData,
+        Number.parseInt(req.user.id)
+      );
 
       res.status(201).json({
         success: true,
@@ -300,7 +302,7 @@ export function buildOrderCrudRoutes(dependencies: OrderRoutesDependencies) {
         updateData.customerPhone,
         updateData.deliveryAddress,
         updateData.notes,
-        req.user!.userId
+        Number.parseInt(req.user!.id)
       );
 
       res.json(result);
@@ -366,7 +368,11 @@ export function buildOrderCrudRoutes(dependencies: OrderRoutesDependencies) {
         throw new BadRequestError("Cancellation reason is required");
       }
 
-      await orderService.deleteOrder(orderId, reason, req.user!.userId);
+      await orderService.deleteOrder(
+        orderId,
+        reason,
+        Number.parseInt(req.user!.id)
+      );
 
       const result = await orderService.getOrder(orderId, true, true, true);
 

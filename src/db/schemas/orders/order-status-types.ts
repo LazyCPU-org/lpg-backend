@@ -2,9 +2,8 @@ import { pgEnum } from "drizzle-orm/pg-core";
 
 // Define the order status enum values
 export enum OrderStatusEnum {
-  PENDING = "pending", // Order created by operator, awaiting confirmation
-  CONFIRMED = "confirmed", // Order details verified, ready for inventory reservation
-  RESERVED = "reserved", // Inventory successfully reserved for this order
+  PENDING = "pending", // Order created by operator, awaiting confirmation and assignment
+  CONFIRMED = "confirmed", // Order details verified, store assigned, inventory reserved
   IN_TRANSIT = "in_transit", // Delivery user has started the delivery process
   DELIVERED = "delivered", // Physical delivery completed, inventory transactions created
   FULFILLED = "fulfilled", // Invoice generated (optional), order complete
@@ -16,7 +15,6 @@ export enum OrderStatusEnum {
 export const orderStatusEnum = pgEnum("order_status_enum", [
   OrderStatusEnum.PENDING,
   OrderStatusEnum.CONFIRMED,
-  OrderStatusEnum.RESERVED,
   OrderStatusEnum.IN_TRANSIT,
   OrderStatusEnum.DELIVERED,
   OrderStatusEnum.FULFILLED,

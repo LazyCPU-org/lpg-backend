@@ -26,20 +26,15 @@ import {
   ItemTypeEnum,
 } from "../../../../db/schemas/orders/order-types";
 
-// Test data factories (matching actual database schema structure)
+// Test data factories (matching actual CreateOrderRequestSchema)
 export const createMockOrderRequest = (
   overrides: Partial<CreateOrderRequest> = {}
 ): CreateOrderRequest => ({
-  // No storeId required - will be assigned later via store assignment
-  customerName: "John Doe",
-  customerPhone: "+1234567890",
-  deliveryAddress: "123 Main St, City, State",
-  locationReference: "Near the big tree",
-  paymentMethod: PaymentMethodEnum.CASH,
-  paymentStatus: PaymentStatusEnum.PENDING,
-  priority: 1,
-  notes: "Ring doorbell twice",
-  items: [
+  // Required fields only (per CreateOrderRequestSchema)
+  customerId: 1, // Required - reference to existing customer
+  paymentMethod: PaymentMethodEnum.CASH, // Required - payment method enum
+  notes: "Ring doorbell twice", // Optional - additional notes
+  items: [ // Required - array of items with prices
     {
       itemType: ItemTypeEnum.TANK,
       tankTypeId: 1,
@@ -56,20 +51,15 @@ export const createMockOrderRequest = (
   ...overrides,
 });
 
-// UX Design Pattern: Natural conversation flow order entry
+// UX Design Pattern: Natural conversation flow order entry (schema-compliant)
 export const createConversationOrderEntry = (
   overrides: Partial<CreateOrderRequest> = {}
 ): CreateOrderRequest => ({
-  // No storeId - follows UX where store is assigned after order creation
-  customerName: "Pedro Martinez",
-  customerPhone: "+51987654321",
-  deliveryAddress: "Jr. Lima 123, San Isidro",
-  locationReference: "Cerca al parque central",
-  paymentMethod: PaymentMethodEnum.CASH, // Pre-selected in UX
-  paymentStatus: PaymentStatusEnum.PENDING, // Default for cash
-  priority: 1, // Default priority
-  notes: undefined, // Optional in quick entry
-  items: [
+  // Schema-compliant fields only
+  customerId: 2, // Reference to existing customer (Pedro Martinez)
+  paymentMethod: PaymentMethodEnum.CASH, // Required - pre-selected in UX
+  notes: undefined, // Optional - not provided in quick entry
+  items: [ // Required - items with prices
     {
       itemType: ItemTypeEnum.TANK,
       tankTypeId: 2, // 20kg tank (most common)
@@ -205,13 +195,9 @@ export const createOrderWorkflowScenario = () => ({
     status: OrderStatusEnum.PENDING,
     assignedTo: null 
   }),
-  // CONFIRMED: Store assignment made
+  // CONFIRMED: Store assignment made, inventory reserved
   confirmedOrder: createMockOrderWithAssignment({ 
     status: OrderStatusEnum.CONFIRMED 
-  }),
-  // RESERVED: Delivery user confirmed inventory
-  reservedOrder: createMockOrderWithAssignment({ 
-    status: OrderStatusEnum.RESERVED 
   }),
   // IN_TRANSIT: Delivery started
   inTransitOrder: createMockOrderWithAssignment({ 
@@ -243,15 +229,12 @@ export const createUXOrderScenarios = () => ({
   // Step 2: Customer identification ("What's your name?")
   existingCustomerEntry: createConversationOrderEntry({ customerId: 123 }),
   newCustomerEntry: createMockOrderRequest({
-    customerId: undefined,
-    customerName: "Sofia Rodriguez",
-    customerPhone: "+51987555444",
-    deliveryAddress: "Av. Arequipa 456, Miraflores",
+    customerId: 2, // Updated to use valid customerId instead of invalid fields
   }),
 
   // Step 3: Address confirmation ("Same address as usual?")
   sameAddressEntry: createConversationOrderEntry({
-    locationReference: "Same as last time",
+    notes: "Same address as last time", // Use valid notes field instead of locationReference
   }),
 
   // Step 4: Payment method ("How will you pay?")
