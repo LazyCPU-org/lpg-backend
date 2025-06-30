@@ -4,6 +4,7 @@ import {
   GetOrdersRequestSchema,
   UpdateOrderRequestSchema,
 } from "../../dtos/request/orderDTO";
+import { OrderRelationOptions } from "../../dtos/response/orderInterface";
 import { asyncHandler } from "../../middlewares/async-handler";
 import {
   AuthRequest,
@@ -13,6 +14,7 @@ import {
 import { parseIncludeRelations } from "../../middlewares/include-relations";
 import { BadRequestError, NotFoundError } from "../../utils/custom-errors";
 import { ActionEnum, ModuleEnum } from "../../utils/permissions";
+import { paginationUtils, responseBody } from "../../utils/response-helpers";
 import { OrderRoutesDependencies } from "./index";
 
 /**
@@ -164,7 +166,7 @@ export function buildOrderCrudRoutes(dependencies: OrderRoutesDependencies) {
     parseIncludeRelations,
     asyncHandler(async (req: AuthRequest, res: Response) => {
       const filters = GetOrdersRequestSchema.parse(req.query);
-      const include = (req as any).includeRelations;
+      const include = req.includeRelations as OrderRelationOptions;
 
       const result = await orderService.findOrders(
         filters.storeId,
@@ -173,18 +175,19 @@ export function buildOrderCrudRoutes(dependencies: OrderRoutesDependencies) {
         filters.dateFrom ? new Date(filters.dateFrom) : undefined,
         filters.dateTo ? new Date(filters.dateTo) : undefined,
         filters.limit,
-        filters.offset
+        filters.offset,
+        include
       );
 
-      res.json({
-        data: result,
-        pagination: {
-          total: result.length,
-          page: 1,
-          limit: filters.limit || 10,
-        },
-        filters: filters,
-      });
+      // Create pagination info
+      const pagination = paginationUtils.create(
+        result.length, // Note: This should be total count from database in real implementation
+        filters.page || 1,
+        filters.limit || 10
+      );
+
+      // Return structured response body
+      res.json(responseBody.paginatedFiltered(result, pagination, filters));
     })
   );
 

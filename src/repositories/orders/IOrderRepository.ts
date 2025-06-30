@@ -60,7 +60,8 @@ export abstract class IOrderRepository extends IOrderCoreRepository {
     startDate?: Date,
     endDate?: Date,
     limit?: number,
-    offset?: number
+    offset?: number,
+    include?: OrderRelationOptions
   ): Promise<OrderWithDetails[]>;
 
   // Analytics methods

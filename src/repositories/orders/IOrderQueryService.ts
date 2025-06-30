@@ -65,6 +65,7 @@ export abstract class IOrderQueryService {
     startDate?: Date,
     endDate?: Date,
     limit?: number,
-    offset?: number
+    offset?: number,
+    include?: OrderRelationOptions
   ): Promise<OrderWithDetails[]>;
 }

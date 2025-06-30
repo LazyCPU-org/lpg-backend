@@ -548,7 +548,8 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
     startDate?: Date,
     endDate?: Date,
     limit?: number,
-    offset?: number
+    offset?: number,
+    include?: OrderRelationOptions
   ): Promise<OrderWithDetails[]> {
     return this.orderQueryService.findByFilters(
       storeId,
@@ -557,7 +558,8 @@ export class PgOrderRepository implements IOrderRepository, IOrderCoreRepository
       startDate,
       endDate,
       limit,
-      offset
+      offset,
+      include
     );
   }
 

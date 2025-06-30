@@ -92,8 +92,8 @@ export function buildInventoryAssignmentRouter(
 
       // Convert include relations to repository options
       const relationOptions: InventoryAssignmentRelationOptions = {
-        user: Boolean(req.includeRelations.user),
-        store: Boolean(req.includeRelations.store),
+        user: Boolean(req.includeRelations?.user),
+        store: Boolean(req.includeRelations?.store),
       };
 
       const assignments = await inventoryAssignmentService.findAssignments(
@@ -160,8 +160,8 @@ export function buildInventoryAssignmentRouter(
 
       // Convert include relations to repository options
       const relationOptions: InventoryAssignmentRelationOptions = {
-        user: Boolean(req.includeRelations.user),
-        store: Boolean(req.includeRelations.store),
+        user: Boolean(req.includeRelations?.user),
+        store: Boolean(req.includeRelations?.store),
       };
 
       const assignment = await inventoryAssignmentService.findAssignmentById(

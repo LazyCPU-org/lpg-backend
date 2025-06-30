@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from "express";
+import { responseTypeGuards } from "../utils/response-helpers";
+import type { ApiResponse } from "../types/responses";
 
 export const responseFormatter = (
   req: Request,
@@ -17,39 +19,32 @@ export const responseFormatter = (
   };
 
   // Override the json method
-  res.json = function (body: any): Response {
-    // Determine if this is an error response based on status code or body structure
-    const isError =
-      currentStatusCode >= 400 ||
-      (body &&
-        (body.error || body.message) &&
-        (Object.keys(body).length === 1 ||
-          (Object.keys(body).length === 2 && body.stack)));
+  res.json = function (body: unknown): Response {
+    // Determine if this is an error response
+    const isError = responseTypeGuards.isError(body, currentStatusCode);
 
-    // Check if the response already has pagination structure
-    const hasPaginationStructure = 
-      body && 
-      typeof body === 'object' && 
-      body.hasOwnProperty('data') && 
-      body.hasOwnProperty('pagination') &&
-      Object.keys(body).length === 2;
+    // Check if the response is already structured with data property
+    const isStructured = responseTypeGuards.isStructuredResponse(body);
 
     // Format the response according to the standard structure
-    let formattedBody;
+    let formattedBody: ApiResponse;
 
     if (isError) {
+      // Handle error responses
       formattedBody = {
         data: null,
-        error: body && body.error ? body.error : body,
+        error: (body && typeof body === 'object' && 'error' in body) 
+          ? String(body.error) 
+          : String(body),
       };
-    } else if (hasPaginationStructure) {
-      // For paginated responses, add error field but keep existing structure
+    } else if (isStructured) {
+      // For structured responses (paginated, filtered, etc.), preserve structure and add error field
       formattedBody = {
-        data: body.data,
-        pagination: body.pagination,
+        ...body,
         error: null,
-      };
+      } as ApiResponse;
     } else {
+      // For simple data responses
       formattedBody = {
         data: body,
         error: null,

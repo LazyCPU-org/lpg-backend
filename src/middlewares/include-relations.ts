@@ -13,7 +13,12 @@ export interface RelationOptions {
 declare global {
   namespace Express {
     interface Request {
-      includeRelations: RelationOptions;
+      includeRelations?: RelationOptions;
+      user?: {
+        id: string;
+        role: string;
+        permissions: string[];
+      };
     }
   }
 }
