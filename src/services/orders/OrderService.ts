@@ -9,6 +9,7 @@ import type { CreateOrderRequest } from "../../dtos/request/orderDTO";
 import type {
   OrderType,
   OrderWithDetails,
+  OrderRelationOptions,
 } from "../../dtos/response/orderInterface";
 import { ICustomerRepository } from "../../repositories/customers/ICustomerRepository";
 import { IOrderRepository } from "../../repositories/orders/IOrderRepository";
@@ -258,7 +259,8 @@ export class OrderService implements IOrderService {
     startDate?: Date,
     endDate?: Date,
     limit?: number,
-    offset?: number
+    offset?: number,
+    include?: OrderRelationOptions
   ): Promise<OrderWithDetails[]> {
     return await this.orderRepository.findByFilters(
       storeId,
@@ -267,7 +269,8 @@ export class OrderService implements IOrderService {
       startDate,
       endDate,
       limit,
-      offset
+      offset,
+      include
     );
   }
 

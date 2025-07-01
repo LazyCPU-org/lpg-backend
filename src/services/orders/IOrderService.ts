@@ -1,6 +1,6 @@
 import type { OrderStatusEnum } from "../../db/schemas/orders/order-status-types";
 import type { CreateOrderRequest, OrderItemRequest } from "../../dtos/request/orderDTO";
-import type { OrderWithDetails } from "../../dtos/response/orderInterface";
+import type { OrderWithDetails, OrderRelationOptions } from "../../dtos/response/orderInterface";
 
 /**
  * Core Order Service Interface
@@ -74,7 +74,8 @@ export abstract class IOrderService {
     startDate?: Date,
     endDate?: Date,
     limit?: number,
-    offset?: number
+    offset?: number,
+    include?: OrderRelationOptions
   ): Promise<OrderWithDetails[]>;
 
   abstract findOrdersByCustomer(

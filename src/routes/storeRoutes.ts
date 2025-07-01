@@ -109,9 +109,9 @@ export function buildStoreRouter(storeService: IStoreService) {
 
       // Convert include relations to repository options
       const relationOptions: StoreRelationOptions = {
-        assignments: Boolean(req.includeRelations.assignments),
-        catalog: Boolean(req.includeRelations.catalog),
-        inventory: Boolean(req.includeRelations.inventory),
+        assignments: Boolean(req.includeRelations?.assignments),
+        catalog: Boolean(req.includeRelations?.catalog),
+        inventory: Boolean(req.includeRelations?.inventory),
       };
 
       const store = await storeService.findStoreById(storeId, relationOptions);

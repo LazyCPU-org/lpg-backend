@@ -1,7 +1,6 @@
-import { and, desc, eq, gte, lte, sql, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { customers } from "../../db/schemas/customers/customers";
-import { stores } from "../../db/schemas/locations/stores";
 import { storeAssignments } from "../../db/schemas/locations/store-assignments";
 import {
   inventoryReservations,
@@ -24,7 +23,6 @@ import { NotFoundError } from "../../utils/custom-errors";
 import { IOrderQueryService } from "./IOrderQueryService";
 
 export class OrderQueryService implements IOrderQueryService {
-  
   // Helper method to add store filtering via store assignments
   private addStoreFilter(whereConditions: any[], storeId: number) {
     // For now, we'll filter directly by store assignment store ID
@@ -143,7 +141,9 @@ export class OrderQueryService implements IOrderQueryService {
     return await db
       .select()
       .from(orders)
-      .where(and(eq(orders.assignedTo, storeAssignmentId), eq(orders.status, status)));
+      .where(
+        and(eq(orders.assignedTo, storeAssignmentId), eq(orders.status, status))
+      );
   }
 
   async findByCustomer(customerId: number): Promise<OrderType[]> {
@@ -181,13 +181,13 @@ export class OrderQueryService implements IOrderQueryService {
       const joinResults = await db
         .select()
         .from(orders)
-        .leftJoin(storeAssignments, eq(orders.assignedTo, storeAssignments.assignmentId))
-        .where(and(
-          ...baseConditions,
-          eq(storeAssignments.storeId, storeId)
-        ));
+        .leftJoin(
+          storeAssignments,
+          eq(orders.assignedTo, storeAssignments.assignmentId)
+        )
+        .where(and(...baseConditions, eq(storeAssignments.storeId, storeId)));
       // Extract just the orders from the join results
-      return joinResults.map(result => result.orders);
+      return joinResults.map((result) => result.orders);
     }
 
     return await db
@@ -240,10 +240,24 @@ export class OrderQueryService implements IOrderQueryService {
   ): Promise<OrderType[]> {
     const whereConditions = [eq(orders.status, status)];
 
-    // TODO: Update to use store assignment filtering
-    // if (storeId) {
-    //   whereConditions.push(eq(orders.storeId, storeId));
-    // }
+    // If store filtering is needed, use join logic similar to findByFilters
+    if (storeId) {
+      // Join with store assignments to filter by store
+      const joinResults = await db
+        .select()
+        .from(orders)
+        .leftJoin(
+          storeAssignments,
+          eq(orders.assignedTo, storeAssignments.assignmentId)
+        )
+        .where(
+          and(eq(orders.status, status), eq(storeAssignments.storeId, storeId))
+        )
+        .limit(limit || 50);
+
+      // Extract just the orders from the join results
+      return joinResults.map((result) => result.orders);
+    }
 
     const baseQuery = db
       .select()
@@ -273,10 +287,8 @@ export class OrderQueryService implements IOrderQueryService {
       )`
     );
 
-    // TODO: Update to use store assignment filtering
-    // if (storeId) {
-    //   whereConditions.push(eq(orders.storeId, storeId));
-    // }
+    // Store filtering would require join - for search simplicity, skip store filter for now
+    // Note: If store filtering is needed for search, implement similar join logic as in findByFilters
 
     if (status) {
       whereConditions.push(eq(orders.status, status as OrderStatusEnum));
@@ -310,14 +322,16 @@ export class OrderQueryService implements IOrderQueryService {
     startDate?: Date,
     endDate?: Date,
     limit?: number,
-    offset?: number
+    offset?: number,
+    include?: OrderRelationOptions
   ): Promise<OrderWithDetails[]> {
     const whereConditions = [];
 
-    // TODO: Update to use store assignment filtering
-    // if (storeId) {
-    //   whereConditions.push(eq(orders.storeId, storeId));
-    // }
+    // Store filtering via store assignments requires a join
+    let needsStoreJoin = false;
+    if (storeId) {
+      needsStoreJoin = true;
+    }
 
     if (customerId) {
       whereConditions.push(eq(orders.customerId, customerId));
@@ -328,37 +342,79 @@ export class OrderQueryService implements IOrderQueryService {
     }
 
     if (startDate) {
-      whereConditions.push(gte(orders.createdAt, startDate));
+      // Convert to start of day in GMT-5 timezone
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(5, 0, 0, 0); // GMT-5 = UTC+5 for start of day
+      whereConditions.push(gte(orders.createdAt, startOfDay));
     }
 
     if (endDate) {
-      whereConditions.push(lte(orders.createdAt, endDate));
+      // Convert to end of day in GMT-5 timezone
+      const endOfDay = new Date(endDate);
+      endOfDay.setDate(endOfDay.getDate() + 1); // Move to next day
+      endOfDay.setUTCHours(4, 59, 59, 999); // GMT-5 end of day = next day 04:59:59 UTC
+      whereConditions.push(lte(orders.createdAt, endOfDay));
     }
 
-    const baseQuery = db
-      .select()
-      .from(orders)
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(orders.createdAt));
+    let orderResults;
 
-    if (limit) {
-      baseQuery.limit(limit);
+    if (needsStoreJoin) {
+      // Join with store assignments to filter by store
+      const joinResults = await db
+        .select()
+        .from(orders)
+        .leftJoin(
+          storeAssignments,
+          eq(orders.assignedTo, storeAssignments.assignmentId)
+        )
+        .where(
+          and(
+            ...(whereConditions.length > 0 ? whereConditions : []),
+            eq(storeAssignments.storeId, storeId!)
+          )
+        )
+        .orderBy(desc(orders.createdAt))
+        .limit(limit || 50)
+        .offset(offset || 0);
+
+      // Extract just the orders from the join results
+      orderResults = joinResults.map((result) => result.orders);
+    } else {
+      // Regular query without store join
+      const baseQuery = db
+        .select()
+        .from(orders)
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(orders.createdAt));
+
+      if (limit) {
+        baseQuery.limit(limit);
+      }
+
+      if (offset) {
+        baseQuery.offset(offset);
+      }
+
+      orderResults = await baseQuery;
     }
-
-    if (offset) {
-      baseQuery.offset(offset);
-    }
-
-    const orderResults = await baseQuery;
 
     // Convert to OrderWithDetails by loading relations for each
     const ordersWithDetails: OrderWithDetails[] = [];
     for (const order of orderResults) {
-      const orderWithDetails = await this.findByIdWithRelations(order.orderId, {
-        customer: true,
-        assignation: true,
-        items: true,
-      });
+      const relations = {
+        customer: include?.customer || false,
+        assignation: include?.assignation || false,
+        items: include?.items || false,
+        reservations: include?.reservations || false,
+        transactions: include?.transactions || false,
+        deliveries: include?.deliveries || false,
+        invoice: include?.invoice || false,
+      };
+
+      const orderWithDetails = await this.findByIdWithRelations(
+        order.orderId,
+        relations
+      );
       ordersWithDetails.push(orderWithDetails);
     }
 

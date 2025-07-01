@@ -190,8 +190,8 @@ export const UpdateOrderStatusRequestSchema = z.object({
  *           description: Include relations (comma-separated - items,reservations,transactions,deliveries,customer,invoice)
  */
 export const GetOrdersRequestSchema = z.object({
-  storeId: z.number().positive("ID de tienda inválido").optional(),
-  customerId: z.number().positive("ID de cliente inválido").optional(),
+  storeId: z.coerce.number().positive("ID de tienda inválido").optional(),
+  customerId: z.coerce.number().positive("ID de cliente inválido").optional(),
   status: z
     .enum(
       [
@@ -208,7 +208,7 @@ export const GetOrdersRequestSchema = z.object({
       }
     )
     .optional(),
-  deliveryUserId: z
+  deliveryUserId: z.coerce
     .number()
     .positive("ID de usuario de entrega inválido")
     .optional(),
